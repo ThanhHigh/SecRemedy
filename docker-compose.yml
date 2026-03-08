@@ -1,0 +1,22 @@
+services:
+  nginx-bad:
+    build: .
+    container_name: nginx_bad_server
+    ports:
+      - "8081:80"
+      - "8443:443"
+      - "2221:22" # Port SSH của máy Bad là 2221
+    volumes:
+      - ./configs/nginx_bad.conf:/etc/nginx/nginx.conf:ro
+    restart: always
+
+  nginx-good:
+    build: .
+    container_name: nginx_good_server
+    ports:
+      - "8082:80"
+      - "8444:443"
+      - "2222:22" # Port SSH của máy Good là 2222
+    volumes:
+      - ./configs/nginx_good.conf:/etc/nginx/nginx.conf:ro
+    restart: always
