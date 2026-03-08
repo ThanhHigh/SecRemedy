@@ -202,14 +202,14 @@ Module `core/remedyEng/` là **Engine Khắc phục** — nhận vào file AST J
 
 #### 7.1. Kiến trúc remedyEng
 
-| File | Vai trò |
-|---|---|
-| `backup.py` | Kết nối SSH bằng `paramiko` để backup thư mục cấu hình Nginx trên server/container |
-| `ast_locator.py` | Định vị (locate) các block AST theo `context_path` (VD: `["http", "server"]`) |
-| `injector.py` | Inject/cập nhật directive an toàn vào block AST, xuất file `_modified.json` |
-| `builder.py` | Chuyển AST JSON đã chỉnh sửa về lại text cấu hình Nginx bằng `crossplane.build()` |
-| `diff.py` | So sánh `nginx.conf` gốc và file đã build sau remediate bằng Unified Diff |
-| `paths.py` | Tính `ROOT_DIR` của project để các module trong `remedyEng` dùng đường dẫn nhất quán |
+| File             | Vai trò                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| `backup.py`      | Kết nối SSH bằng `paramiko` để backup thư mục cấu hình Nginx trên server/container   |
+| `ast_locator.py` | Định vị (locate) các block AST theo `context_path` (VD: `["http", "server"]`)        |
+| `injector.py`    | Inject/cập nhật directive an toàn vào block AST, xuất file `_modified.json`          |
+| `builder.py`     | Chuyển AST JSON đã chỉnh sửa về lại text cấu hình Nginx bằng `crossplane.build()`    |
+| `diff.py`        | So sánh `nginx.conf` gốc và file đã build sau remediate bằng Unified Diff            |
+| `paths.py`       | Tính `ROOT_DIR` của project để các module trong `remedyEng` dùng đường dẫn nhất quán |
 
 #### 7.2. Viết `mock_failed_rules` — Định dạng dữ liệu đầu vào
 
@@ -257,13 +257,14 @@ mock_failed_rules = [
 
 **Quy tắc viết `target_context`:**
 
-| `target_context` | Directive được inject vào |
-|---|---|
-| `["http"]` | Block `http { }` ở cấp toàn cục |
-| `["http", "server"]` | Tất cả các block `server { }` nằm trong `http { }` |
+| `target_context`                 | Directive được inject vào                          |
+| -------------------------------- | -------------------------------------------------- |
+| `["http"]`                       | Block `http { }` ở cấp toàn cục                    |
+| `["http", "server"]`             | Tất cả các block `server { }` nằm trong `http { }` |
 | `["http", "server", "location"]` | Tất cả block `location { }` trong mỗi `server { }` |
 
 **Logic Inject của injector.py:**
+
 - Nếu directive **đã tồn tại** trong block → **Ghi đè** (`args` mới)
 - Nếu directive **chưa tồn tại** → **Thêm mới** vào cuối block
 - Trường hợp `add_header` → So sánh thêm `args[0]` (tên header) để tránh trùng
@@ -301,10 +302,10 @@ python core/remedyEng/injector.py -i contracts/config_ast_2221.json -o contracts
 
 **Tham số CLI của `injector.py`:**
 
-| Tham số | Bắt buộc | Mô tả |
-|---|---|---|
-| `-i`, `--input` | ✅ | Đường dẫn file JSON AST gốc (tương đối từ project root) |
-| `-o`, `--output` | ❌ | Đường dẫn file JSON output. Mặc định: `tmp/ast_modified/<tên>_modified.json` |
+| Tham số          | Bắt buộc | Mô tả                                                                        |
+| ---------------- | -------- | ---------------------------------------------------------------------------- |
+| `-i`, `--input`  | ✅       | Đường dẫn file JSON AST gốc (tương đối từ project root)                      |
+| `-o`, `--output` | ❌       | Đường dẫn file JSON output. Mặc định: `tmp/ast_modified/<tên>_modified.json` |
 
 **Xem help:**
 
@@ -386,4 +387,3 @@ Hiện file này chủ yếu phục vụ utility/debug nội bộ (đã có sẵ
 ```
 
 ---
-
