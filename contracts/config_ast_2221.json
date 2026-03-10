@@ -1,0 +1,819 @@
+{
+  "status": "ok",
+  "errors": [],
+  "config": [
+    {
+      "file": "./tmp/nginx_raw_2221/nginx.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "user",
+          "line": 1,
+          "args": [
+            "nginx"
+          ]
+        },
+        {
+          "directive": "worker_processes",
+          "line": 2,
+          "args": [
+            "auto"
+          ]
+        },
+        {
+          "directive": "events",
+          "line": 4,
+          "args": [],
+          "block": [
+            {
+              "directive": "worker_connections",
+              "line": 5,
+              "args": [
+                "1024"
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "http",
+          "line": 8,
+          "args": [],
+          "block": [
+            {
+              "directive": "include",
+              "line": 9,
+              "args": [
+                "mime.types"
+              ],
+              "includes": [
+                1
+              ]
+            },
+            {
+              "directive": "default_type",
+              "line": 10,
+              "args": [
+                "application/octet-stream"
+              ]
+            },
+            {
+              "directive": "server",
+              "line": 17,
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "line": 18,
+                  "args": [
+                    "80"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "line": 19,
+                  "args": [
+                    "localhost"
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "line": 21,
+                  "args": [
+                    "/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "root",
+                      "line": 22,
+                      "args": [
+                        "/usr/share/nginx/html"
+                      ]
+                    },
+                    {
+                      "directive": "index",
+                      "line": 23,
+                      "args": [
+                        "index.html",
+                        "index.htm"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "server",
+              "line": 27,
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "line": 28,
+                  "args": [
+                    "443",
+                    "ssl"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "line": 29,
+                  "args": [
+                    "localhost"
+                  ]
+                },
+                {
+                  "directive": "ssl_certificate",
+                  "line": 31,
+                  "args": [
+                    "/etc/nginx/ssl/nginx.crt"
+                  ]
+                },
+                {
+                  "directive": "ssl_certificate_key",
+                  "line": 32,
+                  "args": [
+                    "/etc/nginx/ssl/nginx.key"
+                  ]
+                },
+                {
+                  "directive": "ssl_protocols",
+                  "line": 35,
+                  "args": [
+                    "TLSv1",
+                    "TLSv1.1",
+                    "TLSv1.2"
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "line": 39,
+                  "args": [
+                    "/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "root",
+                      "line": 40,
+                      "args": [
+                        "/usr/share/nginx/html"
+                      ]
+                    },
+                    {
+                      "directive": "index",
+                      "line": 41,
+                      "args": [
+                        "index.html",
+                        "index.htm"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "./tmp/nginx_raw_2221/mime.types",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "types",
+          "line": 2,
+          "args": [],
+          "block": [
+            {
+              "directive": "text/html",
+              "line": 3,
+              "args": [
+                "html",
+                "htm",
+                "shtml"
+              ]
+            },
+            {
+              "directive": "text/css",
+              "line": 4,
+              "args": [
+                "css"
+              ]
+            },
+            {
+              "directive": "text/xml",
+              "line": 5,
+              "args": [
+                "xml"
+              ]
+            },
+            {
+              "directive": "image/gif",
+              "line": 6,
+              "args": [
+                "gif"
+              ]
+            },
+            {
+              "directive": "image/jpeg",
+              "line": 7,
+              "args": [
+                "jpeg",
+                "jpg"
+              ]
+            },
+            {
+              "directive": "application/javascript",
+              "line": 8,
+              "args": [
+                "js"
+              ]
+            },
+            {
+              "directive": "application/atom+xml",
+              "line": 9,
+              "args": [
+                "atom"
+              ]
+            },
+            {
+              "directive": "application/rss+xml",
+              "line": 10,
+              "args": [
+                "rss"
+              ]
+            },
+            {
+              "directive": "text/mathml",
+              "line": 12,
+              "args": [
+                "mml"
+              ]
+            },
+            {
+              "directive": "text/plain",
+              "line": 13,
+              "args": [
+                "txt"
+              ]
+            },
+            {
+              "directive": "text/vnd.sun.j2me.app-descriptor",
+              "line": 14,
+              "args": [
+                "jad"
+              ]
+            },
+            {
+              "directive": "text/vnd.wap.wml",
+              "line": 15,
+              "args": [
+                "wml"
+              ]
+            },
+            {
+              "directive": "text/x-component",
+              "line": 16,
+              "args": [
+                "htc"
+              ]
+            },
+            {
+              "directive": "image/avif",
+              "line": 18,
+              "args": [
+                "avif"
+              ]
+            },
+            {
+              "directive": "image/png",
+              "line": 19,
+              "args": [
+                "png"
+              ]
+            },
+            {
+              "directive": "image/svg+xml",
+              "line": 20,
+              "args": [
+                "svg",
+                "svgz"
+              ]
+            },
+            {
+              "directive": "image/tiff",
+              "line": 21,
+              "args": [
+                "tif",
+                "tiff"
+              ]
+            },
+            {
+              "directive": "image/vnd.wap.wbmp",
+              "line": 22,
+              "args": [
+                "wbmp"
+              ]
+            },
+            {
+              "directive": "image/webp",
+              "line": 23,
+              "args": [
+                "webp"
+              ]
+            },
+            {
+              "directive": "image/x-icon",
+              "line": 24,
+              "args": [
+                "ico"
+              ]
+            },
+            {
+              "directive": "image/x-jng",
+              "line": 25,
+              "args": [
+                "jng"
+              ]
+            },
+            {
+              "directive": "image/x-ms-bmp",
+              "line": 26,
+              "args": [
+                "bmp"
+              ]
+            },
+            {
+              "directive": "font/woff",
+              "line": 28,
+              "args": [
+                "woff"
+              ]
+            },
+            {
+              "directive": "font/woff2",
+              "line": 29,
+              "args": [
+                "woff2"
+              ]
+            },
+            {
+              "directive": "application/java-archive",
+              "line": 31,
+              "args": [
+                "jar",
+                "war",
+                "ear"
+              ]
+            },
+            {
+              "directive": "application/json",
+              "line": 32,
+              "args": [
+                "json"
+              ]
+            },
+            {
+              "directive": "application/mac-binhex40",
+              "line": 33,
+              "args": [
+                "hqx"
+              ]
+            },
+            {
+              "directive": "application/msword",
+              "line": 34,
+              "args": [
+                "doc"
+              ]
+            },
+            {
+              "directive": "application/pdf",
+              "line": 35,
+              "args": [
+                "pdf"
+              ]
+            },
+            {
+              "directive": "application/postscript",
+              "line": 36,
+              "args": [
+                "ps",
+                "eps",
+                "ai"
+              ]
+            },
+            {
+              "directive": "application/rtf",
+              "line": 37,
+              "args": [
+                "rtf"
+              ]
+            },
+            {
+              "directive": "application/vnd.apple.mpegurl",
+              "line": 38,
+              "args": [
+                "m3u8"
+              ]
+            },
+            {
+              "directive": "application/vnd.google-earth.kml+xml",
+              "line": 39,
+              "args": [
+                "kml"
+              ]
+            },
+            {
+              "directive": "application/vnd.google-earth.kmz",
+              "line": 40,
+              "args": [
+                "kmz"
+              ]
+            },
+            {
+              "directive": "application/vnd.ms-excel",
+              "line": 41,
+              "args": [
+                "xls"
+              ]
+            },
+            {
+              "directive": "application/vnd.ms-fontobject",
+              "line": 42,
+              "args": [
+                "eot"
+              ]
+            },
+            {
+              "directive": "application/vnd.ms-powerpoint",
+              "line": 43,
+              "args": [
+                "ppt"
+              ]
+            },
+            {
+              "directive": "application/vnd.oasis.opendocument.graphics",
+              "line": 44,
+              "args": [
+                "odg"
+              ]
+            },
+            {
+              "directive": "application/vnd.oasis.opendocument.presentation",
+              "line": 45,
+              "args": [
+                "odp"
+              ]
+            },
+            {
+              "directive": "application/vnd.oasis.opendocument.spreadsheet",
+              "line": 46,
+              "args": [
+                "ods"
+              ]
+            },
+            {
+              "directive": "application/vnd.oasis.opendocument.text",
+              "line": 47,
+              "args": [
+                "odt"
+              ]
+            },
+            {
+              "directive": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "line": 48,
+              "args": [
+                "pptx"
+              ]
+            },
+            {
+              "directive": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "line": 50,
+              "args": [
+                "xlsx"
+              ]
+            },
+            {
+              "directive": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "line": 52,
+              "args": [
+                "docx"
+              ]
+            },
+            {
+              "directive": "application/vnd.wap.wmlc",
+              "line": 54,
+              "args": [
+                "wmlc"
+              ]
+            },
+            {
+              "directive": "application/wasm",
+              "line": 55,
+              "args": [
+                "wasm"
+              ]
+            },
+            {
+              "directive": "application/x-7z-compressed",
+              "line": 56,
+              "args": [
+                "7z"
+              ]
+            },
+            {
+              "directive": "application/x-cocoa",
+              "line": 57,
+              "args": [
+                "cco"
+              ]
+            },
+            {
+              "directive": "application/x-java-archive-diff",
+              "line": 58,
+              "args": [
+                "jardiff"
+              ]
+            },
+            {
+              "directive": "application/x-java-jnlp-file",
+              "line": 59,
+              "args": [
+                "jnlp"
+              ]
+            },
+            {
+              "directive": "application/x-makeself",
+              "line": 60,
+              "args": [
+                "run"
+              ]
+            },
+            {
+              "directive": "application/x-perl",
+              "line": 61,
+              "args": [
+                "pl",
+                "pm"
+              ]
+            },
+            {
+              "directive": "application/x-pilot",
+              "line": 62,
+              "args": [
+                "prc",
+                "pdb"
+              ]
+            },
+            {
+              "directive": "application/x-rar-compressed",
+              "line": 63,
+              "args": [
+                "rar"
+              ]
+            },
+            {
+              "directive": "application/x-redhat-package-manager",
+              "line": 64,
+              "args": [
+                "rpm"
+              ]
+            },
+            {
+              "directive": "application/x-sea",
+              "line": 65,
+              "args": [
+                "sea"
+              ]
+            },
+            {
+              "directive": "application/x-shockwave-flash",
+              "line": 66,
+              "args": [
+                "swf"
+              ]
+            },
+            {
+              "directive": "application/x-stuffit",
+              "line": 67,
+              "args": [
+                "sit"
+              ]
+            },
+            {
+              "directive": "application/x-tcl",
+              "line": 68,
+              "args": [
+                "tcl",
+                "tk"
+              ]
+            },
+            {
+              "directive": "application/x-x509-ca-cert",
+              "line": 69,
+              "args": [
+                "der",
+                "pem",
+                "crt"
+              ]
+            },
+            {
+              "directive": "application/x-xpinstall",
+              "line": 70,
+              "args": [
+                "xpi"
+              ]
+            },
+            {
+              "directive": "application/xhtml+xml",
+              "line": 71,
+              "args": [
+                "xhtml"
+              ]
+            },
+            {
+              "directive": "application/xspf+xml",
+              "line": 72,
+              "args": [
+                "xspf"
+              ]
+            },
+            {
+              "directive": "application/zip",
+              "line": 73,
+              "args": [
+                "zip"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 75,
+              "args": [
+                "bin",
+                "exe",
+                "dll"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 76,
+              "args": [
+                "deb"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 77,
+              "args": [
+                "dmg"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 78,
+              "args": [
+                "iso",
+                "img"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 79,
+              "args": [
+                "msi",
+                "msp",
+                "msm"
+              ]
+            },
+            {
+              "directive": "audio/midi",
+              "line": 81,
+              "args": [
+                "mid",
+                "midi",
+                "kar"
+              ]
+            },
+            {
+              "directive": "audio/mpeg",
+              "line": 82,
+              "args": [
+                "mp3"
+              ]
+            },
+            {
+              "directive": "audio/ogg",
+              "line": 83,
+              "args": [
+                "ogg"
+              ]
+            },
+            {
+              "directive": "audio/x-m4a",
+              "line": 84,
+              "args": [
+                "m4a"
+              ]
+            },
+            {
+              "directive": "audio/x-realaudio",
+              "line": 85,
+              "args": [
+                "ra"
+              ]
+            },
+            {
+              "directive": "video/3gpp",
+              "line": 87,
+              "args": [
+                "3gpp",
+                "3gp"
+              ]
+            },
+            {
+              "directive": "video/mp2t",
+              "line": 88,
+              "args": [
+                "ts"
+              ]
+            },
+            {
+              "directive": "video/mp4",
+              "line": 89,
+              "args": [
+                "mp4"
+              ]
+            },
+            {
+              "directive": "video/mpeg",
+              "line": 90,
+              "args": [
+                "mpeg",
+                "mpg"
+              ]
+            },
+            {
+              "directive": "video/quicktime",
+              "line": 91,
+              "args": [
+                "mov"
+              ]
+            },
+            {
+              "directive": "video/webm",
+              "line": 92,
+              "args": [
+                "webm"
+              ]
+            },
+            {
+              "directive": "video/x-flv",
+              "line": 93,
+              "args": [
+                "flv"
+              ]
+            },
+            {
+              "directive": "video/x-m4v",
+              "line": 94,
+              "args": [
+                "m4v"
+              ]
+            },
+            {
+              "directive": "video/x-mng",
+              "line": 95,
+              "args": [
+                "mng"
+              ]
+            },
+            {
+              "directive": "video/x-ms-asf",
+              "line": 96,
+              "args": [
+                "asx",
+                "asf"
+              ]
+            },
+            {
+              "directive": "video/x-ms-wmv",
+              "line": 97,
+              "args": [
+                "wmv"
+              ]
+            },
+            {
+              "directive": "video/x-msvideo",
+              "line": 98,
+              "args": [
+                "avi"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
