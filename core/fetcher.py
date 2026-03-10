@@ -2,6 +2,7 @@ import paramiko
 import os
 import tarfile
 import shutil
+import argparse # Thư viện chuẩn của Python để xử lý tham số Terminal
 
 class NginxFetcher:
     def __init__(self, host, port, username, password):
@@ -23,15 +24,15 @@ class NginxFetcher:
                 password=self.password,
                 timeout=10
             )
-            print(f"[+] Đã kết nối SSH thành công tới {self.host}")
+            print(f"[+] Đã kết nối SSH thành công tới {self.host}:{self.port}")
         except Exception as e:
-            print(f"[-] Lỗi kết nối SSH: {e}")
+            print(f"[-] Lỗi kết nối SSH tới {self.host}:{self.port} - {e}")
             raise
 
     def fetch_config(self, remote_dir='/etc/nginx', local_extract_dir='./tmp/nginx_raw'):
         """Nén cấu hình trên server, tải về và giải nén cục bộ"""
         remote_tar_path = '/tmp/nginx_backup_temp.tar.gz'
-        local_tar_path = './tmp/nginx_backup_temp.tar.gz'
+        local_tar_path = f'./tmp/nginx_backup_temp_{self.port}.tar.gz' # Thêm port để tránh trùng lặp file nén local
 
         # 1. Tạo thư mục local nếu chưa có, nếu có rồi thì xóa đi tạo lại cho sạch
         if os.path.exists(local_extract_dir):
@@ -52,11 +53,11 @@ class NginxFetcher:
                 print(f"[-] Cảnh báo từ server: {error}")
 
             # 3. Mở SFTP để tải file về
-            print("[*] Đang tải file nén về máy Dev...")
+            print(f"[*] Đang tải file nén về máy Dev (Lưu tạm tại {local_tar_path})...")
             sftp = self.ssh_client.open_sftp()
             sftp.get(remote_tar_path, local_tar_path)
 
-            # 4. Xóa file nén tạm trên Server (Clean up)
+            # 4. Xóa file nén tạm trên Server
             sftp.remove(remote_tar_path)
             sftp.close()
             print("[+] Đã tải xong và dọn dẹp file tạm trên server.")
@@ -68,7 +69,7 @@ class NginxFetcher:
             
             # 6. Xóa file nén tạm trên máy Dev
             os.remove(local_tar_path)
-            print(f"[+] Hoàn tất! Cấu hình Nginx đã sẵn sàng tại: {local_extract_dir}")
+            print(f"[+] Hoàn tất! Cấu hình Nginx (Port {self.port}) đã sẵn sàng tại: {local_extract_dir}\n")
 
         except Exception as e:
             print(f"[-] Lỗi trong quá trình fetch data: {e}")
@@ -78,22 +79,34 @@ class NginxFetcher:
         """Đóng kết nối SSH"""
         if self.ssh_client:
             self.ssh_client.close()
-            print("[+] Đã đóng kết nối SSH.")
+            print(f"[+] Đã đóng kết nối SSH ({self.host}:{self.port}).")
 
 # ==========================================
-# KHU VỰC TEST (Chỉ chạy khi chạy trực tiếp file này)
+# KHU VỰC CLI (Chạy qua Terminal)
 # ==========================================
 if __name__ == "__main__":
-    # TODO: Thay đổi thông tin này khớp với Docker Lab (T2) của bạn
-    LAB_HOST = "127.0.0.1" 
-    LAB_PORT = 2221         # Port SSH map từ Docker ra ngoài
-    LAB_USER = "root"
-    LAB_PASS = "root"       # Mật khẩu bạn đã set trong Docker
+    # Khởi tạo bộ phân tích tham số
+    parser = argparse.ArgumentParser(description="DevSecOps Nginx Config Fetcher")
+    
+    # Định nghĩa các tham số (Arguments)
+    parser.add_argument("-H", "--host", type=str, default="127.0.0.1", help="IP của Server (Mặc định: 127.0.0.1)")
+    parser.add_argument("-P", "--port", type=int, required=True, help="Port SSH của Server (Bắt buộc. VD: 2221, 2222)")
+    parser.add_argument("-u", "--user", type=str, default="root", help="Username SSH (Mặc định: root)")
+    parser.add_argument("-p", "--password", type=str, default="root", help="Password SSH (Mặc định: root)")
+    parser.add_argument("-o", "--output", type=str, help="Thư mục lưu cấu hình (Mặc định: ./tmp/nginx_raw_<port>)")
 
-    fetcher = NginxFetcher(LAB_HOST, LAB_PORT, LAB_USER, LAB_PASS)
+    # Lấy các tham số người dùng nhập vào
+    args = parser.parse_args()
+
+    # Nếu người dùng không truyền -o, tự động tạo tên thư mục theo Port
+    output_dir = args.output if args.output else f"./tmp/nginx_raw_{args.port}"
+
+    # Thực thi logic
+    fetcher = NginxFetcher(args.host, args.port, args.user, args.password)
     try:
         fetcher.connect()
-        # Mặc định sẽ lấy /etc/nginx và lưu vào ./tmp/nginx_raw
-        fetcher.fetch_config() 
+        fetcher.fetch_config(local_extract_dir=output_dir)
+    except Exception as e:
+        print(f"[-] Quá trình thất bại: {e}")
     finally:
         fetcher.disconnect()
