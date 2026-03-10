@@ -18,9 +18,18 @@
 
 ```text
 SecRemedy/
-├── configs/               # Lưu trữ các file cấu hình Nginx để kiểm thử (nginx_bad.conf, nginx_good.conf)
-├── contracts/             # Data Contracts kết nối giữa quá trình Quét và Khắc phục (scan_result.json, config_ast.json)
-├── core/                  # Các module lõi và kịch bản thao tác hệ thống (models.py, test_db.py, fetcher.py)
+├── configs/               # Lưu trữ các file cấu hình Nginx để kiểm thử
+│   ├── nginx_bad.conf
+│   └── nginx_good.conf
+├── contracts/             # Data Contracts kết nối giữa quá trình Quét và Khắc phục
+│   ├── scan_result.json
+│   ├── config_ast_2221.json
+│   └── config_ast_2222.json
+├── core/                  # Các module lõi và kịch bản thao tác hệ thống
+│   ├── models.py
+│   ├── test_db.py
+│   ├── fetcher.py
+│   └── parser.py
 ├── Dockerfile             # File build hình ảnh Docker (cài Nginx, cấu hình SSH, giả lập SSL)
 ├── docker-compose.yml     # Khởi chạy cụm 2 servers Nginx giả lập
 ├── devsecops_nginx.db     # Cơ sở dữ liệu SQLite (Tự sinh sau khi khởi tạo)
@@ -132,5 +141,35 @@ Các tham số được hỗ trợ:
 - `-u`, `--user`: Username SSH (Mặc định: `root`)
 - `-p`, `--password`: Password SSH (Mặc định: `root`)
 - `-o`, `--output`: Thư mục lưu cấu hình giải nén (Mặc định: `./tmp/nginx_raw_<port>`)
+
+---
+
+### 6. Phân tích cấu hình Nginx sang JSON AST (NginxParser)
+
+Sử dụng module `core/parser.py` để tự động hóa việc phân tích cấu hình Nginx (đã được tải về bởi `fetcher.py`) thành định dạng JSON AST. Module này tích hợp sẵn khả năng **chuẩn hóa (normalize)** các đường dẫn `include` tuyệt đối (thường gặp như `/etc/nginx/...`) thành đường dẫn tương đối, đảm bảo `crossplane` có thể truy vết và phân tích toàn bộ các file tham chiếu mà không gặp lỗi.
+
+**Ví dụ phân tích cấu hình từ Nginx "Bad" Server (Port 2221):**
+
+```bash
+python core/parser.py -P 2221
+```
+
+**Ví dụ phân tích cấu hình từ Nginx "Good" Server (Port 2222):**
+
+```bash
+python core/parser.py -P 2222
+```
+
+**Các tham số hỗ trợ:**
+
+- `-P`, `--port`: Port của Nginx Server đã được fetch (Bắt buộc. VD: 2221, 2222).
+- `-o`, `--output`: Đường dẫn file JSON đầu ra (Mặc định: `contracts/config_ast_<port>.json`).
+
+**Luồng hoạt động của Parser:**
+
+1. **Xác định nguồn:** Tự động tìm thư mục cấu hình tại `./tmp/nginx_raw_<port>`.
+2. **Tiền xử lý:** Quét và chuẩn hóa các chỉ thị `include` bằng Regex để tránh lỗi "No such file or directory".
+3. **Trích xuất AST:** Sử dụng thư viện `crossplane` để chuyển đổi sang định dạng JSON.
+4. **Xuất kết quả:** Lưu Data Contract vào thư mục `contracts/` phục vụ cho bước quét bảo mật tiếp theo.
 
 ---
