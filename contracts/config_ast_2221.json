@@ -1,0 +1,188 @@
+{
+    "status": "failed",
+    "errors": [
+        {
+            "file": "./tmp/nginx_raw_2221/nginx.conf",
+            "error": "[Errno 2] No such file or directory: '/etc/nginx/mime.types'",
+            "line": 9
+        }
+    ],
+    "config": [
+        {
+            "file": "./tmp/nginx_raw_2221/nginx.conf",
+            "status": "failed",
+            "errors": [
+                {
+                    "error": "[Errno 2] No such file or directory: '/etc/nginx/mime.types'",
+                    "line": 9
+                }
+            ],
+            "parsed": [
+                {
+                    "directive": "user",
+                    "line": 1,
+                    "args": [
+                        "nginx"
+                    ]
+                },
+                {
+                    "directive": "worker_processes",
+                    "line": 2,
+                    "args": [
+                        "auto"
+                    ]
+                },
+                {
+                    "directive": "events",
+                    "line": 4,
+                    "args": [],
+                    "block": [
+                        {
+                            "directive": "worker_connections",
+                            "line": 5,
+                            "args": [
+                                "1024"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "directive": "http",
+                    "line": 8,
+                    "args": [],
+                    "block": [
+                        {
+                            "directive": "include",
+                            "line": 9,
+                            "args": [
+                                "/etc/nginx/mime.types"
+                            ],
+                            "includes": []
+                        },
+                        {
+                            "directive": "default_type",
+                            "line": 10,
+                            "args": [
+                                "application/octet-stream"
+                            ]
+                        },
+                        {
+                            "directive": "server",
+                            "line": 17,
+                            "args": [],
+                            "block": [
+                                {
+                                    "directive": "listen",
+                                    "line": 18,
+                                    "args": [
+                                        "80"
+                                    ]
+                                },
+                                {
+                                    "directive": "server_name",
+                                    "line": 19,
+                                    "args": [
+                                        "localhost"
+                                    ]
+                                },
+                                {
+                                    "directive": "location",
+                                    "line": 21,
+                                    "args": [
+                                        "/"
+                                    ],
+                                    "block": [
+                                        {
+                                            "directive": "root",
+                                            "line": 22,
+                                            "args": [
+                                                "/usr/share/nginx/html"
+                                            ]
+                                        },
+                                        {
+                                            "directive": "index",
+                                            "line": 23,
+                                            "args": [
+                                                "index.html",
+                                                "index.htm"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "directive": "server",
+                            "line": 27,
+                            "args": [],
+                            "block": [
+                                {
+                                    "directive": "listen",
+                                    "line": 28,
+                                    "args": [
+                                        "443",
+                                        "ssl"
+                                    ]
+                                },
+                                {
+                                    "directive": "server_name",
+                                    "line": 29,
+                                    "args": [
+                                        "localhost"
+                                    ]
+                                },
+                                {
+                                    "directive": "ssl_certificate",
+                                    "line": 31,
+                                    "args": [
+                                        "/etc/nginx/ssl/nginx.crt"
+                                    ]
+                                },
+                                {
+                                    "directive": "ssl_certificate_key",
+                                    "line": 32,
+                                    "args": [
+                                        "/etc/nginx/ssl/nginx.key"
+                                    ]
+                                },
+                                {
+                                    "directive": "ssl_protocols",
+                                    "line": 35,
+                                    "args": [
+                                        "TLSv1",
+                                        "TLSv1.1",
+                                        "TLSv1.2"
+                                    ]
+                                },
+                                {
+                                    "directive": "location",
+                                    "line": 39,
+                                    "args": [
+                                        "/"
+                                    ],
+                                    "block": [
+                                        {
+                                            "directive": "root",
+                                            "line": 40,
+                                            "args": [
+                                                "/usr/share/nginx/html"
+                                            ]
+                                        },
+                                        {
+                                            "directive": "index",
+                                            "line": 41,
+                                            "args": [
+                                                "index.html",
+                                                "index.htm"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
