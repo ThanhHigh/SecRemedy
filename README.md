@@ -20,7 +20,7 @@
 SecRemedy/
 ├── configs/               # Lưu trữ các file cấu hình Nginx để kiểm thử (nginx_bad.conf, nginx_good.conf)
 ├── contracts/             # Data Contracts kết nối giữa quá trình Quét và Khắc phục (scan_result.json, config_ast.json)
-├── scripts/               # Các kịch bản Python về khởi tạo và thao tác Database (models.py, test_db.py)
+├── core/                  # Các module lõi và kịch bản thao tác hệ thống (models.py, test_db.py, fetcher.py)
 ├── Dockerfile             # File build hình ảnh Docker (cài Nginx, cấu hình SSH, giả lập SSL)
 ├── docker-compose.yml     # Khởi chạy cụm 2 servers Nginx giả lập
 ├── devsecops_nginx.db     # Cơ sở dữ liệu SQLite (Tự sinh sau khi khởi tạo)
@@ -49,7 +49,7 @@ pip install sqlalchemy
 Tiến hành tạo cấu trúc bảng cho SQLite:
 
 ```bash
-python scripts/test_db.py
+python core/test_db.py
 ```
 
 _(Hệ thống sẽ tự động khởi tạo file `devsecops_nginx.db` với các bảng dữ liệu `servers`, `scan_results`, `failed_rules`, `remediations`)_
@@ -108,5 +108,29 @@ Crossplane cho phép phân tích cấu hình Nginx thành định dạng JSON AS
 ```bash
 crossplane parse configs/nginx_bad.conf --out contracts/config_ast.json
 ```
+
+### 5. Tải cấu hình Nginx từ Server thông qua SSH (NginxFetcher)
+
+Sử dụng công cụ `core/fetcher.py` để kết nối SSH và tải toàn bộ cấu hình Nginx từ server về máy phân tích thông qua CLI.
+
+Ví dụ tải cấu hình từ Nginx "Bad" Server (Port 2221):
+
+```bash
+python core/fetcher.py -P 2221
+```
+
+Ví dụ tải cấu hình từ Nginx "Good" Server (Port 2222):
+
+```bash
+python core/fetcher.py -P 2222
+```
+
+Các tham số được hỗ trợ:
+
+- `-H`, `--host`: IP của Server (Mặc định: `127.0.0.1`)
+- `-P`, `--port`: Port SSH của Server (Bắt buộc. VD: 2221, 2222)
+- `-u`, `--user`: Username SSH (Mặc định: `root`)
+- `-p`, `--password`: Password SSH (Mặc định: `root`)
+- `-o`, `--output`: Thư mục lưu cấu hình giải nén (Mặc định: `./tmp/nginx_raw_<port>`)
 
 ---
