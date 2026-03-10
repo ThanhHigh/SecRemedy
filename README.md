@@ -106,7 +106,7 @@ Crossplane cho phép phân tích cấu hình Nginx thành định dạng JSON AS
 **Tạo file AST từ cấu hình nginx.conf:**
 
 ```bash
-crossplane parse configs/nginx_bad.conf --output contracts/config_ast.json
+crossplane parse configs/nginx_bad.conf --out contracts/config_ast.json
 ```
 
 ---
