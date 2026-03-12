@@ -7,7 +7,7 @@ services:
       - "8443:443"
       - "2221:22" # Port SSH của máy Bad là 2221
     volumes:
-      - ./configs/nginx_bad.conf:/etc/nginx/nginx.conf:ro
+      - ./configs/nginx_five_errors:/etc/nginx:ro
     restart: always
 
   nginx-good:
@@ -18,5 +18,5 @@ services:
       - "8444:443"
       - "2222:22" # Port SSH của máy Good là 2222
     volumes:
-      - ./configs/nginx_good.conf:/etc/nginx/nginx.conf:ro
+      - ./configs/nginx_no_error:/etc/nginx:ro
     restart: always

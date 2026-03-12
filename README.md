@@ -19,8 +19,8 @@
 ```text
 SecRemedy/
 ├── configs/               # Lưu trữ các file cấu hình Nginx để kiểm thử
-│   ├── nginx_bad.conf
-│   └── nginx_good.conf
+│   ├── nginx_five_errors/
+│   └── nginx_no_error/
 ├── contracts/             # Data Contracts kết nối giữa quá trình Quét và Khắc phục
 │   ├── scan_result.json
 │   ├── config_ast_2221.json

@@ -10,11 +10,15 @@ RUN echo 'root:root' | chpasswd
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
 # Tự động sinh chứng chỉ SSL giả lập để test luật TLS và HSTS
-RUN mkdir -p /etc/nginx/ssl
-RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/nginx/ssl/nginx.key \
-    -out /etc/nginx/ssl/nginx.crt \
-    -subj "/C=VN/ST=HN/L=HN/O=DevSecOps/CN=localhost"
+RUN mkdir -p /etc/ssl/mock_certs && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/ssl/mock_certs/nginx.key \
+    -out /etc/ssl/mock_certs/nginx.crt \
+    -subj "/C=VN/ST=HN/L=HN/O=DevSecOps/CN=localhost" && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/ssl/mock_certs/admin.key \
+    -out /etc/ssl/mock_certs/admin.crt \
+    -subj "/C=VN/ST=HN/L=HN/O=DevSecOps/CN=admin"
 
 # Mở port 80 (HTTP), 443 (HTTPS) và 22 (SSH)
 EXPOSE 80 443 22
