@@ -51,48 +51,62 @@
               ]
             },
             {
-              "directive": "default_type",
+              "directive": "include",
               "line": 10,
+              "args": [
+                "conf.d/*.conf"
+              ],
+              "includes": [
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            },
+            {
+              "directive": "default_type",
+              "line": 11,
               "args": [
                 "application/octet-stream"
               ]
             },
             {
               "directive": "server",
-              "line": 17,
+              "line": 18,
               "args": [],
               "block": [
                 {
                   "directive": "listen",
-                  "line": 18,
+                  "line": 19,
                   "args": [
                     "80"
                   ]
                 },
                 {
                   "directive": "server_name",
-                  "line": 19,
+                  "line": 20,
                   "args": [
                     "localhost"
                   ]
                 },
                 {
                   "directive": "location",
-                  "line": 21,
+                  "line": 22,
                   "args": [
                     "/"
                   ],
                   "block": [
                     {
                       "directive": "root",
-                      "line": 22,
+                      "line": 23,
                       "args": [
                         "/usr/share/nginx/html"
                       ]
                     },
                     {
                       "directive": "index",
-                      "line": 23,
+                      "line": 24,
                       "args": [
                         "index.html",
                         "index.htm"
@@ -104,12 +118,12 @@
             },
             {
               "directive": "server",
-              "line": 27,
+              "line": 28,
               "args": [],
               "block": [
                 {
                   "directive": "listen",
-                  "line": 28,
+                  "line": 29,
                   "args": [
                     "443",
                     "ssl"
@@ -117,28 +131,28 @@
                 },
                 {
                   "directive": "server_name",
-                  "line": 29,
+                  "line": 30,
                   "args": [
                     "localhost"
                   ]
                 },
                 {
                   "directive": "ssl_certificate",
-                  "line": 31,
+                  "line": 32,
                   "args": [
-                    "/etc/nginx/ssl/nginx.crt"
+                    "/etc/ssl/mock_certs/nginx.crt"
                   ]
                 },
                 {
                   "directive": "ssl_certificate_key",
-                  "line": 32,
+                  "line": 33,
                   "args": [
-                    "/etc/nginx/ssl/nginx.key"
+                    "/etc/ssl/mock_certs/nginx.key"
                   ]
                 },
                 {
                   "directive": "ssl_protocols",
-                  "line": 35,
+                  "line": 36,
                   "args": [
                     "TLSv1",
                     "TLSv1.1",
@@ -147,21 +161,21 @@
                 },
                 {
                   "directive": "location",
-                  "line": 39,
+                  "line": 40,
                   "args": [
                     "/"
                   ],
                   "block": [
                     {
                       "directive": "root",
-                      "line": 40,
+                      "line": 41,
                       "args": [
                         "/usr/share/nginx/html"
                       ]
                     },
                     {
                       "directive": "index",
-                      "line": 41,
+                      "line": 42,
                       "args": [
                         "index.html",
                         "index.htm"
@@ -809,6 +823,308 @@
               "line": 98,
               "args": [
                 "avi"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "./tmp/nginx_raw_2221/conf.d/admin.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 2,
+              "args": [
+                "8443",
+                "ssl"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 3,
+              "args": [
+                "admin.local"
+              ]
+            },
+            {
+              "directive": "ssl_certificate",
+              "line": 5,
+              "args": [
+                "/etc/ssl/mock_certs/admin.crt"
+              ]
+            },
+            {
+              "directive": "ssl_certificate_key",
+              "line": 6,
+              "args": [
+                "/etc/ssl/mock_certs/admin.key"
+              ]
+            },
+            {
+              "directive": "ssl_protocols",
+              "line": 9,
+              "args": [
+                "SSLv3",
+                "TLSv1"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 11,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "root",
+                  "line": 12,
+                  "args": [
+                    "/var/www/admin"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "./tmp/nginx_raw_2221/conf.d/api.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 2,
+              "args": [
+                "8080"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 3,
+              "args": [
+                "api.local"
+              ]
+            },
+            {
+              "directive": "server_tokens",
+              "line": 6,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 8,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "return",
+                  "line": 9,
+                  "args": [
+                    "200",
+                    "{\"status\":\"ok\"}"
+                  ]
+                },
+                {
+                  "directive": "add_header",
+                  "line": 10,
+                  "args": [
+                    "Content-Type",
+                    "application/json"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "./tmp/nginx_raw_2221/conf.d/default.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 2,
+              "args": [
+                "80"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 3,
+              "args": [
+                "localhost"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 7,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "root",
+                  "line": 8,
+                  "args": [
+                    "/usr/share/nginx/html"
+                  ]
+                },
+                {
+                  "directive": "index",
+                  "line": 9,
+                  "args": [
+                    "index.html",
+                    "index.htm"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "error_page",
+              "line": 16,
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/50x.html"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 17,
+              "args": [
+                "=",
+                "/50x.html"
+              ],
+              "block": [
+                {
+                  "directive": "root",
+                  "line": 18,
+                  "args": [
+                    "/usr/share/nginx/html"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "./tmp/nginx_raw_2221/conf.d/legacy.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 2,
+              "args": [
+                "80"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 3,
+              "args": [
+                "legacy.local"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 7,
+              "args": [
+                "/old-app"
+              ],
+              "block": [
+                {
+                  "directive": "proxy_pass",
+                  "line": 8,
+                  "args": [
+                    "http://127.0.0.1:9000"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "./tmp/nginx_raw_2221/conf.d/static.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 2,
+              "args": [
+                "80"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 3,
+              "args": [
+                "static.local"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 7,
+              "args": [
+                "/assets"
+              ],
+              "block": [
+                {
+                  "directive": "alias",
+                  "line": 8,
+                  "args": [
+                    "/var/www/assets"
+                  ]
+                },
+                {
+                  "directive": "autoindex",
+                  "line": 9,
+                  "args": [
+                    "on"
+                  ]
+                }
               ]
             }
           ]
