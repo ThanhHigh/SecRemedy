@@ -1,7 +1,18 @@
 import json
 import os
 from typing import List, Dict, Any
+import argparse
+
+from paths import ROOT_DIR
 from ast_locator import locate_blocks, extract_main_parsed_ast
+
+
+def build_default_output_path(input_path: str) -> str:
+    input_filename = os.path.basename(input_path)
+    base_name, ext = os.path.splitext(input_filename)
+    output_filename = f"{base_name}_modified{ext if ext else '.json'}"
+    os.makedirs(os.path.join(ROOT_DIR, "contracts", "modified"), exist_ok=True)
+    return os.path.join(ROOT_DIR, "contracts", "modified", output_filename)
 
 def inject_remediations(parsed_ast: List[Dict[str, Any]], failed_rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
@@ -68,16 +79,62 @@ def inject_remediations(parsed_ast: List[Dict[str, Any]], failed_rules: List[Dic
 # KHỐI TEST (Chỉ chạy khi chạy trực tiếp file này)
 # ==========================================
 if __name__ == "__main__":
-    # 1. Đọc file AST gốc (từ Task 12)
-    # Tìm đường dẫn tuyệt đối đến thư mục gốc của project (SecRemedy)
-    current_dir = os.path.dirname(os.path.abspath(__file__))  # core/remedyEng/
-    project_root = os.path.dirname(os.path.dirname(current_dir))  # SecRemedy/
-    config_ast_path = os.path.join(project_root, "contracts", "config_ast.json")
+
+    # Khoi tao ArgumentParser
+    parser_cli = argparse.ArgumentParser(description="Remediation Injector for Nginx AST")
+        # Hướng dẫn sử dụng CLI:
+        # Sử dụng: python injector.py -h
+        # Hiển thị chi tiết các tham số CLI
+
+    # Them tham so -i hoac --input de chi dinh duong dan file AST goc {contracts/config_ast.json}
+    parser_cli.add_argument(
+        "-i", 
+        "--input", 
+        required=True, 
+        help="Require - File JSON input original AST"
+    )
+
+    # Them tham so -o hoac --output de chi dinh duong dan file AST sau khi da inject
+    parser_cli.add_argument(
+        "-o",
+        "--output",
+        help="Not Require - File JSON output modified AST sau khi inject. Default: contracts/<ten_input>_modified.json"
+    )
+        # Thêm ví dụ sử dụng vào help
+    parser_cli.epilog = "Ví dụ: python injector.py -i contracts/config_ast_2221.json -o contracts/config_ast_2221_modified.json"
+
+
+    # Phan tich cac tham so nguoi dung nhap vao
+    args = parser_cli.parse_args()
+
+    # Trich xuat duong dan den file AST goc
+    input_path = args.input
+    output_path = args.output if args.output else build_default_output_path(input_path)
+
+    # # Test Debug
+    # input_path = "contracts/config_ast_2221.json"
+
+    config_ast_path = os.path.join(os.getcwd(), input_path)
+    output_path = os.path.join(os.getcwd(), output_path)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Thuc thi Injector dua tren file AST duoc chi dinh
+    
+    # 1. Đọc file AST
+    # Nếu người dùng nhập đường dẫn tương đối, chuyển thành đường dẫn tuyệt đối
+    # if not os.path.isabs(config_ast_path):
+    #     current_dir = os.path.dirname(os.path.abspath(__file__))
+    #     project_root = os.path.dirname(os.path.dirname(current_dir))
+    #     config_ast_path = os.path.join(project_root, config_ast_path)
+    
+    # # Chuyển về đường dẫn chuẩn (normalize)
+    # config_ast_path = os.path.abspath(config_ast_path)
     
     try:
         with open(config_ast_path, "r") as f:
             raw_data = json.load(f)
             main_ast = extract_main_parsed_ast(raw_data)
+            # print(main_ast)
     except FileNotFoundError:
         print(f"[-] Không tìm thấy file config_ast.json tại {config_ast_path}.")
         exit(1)
@@ -108,25 +165,30 @@ if __name__ == "__main__":
         }
     ]
 
-    print("[*] Đang tiến hành Inject cấu hình an toàn vào AST...")
+    # print("[*] Đang tiến hành Inject cấu hình an toàn vào AST...")
     modified_ast = inject_remediations(main_ast, mock_failed_rules)
+
     
-    # 3. In ra kết quả để kiểm chứng
-    print("\n[+] KẾT QUẢ SAU KHI INJECT:")
+    with open(output_path, "w") as f_out:
+        json.dump(modified_ast, f_out, indent=2, ensure_ascii=False)
+    print(f"[+] Modified AST exported to {output_path}")
     
-    # Kiểm tra block HTTP (Xem có server_tokens và add_header chưa)
-    http_block = locate_blocks(modified_ast, ["http"])[0]
-    print("\n--- Các directive mới trong block 'http' ---")
-    for d in http_block:
-        if d.get("directive") in ["server_tokens", "add_header"]:
-            print(f"    {d['directive']} {' '.join(d['args'])};")
+    # # 3. In ra kết quả để kiểm chứng
+    # print("\n[+] KẾT QUẢ SAU KHI INJECT:")
+    
+    # # Kiểm tra block HTTP (Xem có server_tokens và add_header chưa)
+    # http_block = locate_blocks(modified_ast, ["http"])[0]
+    # print("\n--- Các directive mới trong block 'http' ---")
+    # for d in http_block:
+    #     if d.get("directive") in ["server_tokens", "add_header"]:
+    #         print(f"    {d['directive']} {' '.join(d['args'])};")
             
-    # Kiểm tra block Server (Xem ssl_protocols đã bị ghi đè chưa)
-    server_blocks = locate_blocks(modified_ast, ["http", "server"])
-    print("\n--- Kiểm tra ghi đè 'ssl_protocols' trong các block 'server' ---")
-    for idx, s_block in enumerate(server_blocks):
-        ssl_dir = next((d for d in s_block if d.get("directive") == "ssl_protocols"), None)
-        if ssl_dir:
-            print(f"    Server {idx + 1}: ssl_protocols {' '.join(ssl_dir['args'])}; (Đã được cập nhật!)")
-        else:
-            print(f"    Server {idx + 1}: Không có cấu hình SSL.")
+    # # Kiểm tra block Server (Xem ssl_protocols đã bị ghi đè chưa)
+    # server_blocks = locate_blocks(modified_ast, ["http", "server"])
+    # print("\n--- Kiểm tra ghi đè 'ssl_protocols' trong các block 'server' ---")
+    # for idx, s_block in enumerate(server_blocks):
+    #     ssl_dir = next((d for d in s_block if d.get("directive") == "ssl_protocols"), None)
+    #     if ssl_dir:
+    #         print(f"    Server {idx + 1}: ssl_protocols {' '.join(ssl_dir['args'])}; (Đã được cập nhật!)")
+    #     else:
+    #         print(f"    Server {idx + 1}: Không có cấu hình SSL.")
