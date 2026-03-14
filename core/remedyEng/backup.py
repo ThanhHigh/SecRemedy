@@ -28,25 +28,79 @@ class NginxBackupManager:
         """
         Thiet lap ket noi SSH den server
         """
+        try:
+            self.ssh_client = paramiko.SSHClient()
+            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
+            logging.info(f"Dang ket noi SSH toi {self.host}:{self.port} voi ten nguoi dung la {self.username}...")
+
+            self.ssh_client.connect(
+                hostname=self.host,
+                port=self.port,
+                username=self.username,
+                password=self.password,
+                timeout=10
+            )
+
+            logging.info("SSH ket noi thanh cong.")
+        except Exception as e:
+            logging.error(f"Loi khong the ket noi SSH: {e}")
+            raise
+
+        
     
     def disconnect(self):
         """
         Dong ket noi SSH
         """
+        if self.ssh_client:
+            self.ssh_client.close()
+            logging.info("SSH ket noi da duoc dong.")
     
-    def create_backup(self, backup_dir, source_dir):
+    def create_backup(self, source_dir):
         """
         Thuc hien backup cau hinh Nginx
         Luu tru file backup voi ten co dinh kem thoi gian
+        File backup se duoc luu trong thu muc backup_dir tren server
+        Tuc la o trong container server
+        Mac dinh la /etc/nginx
+        Neu mount volume thi se o trong thu muc /config
+        Tra ve duong dan backup neu thanh cong
         """
+        if not self.ssh_client:
+            logging.error("Chua ket noi SSH. Vui long goi connect() truoc.")
+            return None
+        
+        # Tao timestamp de dat ten file backup
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_dir = f"{source_dir}_backup_{timestamp}"
+
+        # Thuc hien lenh sao chep thu muc cau hinh Nginx sang thu muc backup
+        command = f"cp -a {source_dir} {backup_dir}"
+
+        logging.info(f"Dang thuc hien lenh backup: {command}...")
+
+        try:
+            stdin, stdout, stderr = self.ssh_client.exec_command(command)
+
+            # Doc ket qua lenh Linux de biet thanh cong (=0) hay that bai (khac 0)
+            exit_status = stdout.channel.recv_exit_status()
+            if exit_status == 0:
+                logging.info(f"Backup thanh cong. File backup duoc luu tai: {backup_dir}")
+                return backup_dir
+            else:
+                error_message = stderr.read().decode().strip()
+                logging.error(f"Backup that bai. Loi: {error_message}")
+                return None
+        except Exception as e:
+            logging.error(f"Loi khi thuc hien lenh backup: {e}")
+            return None
+
+
+
 
 # Test
 if __name__ == "__main__":
-    # Khoi tao thu muc luu tru backup
-    # Mac dinh la root/backups
-    backup_dir = os.path.join(ROOT_DIR, "backups")
-    os.makedirs(backup_dir, exist_ok=True)
     # Thu muc source chua cau hinh Nginx tren server
     # Mac dinh la /etc/nginx
     source_dir = "/etc/nginx"
@@ -66,7 +120,12 @@ if __name__ == "__main__":
 
     try:
         backup_manager.connect()
-        backup_manager.create_backup(backup_dir, source_dir)
+        backup_dir = backup_manager.create_backup(source_dir)
+
+        if backup_dir:
+            logging.info(f"Backup duoc luu tai: {backup_dir}")
+        else:
+            logging.error("Backup that bai.")
 
 
     except Exception as e:
