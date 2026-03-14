@@ -41,6 +41,7 @@ SecRemedy/
 │   ├── fetcher.py               # CLI: Tải cấu hình Nginx từ server qua SSH
 │   ├── parser.py                # CLI: Phân tích nginx.conf sang JSON AST (dùng crossplane)
 │   └── remedyEng/               # Engine Khắc phục - Inject cấu hình an toàn vào AST
+│       ├── backup.py            # CLI: Backup trước khi sửa file cấu hình của Nginx
 │       ├── ast_locator.py       # CLI: Định vị block trong cây AST theo context_path
 │       └── injector.py          # CLI: Inject/cập nhật directive vào AST dựa trên failed_rules
 ├── tmp/                         # (Tự sinh) Cấu hình Nginx thô tải về từ server qua SSH
@@ -262,13 +263,19 @@ mock_failed_rules = [
 > **Yêu cầu:** Đã có file AST JSON tại `contracts/` (sinh ra từ bước 6).
 > Vì `injector.py` dùng relative import (`from paths import ...`), phải chạy từ thư mục `core/remedyEng/`.
 
-**Bước 1:** Di chuyển vào thư mục `remedyEng`:
+**Bước 1:** Backup file cấu hình Nginx trước khi sửa đổi
+
+```bash
+python core/remedyEng/backup.py
+```
+
+**Bước 2:** Di chuyển vào thư mục `remedyEng`:
 
 ```bash
 cd core/remedyEng
 ```
 
-**Bước 2:** Chạy injector với file AST của Nginx "Bad" Server (port 2221):
+**Bước 3:** Chạy injector với file AST của Nginx "Bad" Server (port 2221):
 
 ```bash
 python injector.py -i contracts/config_ast_2221.json
