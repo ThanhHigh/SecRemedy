@@ -1,5 +1,5 @@
 # Sử dụng Nginx bản mới nhất trên nền Debian
-FROM nginx:latest
+FROM nginx:1.28
 
 # Cài đặt OpenSSH Server và OpenSSL
 RUN apt-get update && apt-get install -y openssh-server openssl && rm -rf /var/lib/apt/lists/*
