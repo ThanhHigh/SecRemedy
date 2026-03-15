@@ -47,7 +47,7 @@ def main():
         help="Duong dan toi file output de luu cau hinh nginx"
     )
 
-    parser_cli.epilog = "Vi du: python builder.py -i contracts/modified/config_ast_modified.json -o contracts/modified/nginx_fixed.conf"
+    parser_cli.epilog = "Vi du: python builder.py -i tmp/ast_modified/config_ast_2221_modified.json -o tmp/nginx_fixed_2221/nginx_fixed.conf"
 
     args = parser_cli.parse_args()
 
@@ -83,5 +83,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+    # Test thu ket qua ra kha oke tuy nhien
+    # Chua giong voi config ban dau o khoan include
+    # Chua chay test thu server voi file nginx config moi
     

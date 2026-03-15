@@ -11,8 +11,8 @@ def build_default_output_path(input_path: str) -> str:
     input_filename = os.path.basename(input_path)
     base_name, ext = os.path.splitext(input_filename)
     output_filename = f"{base_name}_modified{ext if ext else '.json'}"
-    os.makedirs(os.path.join(ROOT_DIR, "contracts", "modified"), exist_ok=True)
-    return os.path.join(ROOT_DIR, "contracts", "modified", output_filename)
+    os.makedirs(os.path.join(ROOT_DIR, "tmp", "ast_modified"), exist_ok=True)
+    return os.path.join(ROOT_DIR, "tmp", "ast_modified", output_filename)
 
 def inject_remediations(parsed_ast: List[Dict[str, Any]], failed_rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
@@ -98,10 +98,10 @@ if __name__ == "__main__":
     parser_cli.add_argument(
         "-o",
         "--output",
-        help="Not Require - File JSON output modified AST sau khi inject. Default: contracts/<ten_input>_modified.json"
+        help="Not Require - File JSON output modified AST sau khi inject. Default: tmp/ast_modified/<ten_input>_modified.json"
     )
         # Thêm ví dụ sử dụng vào help
-    parser_cli.epilog = "Ví dụ: python injector.py -i contracts/config_ast_2221.json -o contracts/config_ast_2221_modified.json"
+    parser_cli.epilog = "Ví dụ: python injector.py -i contracts/config_ast_2221.json -o tmp/ast_modified/config_ast_2221_modified.json"
 
 
     # Phan tich cac tham so nguoi dung nhap vao
