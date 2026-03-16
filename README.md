@@ -33,8 +33,7 @@ SecRemedy/
 │   ├── scan_result.json         # Kết quả quét bảo mật (output của scanner)
 │   ├── config_ast_2221.json     # AST JSON của Nginx "Bad" Server (port 2221)
 │   ├── config_ast_2222.json     # AST JSON của Nginx "Good" Server (port 2222)
-│   └── modified/                # (Tự sinh) Chứa AST đã được vá lỗi sau khi inject
-│       └── config_ast_2221_modified.json
+│   └── ...
 ├── core/                        # Các module lõi và kịch bản thao tác hệ thống
 │   ├── models.py                # Định nghĩa ORM (SQLAlchemy): Server, ScanResult, FailedRule, Remediation
 │   ├── test_db.py               # Script khởi tạo và kiểm tra cơ sở dữ liệu SQLite
@@ -43,9 +42,14 @@ SecRemedy/
 │   └── remedyEng/               # Engine Khắc phục - Inject cấu hình an toàn vào AST
 │       ├── backup.py            # CLI: Backup trước khi sửa file cấu hình của Nginx
 │       ├── ast_locator.py       # CLI: Định vị block trong cây AST theo context_path
-│       └── injector.py          # CLI: Inject/cập nhật directive vào AST dựa trên failed_rules
+│       ├── injector.py          # CLI: Inject/cập nhật directive vào AST dựa trên failed_rules
+│       ├── builder.py           # CLI: Build ngược từ AST JSON sang nginx config text
+│       └── paths.py             # Khai báo đường dẫn gốc dùng chung cho remedy engine
 ├── tmp/                         # (Tự sinh) Cấu hình Nginx thô tải về từ server qua SSH
-│   └── nginx_raw_<port>/        # VD: nginx_raw_2221/ - toàn bộ /etc/nginx từ server
+│   ├── ast_modified/            # (Tự sinh) AST JSON sau khi inject remediation
+│   │   └── config_ast_<port>_modified.json
+│   ├── nginx_raw_<port>/        # VD: nginx_raw_2221/ - toàn bộ /etc/nginx từ server
+│   └── nginx_fixed_<port>/      # (Tự sinh) File nginx.conf text sau khi build lại từ AST
 ├── Dockerfile                   # Build image Docker (cài Nginx, cấu hình SSH, giả lập SSL)
 ├── docker-compose.yml           # Khởi chạy cụm 2 servers Nginx giả lập (port 2221, 2222)
 ├── devsecops_nginx.db           # Cơ sở dữ liệu SQLite (Tự sinh sau khi khởi tạo)
@@ -67,6 +71,9 @@ pip install crossplane
 
 # Cài đặt SQLAlchemy để sử dụng cơ sở dữ liệu
 pip install sqlalchemy
+
+# Cài đặt Paramiko để SSH/backup cấu hình từ server
+pip install paramiko
 ```
 
 ### 2. Khởi tạo Cơ sở dữ liệu
@@ -198,8 +205,11 @@ Module `core/remedyEng/` là **Engine Khắc phục** — nhận vào file AST J
 
 | File | Vai trò |
 |---|---|
+| `backup.py` | Kết nối SSH bằng `paramiko` để backup thư mục cấu hình Nginx trên server/container |
 | `ast_locator.py` | Định vị (locate) các block AST theo `context_path` (VD: `["http", "server"]`) |
 | `injector.py` | Inject/cập nhật directive an toàn vào block AST, xuất file `_modified.json` |
+| `builder.py` | Chuyển AST JSON đã chỉnh sửa về lại text cấu hình Nginx bằng `crossplane.build()` |
+| `paths.py` | Tính `ROOT_DIR` của project để các module trong `remedyEng` dùng đường dẫn nhất quán |
 
 #### 7.2. Viết `mock_failed_rules` — Định dạng dữ liệu đầu vào
 
@@ -261,7 +271,7 @@ mock_failed_rules = [
 #### 7.3. Chạy Injector để sinh Modified AST
 
 > **Yêu cầu:** Đã có file AST JSON tại `contracts/` (sinh ra từ bước 6).
-> Vì `injector.py` dùng relative import (`from paths import ...`), phải chạy từ thư mục `core/remedyEng/`.
+> Nên chạy lệnh từ **project root** (thư mục chứa `README.md`) để các đường dẫn input/output đúng mặc định.
 
 **Bước 1:** Backup file cấu hình Nginx trước khi sửa đổi
 
@@ -269,28 +279,24 @@ mock_failed_rules = [
 python core/remedyEng/backup.py
 ```
 
-**Bước 2:** Di chuyển vào thư mục `remedyEng`:
+> `backup.py` hiện dùng cấu hình test cứng (`127.0.0.1:2221`, user/pass `root/root`, source `/etc/nginx`) và tạo bản sao dạng `/etc/nginx_backup_YYYYMMDD_HHMMSS` trên server.
+
+**Bước 2:** Chạy injector với file AST của Nginx "Bad" Server (port 2221):
 
 ```bash
-cd core/remedyEng
-```
-
-**Bước 3:** Chạy injector với file AST của Nginx "Bad" Server (port 2221):
-
-```bash
-python injector.py -i contracts/config_ast_2221.json
+python core/remedyEng/injector.py -i contracts/config_ast_2221.json
 ```
 
 File đầu ra sẽ được tự động tạo tại:
 
 ```
-contracts/modified/config_ast_2221_modified.json
+tmp/ast_modified/config_ast_2221_modified.json
 ```
 
 **Hoặc chỉ định đường dẫn output thủ công:**
 
 ```bash
-python injector.py -i contracts/config_ast_2221.json -o contracts/config_ast_2221_patched.json
+python core/remedyEng/injector.py -i contracts/config_ast_2221.json -o contracts/config_ast_2221_patched.json
 ```
 
 **Tham số CLI của `injector.py`:**
@@ -298,30 +304,42 @@ python injector.py -i contracts/config_ast_2221.json -o contracts/config_ast_222
 | Tham số | Bắt buộc | Mô tả |
 |---|---|---|
 | `-i`, `--input` | ✅ | Đường dẫn file JSON AST gốc (tương đối từ project root) |
-| `-o`, `--output` | ❌ | Đường dẫn file JSON output. Mặc định: `contracts/modified/<tên>_modified.json` |
+| `-o`, `--output` | ❌ | Đường dẫn file JSON output. Mặc định: `tmp/ast_modified/<tên>_modified.json` |
 
 **Xem help:**
 
 ```bash
-python injector.py -h
+python core/remedyEng/injector.py -h
 ```
 
-#### 7.4. Kiểm tra kết quả Modified AST
+#### 7.4. Build lại file nginx.conf từ Modified AST (builder.py)
 
-Sau khi chạy xong, mở file `contracts/modified/config_ast_2221_modified.json` và tìm kiếm các directive đã được vá:
+Sau khi có file AST đã vá, dùng `builder.py` để chuyển về dạng text cấu hình Nginx:
+
+```bash
+python core/remedyEng/builder.py \
+  -i tmp/ast_modified/config_ast_2221_modified.json \
+  -o tmp/nginx_fixed_2221/nginx_fixed.conf
+```
+
+Bạn có thể mở file output để review trước khi apply lên server/container.
+
+#### 7.5. Kiểm tra kết quả Modified AST
+
+Sau khi chạy xong, mở file `tmp/ast_modified/config_ast_2221_modified.json` và tìm kiếm các directive đã được vá:
 
 ```bash
 # Kiểm tra server_tokens đã được thêm vào block http chưa
-grep -A1 '"server_tokens"' contracts/modified/config_ast_2221_modified.json
+grep -A1 '"server_tokens"' tmp/ast_modified/config_ast_2221_modified.json
 
 # Kiểm tra X-Frame-Options đã được inject vào các block server chưa
-grep -A2 '"X-Frame-Options"' contracts/modified/config_ast_2221_modified.json
+grep -A2 '"X-Frame-Options"' tmp/ast_modified/config_ast_2221_modified.json
 
 # Kiểm tra ssl_protocols đã được ghi đè sang TLSv1.2/TLSv1.3 chưa
-grep -A3 '"ssl_protocols"' contracts/modified/config_ast_2221_modified.json
+grep -A3 '"ssl_protocols"' tmp/ast_modified/config_ast_2221_modified.json
 ```
 
-#### 7.5. Luồng hoàn chỉnh từ Fetch → Parse → Inject
+#### 7.6. Luồng hoàn chỉnh từ Fetch → Parse → Inject → Build
 
 ```
 [Docker Server :2221]
@@ -333,7 +351,10 @@ grep -A3 '"ssl_protocols"' contracts/modified/config_ast_2221_modified.json
 [contracts/config_ast_2221.json]  ← AST JSON đầy đủ (crossplane)
         │
         ▼  python core/remedyEng/injector.py -i contracts/config_ast_2221.json
-[contracts/modified/config_ast_2221_modified.json]  ← AST đã vá lỗi bảo mật ✅
+[tmp/ast_modified/config_ast_2221_modified.json]  ← AST đã vá lỗi bảo mật ✅
+    │
+    ▼  python core/remedyEng/builder.py -i tmp/ast_modified/config_ast_2221_modified.json -o tmp/nginx_fixed_2221/nginx_fixed.conf
+[tmp/nginx_fixed_2221/nginx_fixed.conf]  ← File cấu hình Nginx text sau khi remediate ✅
 ```
 
 ---
