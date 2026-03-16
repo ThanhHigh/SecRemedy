@@ -19,12 +19,10 @@
 ```text
 SecRemedy/
 ├── configs/                     # Lưu trữ các file cấu hình Nginx mẫu để kiểm thử
-│   ├── nginx_bad.conf/          # (Placeholder) Cấu hình Nginx "xấu" tham chiếu
 │   ├── nginx_five_errors/       # Cấu hình Nginx với 5 lỗi bảo mật mẫu
 │   │   ├── nginx.conf
 │   │   └── conf.d/
 │           └── ...
-│   ├── nginx_good.conf/         # (Placeholder) Cấu hình Nginx "tốt" tham chiếu
 │   └── nginx_no_error/          # Cấu hình Nginx chuẩn, không lỗi bảo mật
 │       ├── nginx.conf
 │       └── conf.d/
@@ -44,6 +42,7 @@ SecRemedy/
 │       ├── ast_locator.py       # CLI: Định vị block trong cây AST theo context_path
 │       ├── injector.py          # CLI: Inject/cập nhật directive vào AST dựa trên failed_rules
 │       ├── builder.py           # CLI: Build ngược từ AST JSON sang nginx config text
+│       ├── diff.py              # CLI: So sánh file nginx gốc và file đã remediate (dry-run review)
 │       └── paths.py             # Khai báo đường dẫn gốc dùng chung cho remedy engine
 ├── tmp/                         # (Tự sinh) Cấu hình Nginx thô tải về từ server qua SSH
 │   ├── ast_modified/            # (Tự sinh) AST JSON sau khi inject remediation
@@ -138,7 +137,7 @@ Crossplane cho phép phân tích cấu hình Nginx thành định dạng JSON AS
 **Tạo file AST từ cấu hình nginx.conf:**
 
 ```bash
-crossplane parse configs/nginx_bad.conf --out contracts/config_ast.json
+crossplane parse configs/nginx_five_errors/nginx.conf --out contracts/config_ast_manual.json
 ```
 
 ### 5. Tải cấu hình Nginx từ Server thông qua SSH (NginxFetcher)
@@ -209,6 +208,7 @@ Module `core/remedyEng/` là **Engine Khắc phục** — nhận vào file AST J
 | `ast_locator.py` | Định vị (locate) các block AST theo `context_path` (VD: `["http", "server"]`) |
 | `injector.py` | Inject/cập nhật directive an toàn vào block AST, xuất file `_modified.json` |
 | `builder.py` | Chuyển AST JSON đã chỉnh sửa về lại text cấu hình Nginx bằng `crossplane.build()` |
+| `diff.py` | So sánh `nginx.conf` gốc và file đã build sau remediate bằng Unified Diff |
 | `paths.py` | Tính `ROOT_DIR` của project để các module trong `remedyEng` dùng đường dẫn nhất quán |
 
 #### 7.2. Viết `mock_failed_rules` — Định dạng dữ liệu đầu vào
@@ -339,7 +339,32 @@ grep -A2 '"X-Frame-Options"' tmp/ast_modified/config_ast_2221_modified.json
 grep -A3 '"ssl_protocols"' tmp/ast_modified/config_ast_2221_modified.json
 ```
 
-#### 7.6. Luồng hoàn chỉnh từ Fetch → Parse → Inject → Build
+#### 7.6. So sánh trước/sau bằng `diff.py` (Dry-run)
+
+Sau khi đã build lại file cấu hình, dùng `diff.py` để kiểm tra chính xác các dòng thay đổi trước khi apply lên server/container:
+
+```bash
+python core/remedyEng/diff.py \
+    --origin tmp/nginx_raw_2221/nginx.conf \
+    --modified tmp/nginx_fixed_2221/nginx_fixed.conf
+```
+
+Kết quả trả về là **Unified Diff** (dòng thêm `+`, dòng xóa `-`).
+
+- Nếu có thay đổi: review nội dung rồi mới apply thực tế.
+- Nếu không có thay đổi: tool sẽ in `Cấu hình đã an toàn, không có thay đổi nào được đề xuất.`
+
+#### 7.7. Kiểm tra nhanh context AST bằng `ast_locator.py`
+
+`ast_locator.py` hữu ích khi cần debug đường dẫn `target_context` trước khi inject.
+
+```bash
+python core/remedyEng/ast_locator.py -i contracts/config_ast_2221.json
+```
+
+Hiện file này chủ yếu phục vụ utility/debug nội bộ (đã có sẵn hàm `locate_blocks()` để `injector.py` sử dụng trực tiếp).
+
+#### 7.8. Luồng hoàn chỉnh từ Fetch → Parse → Inject → Build → Diff
 
 ```
 [Docker Server :2221]
@@ -355,6 +380,9 @@ grep -A3 '"ssl_protocols"' tmp/ast_modified/config_ast_2221_modified.json
     │
     ▼  python core/remedyEng/builder.py -i tmp/ast_modified/config_ast_2221_modified.json -o tmp/nginx_fixed_2221/nginx_fixed.conf
 [tmp/nginx_fixed_2221/nginx_fixed.conf]  ← File cấu hình Nginx text sau khi remediate ✅
+    │
+    ▼  python core/remedyEng/diff.py --origin tmp/nginx_raw_2221/nginx.conf --modified tmp/nginx_fixed_2221/nginx_fixed.conf
+[Unified Diff Output]  ← So sánh thay đổi trước khi apply ✅
 ```
 
 ---
