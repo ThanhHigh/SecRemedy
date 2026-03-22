@@ -1,22 +1,20 @@
 services:
-  nginx-bad:
+  nginx_five_errors:
     build: .
-    container_name: nginx_bad_server
+    container_name: nginx_five_errors
     ports:
       - "8081:80"
       - "8443:443"
-      - "2221:22" # Port SSH của máy Bad là 2221
+      - "2221:22" # Port SSH của máy Five Errors là 2221
     volumes:
       - ./configs/nginx_five_errors:/etc/nginx:ro
-    restart: always
 
-  nginx-good:
+  nginx_no_error:
     build: .
-    container_name: nginx_good_server
+    container_name: nginx_no_error
     ports:
       - "8082:80"
       - "8444:443"
-      - "2222:22" # Port SSH của máy Good là 2222
+      - "2222:22" # Port SSH của máy No Error là 2222
     volumes:
       - ./configs/nginx_no_error:/etc/nginx:ro
-    restart: always

@@ -1,0 +1,49 @@
+ [ TARGET SERVERS ]
+         │
+         │ 1. Raw Nginx Config Files (/etc/nginx/*)
+         ▼
+ +--------------------+
+ |    FETCHER (T5)    | (Kéo file qua SSH Paramiko)
+ +--------------------+
+         │
+         │ 2. Raw Text Files (Local /tmp/)
+         ▼
+ +--------------------+
+ |    PARSER (T6)     | (Crossplane phân tích đệ quy)
+ +--------------------+
+         │
+         │ 3. Parsed AST (JSON) 
+         ▼
+ +--------------------+
+ | CIS RULES EVALUATOR| (T7-T9: Đối chiếu tập luật CIS)
+ +--------------------+
+         │
+         │ 4. failedRules (JSON)  <-- [ĐIỂM GIAO TIẾP GIỮA THÀNH VIÊN 1 & 2]
+         ▼
+ +--------------------+
+ | LOCATOR & INJECTOR | (T12-T13: Tìm vị trí lỗi & Tiêm cấu hình chuẩn vào RAM)
+ +--------------------+
+         │
+         │ 5. fixed AST (JSON)
+         ▼
+ +--------------------+
+ |    BUILDER (T14)   | (Crossplane dịch ngược JSON thành Text)
+ +--------------------+
+         │
+         │ 6. Hardened Nginx Config Files (Text)
+         ▼
+ +--------------------+-----------------------------------------+
+ |                    |                                         |
+ | DIFF GENERATOR     | (T15)                 BACKUP & VALIDATE | (T11, T16)
+ |                    |                                         |
+ +--------------------+-----------------------------------------+
+         │                                         │
+         │ 7. diffs (JSON / Unified Diff)          │ 8. Syntax OK (True/False)
+         ▼                                         ▼
+ [ FRONTEND UI ]                           +--------------------+
+ (Hiển thị Dry-Run)                        |   EXECUTOR (T17)   | (Chỉ chạy khi có lệnh Approve
+                                           +--------------------+  và Syntax OK)
+                                                   │
+                                                   │ 9. Push & `nginx -s reload`
+                                                   ▼
+                                           [ TARGET SERVERS ]

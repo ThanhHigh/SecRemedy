@@ -1,6 +1,7 @@
 import json
 import os
 from typing import List, Dict, Any
+import argparse
 
 def locate_blocks(parsed_ast: List[Dict[str, Any]], context_path: List[str]) -> List[List[Dict[str, Any]]]:
     """
@@ -48,8 +49,27 @@ def extract_main_parsed_ast(crossplane_output: Dict[str, Any]) -> List[Dict[str,
 # KHỐI TEST (Chỉ chạy khi chạy trực tiếp file này)
 # ==========================================
 if __name__ == "__main__":
+
+
+    # Khoi tao ArgumentParser
+    parser_cli = argparse.ArgumentParser(description="Nginx Configuration AST Locator")
+    # Hướng dẫn sử dụng CLI:
+    # Sử dụng: python ast_locator.py -h
+    # Hiển thị chi tiết các tham số CLI
+
+    # Them tham os -i hoac --input (Bat buoc)
+    parser_cli.add_argument("-i", "--input", required=True, help="Required -Input duong dan toi file JSON chua AST")
+    # Thêm ví dụ sử dụng vào help
+    parser_cli.epilog = "Ví dụ: python ast_locator.py -i contracts/config_ast_2221.json"
+
+    # Phan tich tham so nguoi dung nhap
+    args = parser_cli.parse_args()
+
+    input_path = args.input
+    
     # 1. Đọc file JSON mẫu từ thư mục contracts
-    config_path = os.path.join(os.path.dirname(__file__), "..", "..", "contracts", "config_ast.json")
+    config_path = os.path.join(os.getcwd(),input_path)
+    print(f"[*] Đang đọc file AST từ: {config_path}")
     
     try:
         with open(config_path, "r") as f:
@@ -61,22 +81,36 @@ if __name__ == "__main__":
     # 2. Trích xuất mảng parsed
     main_ast = extract_main_parsed_ast(raw_data)
     
-    print("--- TEST CASE 1: Tìm block 'http' ---")
-    http_blocks = locate_blocks(main_ast, ["http"])
-    print(f"[+] Tìm thấy {len(http_blocks)} block 'http'.")
-    # In thử directive đầu tiên trong block http tìm được
-    if http_blocks:
-        print(f"    Directive đầu tiên trong http: {http_blocks[0][0]['directive']} (line {http_blocks[0][0]['line']})")
+    # print("--- TEST CASE 1: Tìm block 'http' ---")
+    # http_blocks = locate_blocks(main_ast, ["http"])
+    # print(f"[+] Tìm thấy {len(http_blocks)} block 'http'.")
+    # # In thử directive đầu tiên trong block http tìm được
+    # if http_blocks:
+    #     print(f"    Directive đầu tiên trong http: {http_blocks[0][0]['directive']} (line {http_blocks[0][0]['line']})")
 
-    print("\n--- TEST CASE 2: Tìm block 'server' bên trong 'http' ---")
-    server_blocks = locate_blocks(main_ast, ["http", "server"])
-    print(f"[+] Tìm thấy {len(server_blocks)} block 'server'.")
-    for idx, block in enumerate(server_blocks):
-        # Tìm directive 'listen' để chứng minh ta đã lấy đúng block
-        listen_dir = next((d for d in block if d.get("directive") == "listen"), None)
-        listen_args = listen_dir["args"] if listen_dir else "Unknown"
-        print(f"    Server {idx + 1}: listen {listen_args}")
+    # print("\n--- TEST CASE 2: Tìm block 'server' bên trong 'http' ---")
+    # server_blocks = locate_blocks(main_ast, ["http", "server"])
+    # print(f"[+] Tìm thấy {len(server_blocks)} block 'server'.")
+    # for idx, block in enumerate(server_blocks):
+    #     # Tìm directive 'listen' để chứng minh ta đã lấy đúng block
+    #     listen_dir = next((d for d in block if d.get("directive") == "listen"), None)
+    #     listen_args = listen_dir["args"] if listen_dir else "Unknown"
+    #     print(f"    Server {idx + 1}: listen {listen_args}")
 
-    print("\n--- TEST CASE 3: Tìm context không tồn tại (VD: 'mail') ---")
-    mail_blocks = locate_blocks(main_ast, ["mail"])
-    print(f"[+] Tìm thấy {len(mail_blocks)} block 'mail'.")
+    # print("\n--- TEST CASE 3: Tìm context không tồn tại (VD: 'mail') ---")
+    # mail_blocks = locate_blocks(main_ast, ["mail"])
+    # print(f"[+] Tìm thấy {len(mail_blocks)} block 'mail'.")
+    # print(f"    Directive đầu tiên trong http: {http_blocks[0][0]['directive']} (line {http_blocks[0][0]['line']})")
+
+    # print("\n--- TEST CASE 2: Tìm block 'server' bên trong 'http' ---")
+    # server_blocks = locate_blocks(main_ast, ["http", "server"])
+    # print(f"[+] Tìm thấy {len(server_blocks)} block 'server'.")
+    # for idx, block in enumerate(server_blocks):
+    #     # Tìm directive 'listen' để chứng minh ta đã lấy đúng block
+    #     listen_dir = next((d for d in block if d.get("directive") == "listen"), None)
+    #     listen_args = listen_dir["args"] if listen_dir else "Unknown"
+    #     print(f"    Server {idx + 1}: listen {listen_args}")
+
+    # print("\n--- TEST CASE 3: Tìm context không tồn tại (VD: 'mail') ---")
+    # mail_blocks = locate_blocks(main_ast, ["mail"])
+    # print(f"[+] Tìm thấy {len(mail_blocks)} block 'mail'.")

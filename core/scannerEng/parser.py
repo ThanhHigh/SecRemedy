@@ -43,7 +43,7 @@ class NginxParser:
                     
                     # Nếu phát hiện pattern, tiến hành thay thế
                     if pattern.search(content):
-                        # Thay thế bằng Group 1 và Group 2, bỏ đi phần /etc/nginx/
+                        # Thay thế bằng Group 1 và Group 2, bỏ đi phần /etc/nginx/  
                         # \g<1> giữ lại đúng số lượng khoảng trắng gốc
                         # \g<2> giữ lại dấu ngoặc (nếu có)
                         new_content = pattern.sub(r'\g<1>\g<2>', content)

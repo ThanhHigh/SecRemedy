@@ -18,23 +18,42 @@
 
 ```text
 SecRemedy/
-├── configs/               # Lưu trữ các file cấu hình Nginx để kiểm thử
-│   ├── nginx_five_errors/
-│   └── nginx_no_error/
-├── contracts/             # Data Contracts kết nối giữa quá trình Quét và Khắc phục
-│   ├── scan_result.json
-│   ├── config_ast_2221.json
-│   └── config_ast_2222.json
-├── core/                  # Các module lõi và kịch bản thao tác hệ thống
-│   ├── models.py
-│   ├── test_db.py
-│   ├── fetcher.py
-│   └── parser.py
-├── Dockerfile             # File build hình ảnh Docker (cài Nginx, cấu hình SSH, giả lập SSL)
-├── docker-compose.yml     # Khởi chạy cụm 2 servers Nginx giả lập
-├── devsecops_nginx.db     # Cơ sở dữ liệu SQLite (Tự sinh sau khi khởi tạo)
-├── cis_rule.md            # Tài liệu 5 quy tắc cấu hình bảo mật chuẩn CIS
-└── README.md              # Tổng quan dự án (File này)
+├── configs/                     # Lưu trữ các file cấu hình Nginx mẫu để kiểm thử
+│   ├── nginx_five_errors/       # Cấu hình Nginx với 5 lỗi bảo mật mẫu
+│   │   ├── nginx.conf
+│   │   └── conf.d/
+│           └── ...
+│   └── nginx_no_error/          # Cấu hình Nginx chuẩn, không lỗi bảo mật
+│       ├── nginx.conf
+│       └── conf.d/
+│           └── ...
+├── contracts/                   # Data Contracts kết nối giữa quá trình Quét và Khắc phục
+│   ├── scan_result.json         # Kết quả quét bảo mật (output của scanner)
+│   ├── config_ast_2221.json     # AST JSON của Nginx "Bad" Server (port 2221)
+│   ├── config_ast_2222.json     # AST JSON của Nginx "Good" Server (port 2222)
+│   └── ...
+├── core/                        # Các module lõi và kịch bản thao tác hệ thống
+│   ├── models.py                # Định nghĩa ORM (SQLAlchemy): Server, ScanResult, FailedRule, Remediation
+│   ├── test_db.py               # Script khởi tạo và kiểm tra cơ sở dữ liệu SQLite
+│   ├── fetcher.py               # CLI: Tải cấu hình Nginx từ server qua SSH
+│   ├── parser.py                # CLI: Phân tích nginx.conf sang JSON AST (dùng crossplane)
+│   └── remedyEng/               # Engine Khắc phục - Inject cấu hình an toàn vào AST
+│       ├── backup.py            # CLI: Backup trước khi sửa file cấu hình của Nginx
+│       ├── ast_locator.py       # CLI: Định vị block trong cây AST theo context_path
+│       ├── injector.py          # CLI: Inject/cập nhật directive vào AST dựa trên failed_rules
+│       ├── builder.py           # CLI: Build ngược từ AST JSON sang nginx config text
+│       ├── diff.py              # CLI: So sánh file nginx gốc và file đã remediate (dry-run review)
+│       └── paths.py             # Khai báo đường dẫn gốc dùng chung cho remedy engine
+├── tmp/                         # (Tự sinh) Cấu hình Nginx thô tải về từ server qua SSH
+│   ├── ast_modified/            # (Tự sinh) AST JSON sau khi inject remediation
+│   │   └── config_ast_<port>_modified.json
+│   ├── nginx_raw_<port>/        # VD: nginx_raw_2221/ - toàn bộ /etc/nginx từ server
+│   └── nginx_fixed_<port>/      # (Tự sinh) File nginx.conf text sau khi build lại từ AST
+├── Dockerfile                   # Build image Docker (cài Nginx, cấu hình SSH, giả lập SSL)
+├── docker-compose.yml           # Khởi chạy cụm 2 servers Nginx giả lập (port 2221, 2222)
+├── devsecops_nginx.db           # Cơ sở dữ liệu SQLite (Tự sinh sau khi khởi tạo)
+├── cis_rule.md                  # Tài liệu 5 quy tắc cấu hình bảo mật chuẩn CIS
+└── README.md                    # Tổng quan dự án (File này)
 ```
 
 ---
@@ -51,6 +70,9 @@ pip install crossplane
 
 # Cài đặt SQLAlchemy để sử dụng cơ sở dữ liệu
 pip install sqlalchemy
+
+# Cài đặt Paramiko để SSH/backup cấu hình từ server
+pip install paramiko
 ```
 
 ### 2. Khởi tạo Cơ sở dữ liệu
@@ -115,7 +137,7 @@ Crossplane cho phép phân tích cấu hình Nginx thành định dạng JSON AS
 **Tạo file AST từ cấu hình nginx.conf:**
 
 ```bash
-crossplane parse configs/nginx_bad.conf --out contracts/config_ast.json
+crossplane parse configs/nginx_five_errors/nginx.conf --out contracts/config_ast_manual.json
 ```
 
 ### 5. Tải cấu hình Nginx từ Server thông qua SSH (NginxFetcher)
@@ -171,5 +193,197 @@ python core/parser.py -P 2222
 2. **Tiền xử lý:** Quét và chuẩn hóa các chỉ thị `include` bằng Regex để tránh lỗi "No such file or directory".
 3. **Trích xuất AST:** Sử dụng thư viện `crossplane` để chuyển đổi sang định dạng JSON.
 4. **Xuất kết quả:** Lưu Data Contract vào thư mục `contracts/` phục vụ cho bước quét bảo mật tiếp theo.
+
+---
+
+### 7. Inject Khắc phục vào AST (remedyEng)
+
+Module `core/remedyEng/` là **Engine Khắc phục** — nhận vào file AST JSON đã được phân tích và danh sách các quy tắc vi phạm (`failed_rules`), sau đó tự động chèn/cập nhật các directive an toàn vào đúng vị trí trong cây AST.
+
+#### 7.1. Kiến trúc remedyEng
+
+| File             | Vai trò                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| `backup.py`      | Kết nối SSH bằng `paramiko` để backup thư mục cấu hình Nginx trên server/container   |
+| `ast_locator.py` | Định vị (locate) các block AST theo `context_path` (VD: `["http", "server"]`)        |
+| `injector.py`    | Inject/cập nhật directive an toàn vào block AST, xuất file `_modified.json`          |
+| `builder.py`     | Chuyển AST JSON đã chỉnh sửa về lại text cấu hình Nginx bằng `crossplane.build()`    |
+| `diff.py`        | So sánh `nginx.conf` gốc và file đã build sau remediate bằng Unified Diff            |
+| `paths.py`       | Tính `ROOT_DIR` của project để các module trong `remedyEng` dùng đường dẫn nhất quán |
+
+#### 7.2. Viết `mock_failed_rules` — Định dạng dữ liệu đầu vào
+
+`mock_failed_rules` là một Python list mô phỏng dữ liệu từ cột `FailedRule` trong Database (do bước Scanner quét ra). Mỗi phần tử là một dict với cấu trúc sau:
+
+```python
+mock_failed_rules = [
+    {
+        "rule_id": "CIS_2.1.3",               # ID quy tắc CIS
+        "rule_name": "Ensure server_tokens is off",  # Mô tả quy tắc
+        "severity": "High",                    # Mức độ: High / Medium / Low
+        "target_context": ["http"],            # Đường dẫn block trong AST cần vá
+                                               # VD: ["http"] -> block http {}
+                                               #     ["http", "server"] -> block server {} bên trong http {}
+        "recommended_directive": {
+            "directive": "server_tokens",      # Tên directive Nginx cần thêm/ghi đè
+            "args": ["off"]                    # Danh sách tham số
+        }
+    },
+    {
+        "rule_id": "CIS_5.1.3",
+        "rule_name": "Ensure X-Frame-Options header is configured",
+        "severity": "Medium",
+        "target_context": ["http", "server"],  # Áp dụng cho TẤT CẢ block server trong http
+        "recommended_directive": {
+            "directive": "add_header",
+            "args": ["X-Frame-Options", "SAMEORIGIN"]
+            # Chú ý: add_header được xử lý đặc biệt — so khớp theo args[0] (tên header)
+            # để tránh tạo nhiều dòng add_header trùng tên
+        }
+    },
+    {
+        "rule_id": "CIS_3.1",
+        "rule_name": "Ensure outdated SSL protocols are disabled",
+        "severity": "Medium",
+        "target_context": ["http", "server"],
+        "recommended_directive": {
+            "directive": "ssl_protocols",
+            "args": ["TLSv1.2", "TLSv1.3"]
+            # Tool sẽ TỰ ĐỘNG GHI ĐÈ nếu ssl_protocols đã tồn tại với giá trị cũ
+        }
+    }
+]
+```
+
+**Quy tắc viết `target_context`:**
+
+| `target_context`                 | Directive được inject vào                          |
+| -------------------------------- | -------------------------------------------------- |
+| `["http"]`                       | Block `http { }` ở cấp toàn cục                    |
+| `["http", "server"]`             | Tất cả các block `server { }` nằm trong `http { }` |
+| `["http", "server", "location"]` | Tất cả block `location { }` trong mỗi `server { }` |
+
+**Logic Inject của injector.py:**
+
+- Nếu directive **đã tồn tại** trong block → **Ghi đè** (`args` mới)
+- Nếu directive **chưa tồn tại** → **Thêm mới** vào cuối block
+- Trường hợp `add_header` → So sánh thêm `args[0]` (tên header) để tránh trùng
+
+#### 7.3. Chạy Injector để sinh Modified AST
+
+> **Yêu cầu:** Đã có file AST JSON tại `contracts/` (sinh ra từ bước 6).
+> Nên chạy lệnh từ **project root** (thư mục chứa `README.md`) để các đường dẫn input/output đúng mặc định.
+
+**Bước 1:** Backup file cấu hình Nginx trước khi sửa đổi
+
+```bash
+python core/remedyEng/backup.py
+```
+
+> `backup.py` hiện dùng cấu hình test cứng (`127.0.0.1:2221`, user/pass `root/root`, source `/etc/nginx`) và tạo bản sao dạng `/etc/nginx_backup_YYYYMMDD_HHMMSS` trên server.
+
+**Bước 2:** Chạy injector với file AST của Nginx "Bad" Server (port 2221):
+
+```bash
+python core/remedyEng/injector.py -i contracts/config_ast_2221.json
+```
+
+File đầu ra sẽ được tự động tạo tại:
+
+```
+tmp/ast_modified/config_ast_2221_modified.json
+```
+
+**Hoặc chỉ định đường dẫn output thủ công:**
+
+```bash
+python core/remedyEng/injector.py -i contracts/config_ast_2221.json -o contracts/config_ast_2221_patched.json
+```
+
+**Tham số CLI của `injector.py`:**
+
+| Tham số          | Bắt buộc | Mô tả                                                                        |
+| ---------------- | -------- | ---------------------------------------------------------------------------- |
+| `-i`, `--input`  | ✅       | Đường dẫn file JSON AST gốc (tương đối từ project root)                      |
+| `-o`, `--output` | ❌       | Đường dẫn file JSON output. Mặc định: `tmp/ast_modified/<tên>_modified.json` |
+
+**Xem help:**
+
+```bash
+python core/remedyEng/injector.py -h
+```
+
+#### 7.4. Build lại file nginx.conf từ Modified AST (builder.py)
+
+Sau khi có file AST đã vá, dùng `builder.py` để chuyển về dạng text cấu hình Nginx:
+
+```bash
+python core/remedyEng/builder.py \
+  -i tmp/ast_modified/config_ast_2221_modified.json \
+  -o tmp/nginx_fixed_2221/nginx_fixed.conf
+```
+
+Bạn có thể mở file output để review trước khi apply lên server/container.
+
+#### 7.5. Kiểm tra kết quả Modified AST
+
+Sau khi chạy xong, mở file `tmp/ast_modified/config_ast_2221_modified.json` và tìm kiếm các directive đã được vá:
+
+```bash
+# Kiểm tra server_tokens đã được thêm vào block http chưa
+grep -A1 '"server_tokens"' tmp/ast_modified/config_ast_2221_modified.json
+
+# Kiểm tra X-Frame-Options đã được inject vào các block server chưa
+grep -A2 '"X-Frame-Options"' tmp/ast_modified/config_ast_2221_modified.json
+
+# Kiểm tra ssl_protocols đã được ghi đè sang TLSv1.2/TLSv1.3 chưa
+grep -A3 '"ssl_protocols"' tmp/ast_modified/config_ast_2221_modified.json
+```
+
+#### 7.6. So sánh trước/sau bằng `diff.py` (Dry-run)
+
+Sau khi đã build lại file cấu hình, dùng `diff.py` để kiểm tra chính xác các dòng thay đổi trước khi apply lên server/container:
+
+```bash
+python core/remedyEng/diff.py \
+    --origin tmp/nginx_raw_2221/nginx.conf \
+    --modified tmp/nginx_fixed_2221/nginx_fixed.conf
+```
+
+Kết quả trả về là **Unified Diff** (dòng thêm `+`, dòng xóa `-`).
+
+- Nếu có thay đổi: review nội dung rồi mới apply thực tế.
+- Nếu không có thay đổi: tool sẽ in `Cấu hình đã an toàn, không có thay đổi nào được đề xuất.`
+
+#### 7.7. Kiểm tra nhanh context AST bằng `ast_locator.py`
+
+`ast_locator.py` hữu ích khi cần debug đường dẫn `target_context` trước khi inject.
+
+```bash
+python core/remedyEng/ast_locator.py -i contracts/config_ast_2221.json
+```
+
+Hiện file này chủ yếu phục vụ utility/debug nội bộ (đã có sẵn hàm `locate_blocks()` để `injector.py` sử dụng trực tiếp).
+
+#### 7.8. Luồng hoàn chỉnh từ Fetch → Parse → Inject → Build → Diff
+
+```
+[Docker Server :2221]
+        │
+        ▼  python core/fetcher.py -P 2221
+[tmp/nginx_raw_2221/]  ← Cấu hình Nginx thô (tải về qua SSH)
+        │
+        ▼  python core/parser.py -P 2221
+[contracts/config_ast_2221.json]  ← AST JSON đầy đủ (crossplane)
+        │
+        ▼  python core/remedyEng/injector.py -i contracts/config_ast_2221.json
+[tmp/ast_modified/config_ast_2221_modified.json]  ← AST đã vá lỗi bảo mật ✅
+    │
+    ▼  python core/remedyEng/builder.py -i tmp/ast_modified/config_ast_2221_modified.json -o tmp/nginx_fixed_2221/nginx_fixed.conf
+[tmp/nginx_fixed_2221/nginx_fixed.conf]  ← File cấu hình Nginx text sau khi remediate ✅
+    │
+    ▼  python core/remedyEng/diff.py --origin tmp/nginx_raw_2221/nginx.conf --modified tmp/nginx_fixed_2221/nginx_fixed.conf
+[Unified Diff Output]  ← So sánh thay đổi trước khi apply ✅
+```
 
 ---
