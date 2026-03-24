@@ -11,7 +11,7 @@
           "directive": "user",
           "line": 1,
           "args": [
-            "nginx"
+            "www-data"
           ]
         },
         {
@@ -22,13 +22,28 @@
           ]
         },
         {
+          "directive": "error_log",
+          "line": 5,
+          "args": [
+            "/var/log/nginx/error.log",
+            "error"
+          ]
+        },
+        {
+          "directive": "pid",
+          "line": 6,
+          "args": [
+            "/var/run/nginx.pid"
+          ]
+        },
+        {
           "directive": "events",
-          "line": 4,
+          "line": 8,
           "args": [],
           "block": [
             {
               "directive": "worker_connections",
-              "line": 5,
+              "line": 9,
               "args": [
                 "1024"
               ]
@@ -37,12 +52,12 @@
         },
         {
           "directive": "http",
-          "line": 8,
+          "line": 12,
           "args": [],
           "block": [
             {
               "directive": "include",
-              "line": 9,
+              "line": 13,
               "args": [
                 "mime.types"
               ],
@@ -51,94 +66,59 @@
               ]
             },
             {
-              "directive": "include",
-              "line": 10,
-              "args": [
-                "conf.d/*.conf"
-              ],
-              "includes": [
-                2,
-                3,
-                4,
-                5,
-                6
-              ]
-            },
-            {
               "directive": "default_type",
-              "line": 11,
+              "line": 14,
               "args": [
                 "application/octet-stream"
               ]
             },
             {
               "directive": "server_tokens",
-              "line": 14,
+              "line": 17,
               "args": [
                 "off"
               ]
             },
             {
-              "directive": "add_header",
-              "line": 17,
+              "directive": "access_log",
+              "line": 21,
               "args": [
-                "X-Frame-Options",
-                "SAMEORIGIN",
-                "always"
+                "off"
               ]
             },
             {
-              "directive": "add_header",
-              "line": 18,
+              "directive": "sendfile",
+              "line": 23,
               "args": [
-                "X-Content-Type-Options",
-                "nosniff",
-                "always"
+                "on"
               ]
             },
             {
-              "directive": "server",
-              "line": 20,
-              "args": [],
-              "block": [
-                {
-                  "directive": "listen",
-                  "line": 21,
-                  "args": [
-                    "80"
-                  ]
-                },
-                {
-                  "directive": "server_name",
-                  "line": 22,
-                  "args": [
-                    "localhost"
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "line": 24,
-                  "args": [
-                    "/"
-                  ],
-                  "block": [
-                    {
-                      "directive": "root",
-                      "line": 25,
-                      "args": [
-                        "/usr/share/nginx/html"
-                      ]
-                    },
-                    {
-                      "directive": "index",
-                      "line": 26,
-                      "args": [
-                        "index.html",
-                        "index.htm"
-                      ]
-                    }
-                  ]
-                }
+              "directive": "tcp_nopush",
+              "line": 24,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "tcp_nodelay",
+              "line": 25,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "keepalive_timeout",
+              "line": 26,
+              "args": [
+                "65"
+              ]
+            },
+            {
+              "directive": "types_hash_max_size",
+              "line": 27,
+              "args": [
+                "2048"
               ]
             },
             {
@@ -150,72 +130,114 @@
                   "directive": "listen",
                   "line": 31,
                   "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "line": 33,
+                  "args": [
                     "443",
-                    "ssl"
+                    "ssl",
+                    "default_server"
                   ]
                 },
                 {
                   "directive": "server_name",
-                  "line": 32,
+                  "line": 34,
                   "args": [
-                    "localhost"
+                    "_"
                   ]
                 },
                 {
                   "directive": "ssl_certificate",
-                  "line": 34,
+                  "line": 35,
                   "args": [
                     "/etc/ssl/mock_certs/nginx.crt"
                   ]
                 },
                 {
                   "directive": "ssl_certificate_key",
-                  "line": 35,
+                  "line": 36,
                   "args": [
                     "/etc/ssl/mock_certs/nginx.key"
                   ]
                 },
                 {
-                  "directive": "ssl_protocols",
-                  "line": 38,
+                  "directive": "ssl_reject_handshake",
+                  "line": 37,
                   "args": [
-                    "TLSv1.2",
-                    "TLSv1.3"
+                    "on"
                   ]
                 },
                 {
-                  "directive": "add_header",
-                  "line": 41,
+                  "directive": "error_page",
+                  "line": 40,
                   "args": [
-                    "Strict-Transport-Security",
-                    "max-age=31536000; includeSubDomains",
-                    "always"
+                    "404",
+                    "/404.html"
                   ]
                 },
                 {
                   "directive": "location",
-                  "line": 43,
+                  "line": 41,
                   "args": [
-                    "/"
+                    "=",
+                    "/404.html"
                   ],
                   "block": [
                     {
                       "directive": "root",
-                      "line": 44,
+                      "line": 42,
                       "args": [
                         "/usr/share/nginx/html"
                       ]
                     },
                     {
-                      "directive": "index",
-                      "line": 45,
+                      "directive": "internal",
+                      "line": 43,
+                      "args": []
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "line": 47,
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "line": 48,
                       "args": [
-                        "index.html",
-                        "index.htm"
+                        "all"
                       ]
                     }
                   ]
+                },
+                {
+                  "directive": "return",
+                  "line": 51,
+                  "args": [
+                    "444"
+                  ]
                 }
+              ]
+            },
+            {
+              "directive": "include",
+              "line": 54,
+              "args": [
+                "conf.d/*.conf"
+              ],
+              "includes": [
+                2,
+                3,
+                4,
+                5
               ]
             }
           ]
@@ -229,12 +251,12 @@
       "parsed": [
         {
           "directive": "types",
-          "line": 2,
+          "line": 1,
           "args": [],
           "block": [
             {
               "directive": "text/html",
-              "line": 3,
+              "line": 2,
               "args": [
                 "html",
                 "htm",
@@ -243,28 +265,28 @@
             },
             {
               "directive": "text/css",
-              "line": 4,
+              "line": 3,
               "args": [
                 "css"
               ]
             },
             {
               "directive": "text/xml",
-              "line": 5,
+              "line": 4,
               "args": [
                 "xml"
               ]
             },
             {
               "directive": "image/gif",
-              "line": 6,
+              "line": 5,
               "args": [
                 "gif"
               ]
             },
             {
               "directive": "image/jpeg",
-              "line": 7,
+              "line": 6,
               "args": [
                 "jpeg",
                 "jpg"
@@ -272,85 +294,70 @@
             },
             {
               "directive": "application/javascript",
-              "line": 8,
+              "line": 7,
               "args": [
                 "js"
               ]
             },
             {
               "directive": "application/atom+xml",
-              "line": 9,
+              "line": 8,
               "args": [
                 "atom"
               ]
             },
             {
               "directive": "application/rss+xml",
-              "line": 10,
+              "line": 9,
               "args": [
                 "rss"
               ]
             },
             {
               "directive": "text/mathml",
-              "line": 12,
+              "line": 10,
               "args": [
                 "mml"
               ]
             },
             {
               "directive": "text/plain",
-              "line": 13,
+              "line": 11,
               "args": [
                 "txt"
               ]
             },
             {
               "directive": "text/vnd.sun.j2me.app-descriptor",
-              "line": 14,
+              "line": 12,
               "args": [
                 "jad"
               ]
             },
             {
               "directive": "text/vnd.wap.wml",
-              "line": 15,
+              "line": 13,
               "args": [
                 "wml"
               ]
             },
             {
               "directive": "text/x-component",
-              "line": 16,
+              "line": 14,
               "args": [
                 "htc"
               ]
             },
             {
-              "directive": "image/avif",
-              "line": 18,
-              "args": [
-                "avif"
-              ]
-            },
-            {
               "directive": "image/png",
-              "line": 19,
+              "line": 16,
               "args": [
                 "png"
               ]
             },
             {
-              "directive": "image/svg+xml",
-              "line": 20,
-              "args": [
-                "svg",
-                "svgz"
-              ]
-            },
-            {
               "directive": "image/tiff",
-              "line": 21,
+              "line": 17,
               "args": [
                 "tif",
                 "tiff"
@@ -358,9 +365,38 @@
             },
             {
               "directive": "image/vnd.wap.wbmp",
-              "line": 22,
+              "line": 18,
               "args": [
                 "wbmp"
+              ]
+            },
+            {
+              "directive": "image/x-icon",
+              "line": 19,
+              "args": [
+                "ico"
+              ]
+            },
+            {
+              "directive": "image/x-jng",
+              "line": 20,
+              "args": [
+                "jng"
+              ]
+            },
+            {
+              "directive": "image/x-ms-bmp",
+              "line": 21,
+              "args": [
+                "bmp"
+              ]
+            },
+            {
+              "directive": "image/svg+xml",
+              "line": 22,
+              "args": [
+                "svg",
+                "svgz"
               ]
             },
             {
@@ -371,43 +407,15 @@
               ]
             },
             {
-              "directive": "image/x-icon",
-              "line": 24,
-              "args": [
-                "ico"
-              ]
-            },
-            {
-              "directive": "image/x-jng",
+              "directive": "application/font-woff",
               "line": 25,
-              "args": [
-                "jng"
-              ]
-            },
-            {
-              "directive": "image/x-ms-bmp",
-              "line": 26,
-              "args": [
-                "bmp"
-              ]
-            },
-            {
-              "directive": "font/woff",
-              "line": 28,
               "args": [
                 "woff"
               ]
             },
             {
-              "directive": "font/woff2",
-              "line": 29,
-              "args": [
-                "woff2"
-              ]
-            },
-            {
               "directive": "application/java-archive",
-              "line": 31,
+              "line": 26,
               "args": [
                 "jar",
                 "war",
@@ -416,35 +424,35 @@
             },
             {
               "directive": "application/json",
-              "line": 32,
+              "line": 27,
               "args": [
                 "json"
               ]
             },
             {
               "directive": "application/mac-binhex40",
-              "line": 33,
+              "line": 28,
               "args": [
                 "hqx"
               ]
             },
             {
               "directive": "application/msword",
-              "line": 34,
+              "line": 29,
               "args": [
                 "doc"
               ]
             },
             {
               "directive": "application/pdf",
-              "line": 35,
+              "line": 30,
               "args": [
                 "pdf"
               ]
             },
             {
               "directive": "application/postscript",
-              "line": 36,
+              "line": 31,
               "args": [
                 "ps",
                 "eps",
@@ -453,154 +461,98 @@
             },
             {
               "directive": "application/rtf",
-              "line": 37,
+              "line": 32,
               "args": [
                 "rtf"
               ]
             },
             {
               "directive": "application/vnd.apple.mpegurl",
-              "line": 38,
+              "line": 33,
               "args": [
                 "m3u8"
               ]
             },
             {
-              "directive": "application/vnd.google-earth.kml+xml",
-              "line": 39,
-              "args": [
-                "kml"
-              ]
-            },
-            {
-              "directive": "application/vnd.google-earth.kmz",
-              "line": 40,
-              "args": [
-                "kmz"
-              ]
-            },
-            {
               "directive": "application/vnd.ms-excel",
-              "line": 41,
+              "line": 34,
               "args": [
                 "xls"
               ]
             },
             {
               "directive": "application/vnd.ms-fontobject",
-              "line": 42,
+              "line": 35,
               "args": [
                 "eot"
               ]
             },
             {
               "directive": "application/vnd.ms-powerpoint",
-              "line": 43,
+              "line": 36,
               "args": [
                 "ppt"
               ]
             },
             {
-              "directive": "application/vnd.oasis.opendocument.graphics",
-              "line": 44,
-              "args": [
-                "odg"
-              ]
-            },
-            {
-              "directive": "application/vnd.oasis.opendocument.presentation",
-              "line": 45,
-              "args": [
-                "odp"
-              ]
-            },
-            {
-              "directive": "application/vnd.oasis.opendocument.spreadsheet",
-              "line": 46,
-              "args": [
-                "ods"
-              ]
-            },
-            {
-              "directive": "application/vnd.oasis.opendocument.text",
-              "line": 47,
-              "args": [
-                "odt"
-              ]
-            },
-            {
-              "directive": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-              "line": 48,
-              "args": [
-                "pptx"
-              ]
-            },
-            {
-              "directive": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              "line": 50,
-              "args": [
-                "xlsx"
-              ]
-            },
-            {
-              "directive": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-              "line": 52,
-              "args": [
-                "docx"
-              ]
-            },
-            {
               "directive": "application/vnd.wap.wmlc",
-              "line": 54,
+              "line": 37,
               "args": [
                 "wmlc"
               ]
             },
             {
-              "directive": "application/wasm",
-              "line": 55,
+              "directive": "application/vnd.google-earth.kml+xml",
+              "line": 38,
               "args": [
-                "wasm"
+                "kml"
+              ]
+            },
+            {
+              "directive": "application/vnd.google-earth.kmz",
+              "line": 39,
+              "args": [
+                "kmz"
               ]
             },
             {
               "directive": "application/x-7z-compressed",
-              "line": 56,
+              "line": 40,
               "args": [
                 "7z"
               ]
             },
             {
               "directive": "application/x-cocoa",
-              "line": 57,
+              "line": 41,
               "args": [
                 "cco"
               ]
             },
             {
               "directive": "application/x-java-archive-diff",
-              "line": 58,
+              "line": 42,
               "args": [
                 "jardiff"
               ]
             },
             {
               "directive": "application/x-java-jnlp-file",
-              "line": 59,
+              "line": 43,
               "args": [
                 "jnlp"
               ]
             },
             {
               "directive": "application/x-makeself",
-              "line": 60,
+              "line": 44,
               "args": [
                 "run"
               ]
             },
             {
               "directive": "application/x-perl",
-              "line": 61,
+              "line": 45,
               "args": [
                 "pl",
                 "pm"
@@ -608,7 +560,7 @@
             },
             {
               "directive": "application/x-pilot",
-              "line": 62,
+              "line": 46,
               "args": [
                 "prc",
                 "pdb"
@@ -616,42 +568,42 @@
             },
             {
               "directive": "application/x-rar-compressed",
-              "line": 63,
+              "line": 47,
               "args": [
                 "rar"
               ]
             },
             {
               "directive": "application/x-redhat-package-manager",
-              "line": 64,
+              "line": 48,
               "args": [
                 "rpm"
               ]
             },
             {
               "directive": "application/x-sea",
-              "line": 65,
+              "line": 49,
               "args": [
                 "sea"
               ]
             },
             {
               "directive": "application/x-shockwave-flash",
-              "line": 66,
+              "line": 50,
               "args": [
                 "swf"
               ]
             },
             {
               "directive": "application/x-stuffit",
-              "line": 67,
+              "line": 51,
               "args": [
                 "sit"
               ]
             },
             {
               "directive": "application/x-tcl",
-              "line": 68,
+              "line": 52,
               "args": [
                 "tcl",
                 "tk"
@@ -659,7 +611,7 @@
             },
             {
               "directive": "application/x-x509-ca-cert",
-              "line": 69,
+              "line": 53,
               "args": [
                 "der",
                 "pem",
@@ -668,35 +620,35 @@
             },
             {
               "directive": "application/x-xpinstall",
-              "line": 70,
+              "line": 54,
               "args": [
                 "xpi"
               ]
             },
             {
               "directive": "application/xhtml+xml",
-              "line": 71,
+              "line": 55,
               "args": [
                 "xhtml"
               ]
             },
             {
               "directive": "application/xspf+xml",
-              "line": 72,
+              "line": 56,
               "args": [
                 "xspf"
               ]
             },
             {
               "directive": "application/zip",
-              "line": 73,
+              "line": 57,
               "args": [
                 "zip"
               ]
             },
             {
               "directive": "application/octet-stream",
-              "line": 75,
+              "line": 59,
               "args": [
                 "bin",
                 "exe",
@@ -705,21 +657,21 @@
             },
             {
               "directive": "application/octet-stream",
-              "line": 76,
+              "line": 60,
               "args": [
                 "deb"
               ]
             },
             {
               "directive": "application/octet-stream",
-              "line": 77,
+              "line": 61,
               "args": [
                 "dmg"
               ]
             },
             {
               "directive": "application/octet-stream",
-              "line": 78,
+              "line": 62,
               "args": [
                 "iso",
                 "img"
@@ -727,7 +679,7 @@
             },
             {
               "directive": "application/octet-stream",
-              "line": 79,
+              "line": 63,
               "args": [
                 "msi",
                 "msp",
@@ -736,7 +688,7 @@
             },
             {
               "directive": "audio/midi",
-              "line": 81,
+              "line": 65,
               "args": [
                 "mid",
                 "midi",
@@ -745,100 +697,94 @@
             },
             {
               "directive": "audio/mpeg",
-              "line": 82,
+              "line": 66,
               "args": [
                 "mp3"
               ]
             },
             {
               "directive": "audio/ogg",
-              "line": 83,
+              "line": 67,
               "args": [
                 "ogg"
               ]
             },
             {
               "directive": "audio/x-m4a",
-              "line": 84,
+              "line": 68,
               "args": [
                 "m4a"
               ]
             },
             {
               "directive": "audio/x-realaudio",
-              "line": 85,
+              "line": 69,
               "args": [
                 "ra"
               ]
             },
             {
               "directive": "video/3gpp",
-              "line": 87,
+              "line": 71,
               "args": [
                 "3gpp",
                 "3gp"
               ]
             },
             {
-              "directive": "video/mp2t",
-              "line": 88,
-              "args": [
-                "ts"
-              ]
-            },
-            {
               "directive": "video/mp4",
-              "line": 89,
+              "line": 72,
               "args": [
                 "mp4"
               ]
             },
             {
               "directive": "video/mpeg",
-              "line": 90,
+              "line": 73,
               "args": [
                 "mpeg",
-                "mpg"
+                "mpg",
+                "pe"
               ]
             },
             {
               "directive": "video/quicktime",
-              "line": 91,
+              "line": 74,
               "args": [
                 "mov"
               ]
             },
             {
               "directive": "video/webm",
-              "line": 92,
+              "line": 75,
               "args": [
                 "webm"
               ]
             },
             {
               "directive": "video/x-flv",
-              "line": 93,
+              "line": 76,
               "args": [
                 "flv"
               ]
             },
             {
               "directive": "video/x-m4v",
-              "line": 94,
+              "line": 77,
               "args": [
                 "m4v"
               ]
             },
             {
               "directive": "video/x-mng",
-              "line": 95,
+              "line": 78,
               "args": [
                 "mng"
               ]
             },
             {
               "directive": "video/x-ms-asf",
-              "line": 96,
+              "line": 79,
               "args": [
                 "asx",
                 "asf"
@@ -846,14 +792,14 @@
             },
             {
               "directive": "video/x-ms-wmv",
-              "line": 97,
+              "line": 80,
               "args": [
                 "wmv"
               ]
             },
             {
               "directive": "video/x-msvideo",
-              "line": 98,
+              "line": 81,
               "args": [
                 "avi"
               ]
@@ -863,7 +809,7 @@
       ]
     },
     {
-      "file": "./tmp/nginx_raw_2222/conf.d/admin.conf",
+      "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -874,172 +820,37 @@
           "block": [
             {
               "directive": "listen",
-              "line": 2,
-              "args": [
-                "8443",
-                "ssl"
-              ]
-            },
-            {
-              "directive": "server_name",
               "line": 3,
-              "args": [
-                "admin.local"
-              ]
-            },
-            {
-              "directive": "ssl_certificate",
-              "line": 5,
-              "args": [
-                "/etc/ssl/mock_certs/admin.crt"
-              ]
-            },
-            {
-              "directive": "ssl_certificate_key",
-              "line": 6,
-              "args": [
-                "/etc/ssl/mock_certs/admin.key"
-              ]
-            },
-            {
-              "directive": "ssl_protocols",
-              "line": 9,
-              "args": [
-                "TLSv1.2",
-                "TLSv1.3"
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 11,
-              "args": [
-                "/"
-              ],
-              "block": [
-                {
-                  "directive": "root",
-                  "line": 12,
-                  "args": [
-                    "/var/www/admin"
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "file": "./tmp/nginx_raw_2222/conf.d/api.conf",
-      "status": "ok",
-      "errors": [],
-      "parsed": [
-        {
-          "directive": "server",
-          "line": 1,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 2,
-              "args": [
-                "8080"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 3,
-              "args": [
-                "api.local"
-              ]
-            },
-            {
-              "directive": "server_tokens",
-              "line": 6,
-              "args": [
-                "off"
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 8,
-              "args": [
-                "/"
-              ],
-              "block": [
-                {
-                  "directive": "return",
-                  "line": 9,
-                  "args": [
-                    "200",
-                    "{\"status\":\"ok\"}"
-                  ]
-                },
-                {
-                  "directive": "add_header",
-                  "line": 10,
-                  "args": [
-                    "Content-Type",
-                    "application/json"
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "file": "./tmp/nginx_raw_2222/conf.d/default.conf",
-      "status": "ok",
-      "errors": [],
-      "parsed": [
-        {
-          "directive": "server",
-          "line": 1,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 2,
               "args": [
                 "80"
               ]
             },
             {
               "directive": "server_name",
-              "line": 3,
+              "line": 4,
               "args": [
-                "localhost"
+                "admin.emarket.me"
               ]
             },
             {
-              "directive": "location",
-              "line": 7,
+              "directive": "root",
+              "line": 8,
               "args": [
-                "/"
-              ],
-              "block": [
-                {
-                  "directive": "root",
-                  "line": 8,
-                  "args": [
-                    "/usr/share/nginx/html"
-                  ]
-                },
-                {
-                  "directive": "index",
-                  "line": 9,
-                  "args": [
-                    "index.html",
-                    "index.htm"
-                  ]
-                }
+                "/var/www/emarket/admin/public"
+              ]
+            },
+            {
+              "directive": "index",
+              "line": 9,
+              "args": [
+                "index.php",
+                "index.html",
+                "index.htm"
               ]
             },
             {
               "directive": "error_page",
-              "line": 16,
+              "line": 12,
               "args": [
                 "500",
                 "502",
@@ -1050,7 +861,7 @@
             },
             {
               "directive": "location",
-              "line": 17,
+              "line": 13,
               "args": [
                 "=",
                 "/50x.html"
@@ -1058,9 +869,56 @@
               "block": [
                 {
                   "directive": "root",
-                  "line": 18,
+                  "line": 14,
                   "args": [
                     "/usr/share/nginx/html"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 18,
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "line": 19,
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "line": 20,
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "line": 21,
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 24,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "proxy_pass",
+                  "line": 26,
+                  "args": [
+                    "http://127.0.0.1:8000"
                   ]
                 }
               ]
@@ -1070,7 +928,7 @@
       ]
     },
     {
-      "file": "./tmp/nginx_raw_2222/conf.d/legacy.conf",
+      "file": "./tmp/nginx_raw_2222/conf.d/customer.emarket.me.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -1081,57 +939,72 @@
           "block": [
             {
               "directive": "listen",
-              "line": 2,
+              "line": 3,
               "args": [
                 "80"
               ]
             },
             {
               "directive": "server_name",
-              "line": 3,
+              "line": 4,
               "args": [
-                "legacy.local"
+                "customer.emarket.me"
               ]
             },
             {
-              "directive": "add_header",
-              "line": 6,
+              "directive": "error_page",
+              "line": 9,
               "args": [
-                "Strict-Transport-Security",
-                "max-age=31536000; includeSubDomains",
-                "always"
-              ]
-            },
-            {
-              "directive": "add_header",
-              "line": 7,
-              "args": [
-                "X-Frame-Options",
-                "SAMEORIGIN",
-                "always"
-              ]
-            },
-            {
-              "directive": "add_header",
-              "line": 8,
-              "args": [
-                "X-Content-Type-Options",
-                "nosniff",
-                "always"
+                "404",
+                "/404.html"
               ]
             },
             {
               "directive": "location",
               "line": 10,
               "args": [
-                "/old-app"
+                "=",
+                "/404.html"
+              ],
+              "block": [
+                {
+                  "directive": "root",
+                  "line": 11,
+                  "args": [
+                    "/var/www/error_pages"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 15,
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "line": 16,
+                  "args": [
+                    "all"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 19,
+              "args": [
+                "/"
               ],
               "block": [
                 {
                   "directive": "proxy_pass",
-                  "line": 11,
+                  "line": 21,
                   "args": [
-                    "http://127.0.0.1:9000"
+                    "http://127.0.0.1:8002"
                   ]
                 }
               ]
@@ -1141,7 +1014,7 @@
       ]
     },
     {
-      "file": "./tmp/nginx_raw_2222/conf.d/static.conf",
+      "file": "./tmp/nginx_raw_2222/conf.d/emarket.me.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -1152,46 +1025,191 @@
           "block": [
             {
               "directive": "listen",
-              "line": 2,
+              "line": 3,
               "args": [
                 "80"
               ]
             },
             {
               "directive": "server_name",
-              "line": 3,
+              "line": 4,
               "args": [
-                "static.local"
+                "emarket.me",
+                "www.emarket.me"
               ]
             },
             {
-              "directive": "add_header",
-              "line": 6,
+              "directive": "root",
+              "line": 8,
               "args": [
-                "X-Content-Type-Options",
-                "nosniff",
-                "always"
+                "/var/www/emarket/spa/dist"
+              ]
+            },
+            {
+              "directive": "index",
+              "line": 9,
+              "args": [
+                "index.html"
+              ]
+            },
+            {
+              "directive": "error_page",
+              "line": 12,
+              "args": [
+                "404",
+                "/custom_404.html"
               ]
             },
             {
               "directive": "location",
-              "line": 8,
+              "line": 13,
               "args": [
-                "/assets"
+                "=",
+                "/custom_404.html"
               ],
               "block": [
                 {
-                  "directive": "alias",
-                  "line": 9,
+                  "directive": "root",
+                  "line": 14,
                   "args": [
-                    "/var/www/assets"
+                    "/var/www/error_pages"
                   ]
-                },
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 18,
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
                 {
-                  "directive": "autoindex",
-                  "line": 10,
+                  "directive": "deny",
+                  "line": 19,
                   "args": [
-                    "on"
+                    "all"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 22,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "try_files",
+                  "line": 23,
+                  "args": [
+                    "$uri",
+                    "$uri/",
+                    "/index.html"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 26,
+              "args": [
+                "/api"
+              ],
+              "block": [
+                {
+                  "directive": "proxy_pass",
+                  "line": 28,
+                  "args": [
+                    "http://127.0.0.1:8000"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "./tmp/nginx_raw_2222/conf.d/vendor.emarket.me.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 3,
+              "args": [
+                "80"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 4,
+              "args": [
+                "vendor.emarket.me"
+              ]
+            },
+            {
+              "directive": "error_page",
+              "line": 9,
+              "args": [
+                "403",
+                "/403.html"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 10,
+              "args": [
+                "=",
+                "/403.html"
+              ],
+              "block": [
+                {
+                  "directive": "root",
+                  "line": 11,
+                  "args": [
+                    "/var/www/error_pages"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 15,
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "line": 16,
+                  "args": [
+                    "all"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 19,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "proxy_pass",
+                  "line": 21,
+                  "args": [
+                    "http://127.0.0.1:8001"
                   ]
                 }
               ]
