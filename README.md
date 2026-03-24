@@ -1,15 +1,15 @@
 # SecRemedy
 
-**SecRemedy** là một công cụ tự động đánh giá bảo mật và khắc phục lỗi cấu hình cho Nginx, dựa trên các tiêu chuẩn **CIS Benchmark**. Dự án sử dụng `crossplane` để phân tích cấu hình Nginx thành định dạng JSON AST (Abstract Syntax Tree), tiến hành quét tự động tìm kiếm các điểm yếu, sinh ra báo cáo và quản lý luồng đề xuất khắc phục vào cơ sở dữ liệu SQLite.
+**SecRemedy** là một công cụ tự động đánh giá bảo mật và khắc phục lỗi cấu hình cho Nginx, dựa trên các tiêu chuẩn **CIS Benchmark v3.0.0**. Dự án sử dụng `crossplane` để phân tích cấu hình Nginx thành định dạng JSON AST (Abstract Syntax Tree), tiến hành quét tự động tìm kiếm các điểm yếu, sinh ra báo cáo và quản lý luồng đề xuất khắc phục vào cơ sở dữ liệu SQLite.
 
 ---
 
 ## 🚀 Tính năng chính
 
-- **Kiểm tra bảo mật tự động:** Đánh giá cấu hình Nginx dựa trên 5 quy tắc trọng điểm của CIS (Ẩn Server Tokens, thiết lập HSTS, phòng chống Clickjacking, chống MIME Sniffing, giới hạn các giao thức TLS hiện đại).
+- **Kiểm tra bảo mật tự động:** Đánh giá cấu hình Nginx dựa trên **10 quy tắc trọng điểm** của CIS Benchmark v3.0.0 (xem chi tiết tại [`first-ten-recommendations.md`](first-ten-recommendations.md).
 - **Phân tích cấu hình (AST):** Ứng dụng `crossplane` để chuyển đổi tập tin `nginx.conf` sang định dạng JSON, giúp phân tích cấu trúc cấu hình một cách có hệ thống.
 - **Tự động đề xuất khắc phục (Remediation):** Khi tìm thấy các quy tắc vi phạm, hệ thống sinh ra báo cáo dạng hợp đồng dữ liệu (Data Contract) để đề xuất chỉ thị cấu hình chính xác (Ví dụ: `server_tokens off;`), hỗ trợ luồng xét duyệt an toàn trước khi áp dụng.
-- **Môi trường giả lập Docker Mock Servers:** Tích hợp sẵn 2 container Nginx (cấu hình yếu kém và cấu hình chuẩn) kèm theo dịch vụ SSH giả lập để dễ dàng cho việc phát triển và kiểm thử tự động.
+- **Môi trường giả lập Docker Mock Servers:** Tích hợp sẵn 2 container Nginx với các bộ vi phạm CIS khác nhau (Rule 1–5 và Rule 6–10), mount trực tiếp từ thư mục `tests/` để dễ dàng cho việc phát triển và kiểm thử tự động.
 - **Quản lý dữ liệu tập trung:** Ứng dụng SQLAlchemy kết nối với SQLite (`devsecops_nginx.db`) để lưu trữ dữ liệu vòng đời máy chủ, kết quả quét, các quy tắc bị lỗi và tiến trình khắc phục.
 
 ---
@@ -18,42 +18,57 @@
 
 ```text
 SecRemedy/
-├── configs/                     # Lưu trữ các file cấu hình Nginx mẫu để kiểm thử
-│   ├── nginx_five_errors/       # Cấu hình Nginx với 5 lỗi bảo mật mẫu
+├── core/                             # Các engine lõi xử lý logic DevSecOps
+│   ├── scannerEng/                   # Scanner Engine — Quét và đánh giá bảo mật
+│   │   ├── models.py                 # Định nghĩa ORM (SQLAlchemy): Server, ScanResult, FailedRule, Remediation
+│   │   ├── test_db.py                # Script khởi tạo và kiểm tra cơ sở dữ liệu SQLite
+│   │   ├── fetcher.py                # CLI: Tải cấu hình Nginx từ server qua SSH
+│   │   └── parser.py                 # CLI: Phân tích nginx.conf sang JSON AST (dùng crossplane)
+│   └── remedyEng/                    # Remediation Engine — Inject cấu hình an toàn vào AST
+│       ├── backup.py                 # CLI: Backup trước khi sửa file cấu hình của Nginx
+│       ├── ast_locator.py            # CLI: Định vị block trong cây AST theo context_path
+│       ├── injector.py               # CLI: Inject/cập nhật directive vào AST dựa trên failed_rules
+│       ├── builder.py                # CLI: Build ngược từ AST JSON sang nginx config text
+│       ├── diff.py                   # CLI: So sánh file nginx gốc và file đã remediate (dry-run review)
+│       └── paths.py                  # Khai báo đường dẫn gốc dùng chung cho remedy engine
+├── contracts/                        # Data Contracts kết nối giữa quá trình Quét và Khắc phục
+│   ├── scan_result.json              # Kết quả quét bảo mật (output của scanner)
+│   ├── config_ast_2221.json          # AST JSON của Nginx VPS 1–5 (port 2221)
+│   └── config_ast_2222.json          # AST JSON của Nginx VPS 6–10 (port 2222)
+├── tests/                            # Bộ cấu hình Nginx giả lập để kiểm thử CIS compliance
+│   ├── vps-one-to-five/              # VPS giả lập: Vi phạm Rule 1–5, tuân thủ Rule 6–10
 │   │   ├── nginx.conf
-│   │   └── conf.d/
-│           └── ...
-│   └── nginx_no_error/          # Cấu hình Nginx chuẩn, không lỗi bảo mật
+│   │   ├── conf.d/
+│   │   │   ├── emarket.me.conf
+│   │   │   ├── admin.emarket.me.conf
+│   │   │   ├── customer.emarket.me.conf
+│   │   │   └── vendor.emarket.me.conf
+│   │   ├── mime.types
+│   │   ├── fastcgi_params
+│   │   └── proxy_params
+│   └── vps-six-to-then/              # VPS giả lập: Vi phạm Rule 6–10, tuân thủ Rule 1–5
 │       ├── nginx.conf
-│       └── conf.d/
-│           └── ...
-├── contracts/                   # Data Contracts kết nối giữa quá trình Quét và Khắc phục
-│   ├── scan_result.json         # Kết quả quét bảo mật (output của scanner)
-│   ├── config_ast_2221.json     # AST JSON của Nginx "Bad" Server (port 2221)
-│   ├── config_ast_2222.json     # AST JSON của Nginx "Good" Server (port 2222)
-│   └── ...
-├── core/                        # Các module lõi và kịch bản thao tác hệ thống
-│   ├── models.py                # Định nghĩa ORM (SQLAlchemy): Server, ScanResult, FailedRule, Remediation
-│   ├── test_db.py               # Script khởi tạo và kiểm tra cơ sở dữ liệu SQLite
-│   ├── fetcher.py               # CLI: Tải cấu hình Nginx từ server qua SSH
-│   ├── parser.py                # CLI: Phân tích nginx.conf sang JSON AST (dùng crossplane)
-│   └── remedyEng/               # Engine Khắc phục - Inject cấu hình an toàn vào AST
-│       ├── backup.py            # CLI: Backup trước khi sửa file cấu hình của Nginx
-│       ├── ast_locator.py       # CLI: Định vị block trong cây AST theo context_path
-│       ├── injector.py          # CLI: Inject/cập nhật directive vào AST dựa trên failed_rules
-│       ├── builder.py           # CLI: Build ngược từ AST JSON sang nginx config text
-│       ├── diff.py              # CLI: So sánh file nginx gốc và file đã remediate (dry-run review)
-│       └── paths.py             # Khai báo đường dẫn gốc dùng chung cho remedy engine
-├── tmp/                         # (Tự sinh) Cấu hình Nginx thô tải về từ server qua SSH
-│   ├── ast_modified/            # (Tự sinh) AST JSON sau khi inject remediation
+│       ├── conf.d/
+│       │   ├── emarket.me.conf
+│       │   ├── admin.emarket.me.conf
+│       │   ├── customer.emarket.me.conf
+│       │   └── vendor.emarket.me.conf
+│       ├── mime.types
+│       ├── fastcgi_params
+│       └── proxy_params
+├── tmp/                              # (Tự sinh, gitignored) Dữ liệu tạm trong quá trình xử lý
+│   ├── ast_modified/                 # AST JSON sau khi inject remediation
 │   │   └── config_ast_<port>_modified.json
-│   ├── nginx_raw_<port>/        # VD: nginx_raw_2221/ - toàn bộ /etc/nginx từ server
-│   └── nginx_fixed_<port>/      # (Tự sinh) File nginx.conf text sau khi build lại từ AST
-├── Dockerfile                   # Build image Docker (cài Nginx, cấu hình SSH, giả lập SSL)
-├── docker-compose.yml           # Khởi chạy cụm 2 servers Nginx giả lập (port 2221, 2222)
-├── devsecops_nginx.db           # Cơ sở dữ liệu SQLite (Tự sinh sau khi khởi tạo)
-├── cis_rule.md                  # Tài liệu 5 quy tắc cấu hình bảo mật chuẩn CIS
-└── README.md                    # Tổng quan dự án (File này)
+│   ├── nginx_raw_<port>/             # VD: nginx_raw_2221/ — toàn bộ /etc/nginx từ server
+│   └── nginx_fixed_<port>/           # File nginx.conf text sau khi build lại từ AST
+├── Dockerfile                        # Build image Docker (Nginx 1.28, SSH, SSL giả lập)
+├── docker-compose.yml                # Khởi chạy cụm 2 servers Nginx giả lập (port 2221, 2222)
+├── first-ten-recommendations.md      # 10 quy tắc CIS Benchmark chi tiết (Audit, Remediation, ...)
+├── backend_data_flow.txt             # Sơ đồ luồng dữ liệu Core Engines
+├── general_data_flow.txt             # Sơ đồ kiến trúc tổng thể 4 tầng (Frontend → Backend → Core → Infra)
+├── cis_rule.md                       # Tóm tắt 5 quy tắc bảo mật CIS gốc
+├── devsecops_nginx.db                # Cơ sở dữ liệu SQLite (tự sinh, gitignored)
+└── README.md                         # Tổng quan dự án (File này)
 ```
 
 ---
@@ -80,14 +95,21 @@ pip install paramiko
 Tiến hành tạo cấu trúc bảng cho SQLite:
 
 ```bash
-python core/test_db.py
+python core/scannerEng/test_db.py
 ```
 
 _(Hệ thống sẽ tự động khởi tạo file `devsecops_nginx.db` với các bảng dữ liệu `servers`, `scan_results`, `failed_rules`, `remediations`)_
 
 ### 3. Thiết lập Môi trường thử nghiệm Docker
 
-Dự án SecRemedy sử dụng Docker để thiết lập môi trường test với 2 container Nginx: một container với cấu hình tốt và một container với cấu hình có vấn đề bảo mật. Yêu cầu hệ thống phải cài đặt sẵn **Docker** và **Docker Compose**.
+Dự án SecRemedy sử dụng Docker để thiết lập môi trường test với 2 container Nginx, mỗi container mount cấu hình trực tiếp từ thư mục `tests/`:
+
+| Container           | Mount Source             | Mô tả                                    |
+| ------------------- | ------------------------ | ---------------------------------------- |
+| `nginx_one_to_five` | `tests/vps-one-to-five/` | Vi phạm CIS Rule 1–5, tuân thủ Rule 6–10 |
+| `nginx_six_to_then` | `tests/vps-six-to-then/` | Vi phạm CIS Rule 6–10, tuân thủ Rule 1–5 |
+
+Yêu cầu hệ thống phải cài đặt sẵn **Docker** và **Docker Compose**.
 
 **Quản lý containers:**
 
@@ -116,18 +138,18 @@ docker compose ps
 2. **Kiểm tra kết nối SSH:**
    _Các kết nối SSH này sẽ được sử dụng cho Tool tự động kiểm tra bảo mật. Cả hai máy chủ đều hỗ trợ SSH với thông tin đăng nhập: User: `root`, Password: `root`._
 
-- **Nginx "Bad" Server:** HTTP (Port 8081), HTTPS (Port 8443), SSH (Port 2221)
+- **Nginx VPS 1–5 (Vi phạm Rule 1–5):** HTTP (Port 8081), HTTPS (Port 8443), SSH (Port 2221)
   ```bash
   ssh root@localhost -p 2221
   ```
-- **Nginx "Good" Server:** HTTP (Port 8082), HTTPS (Port 8444), SSH (Port 2222)
+- **Nginx VPS 6–10 (Vi phạm Rule 6–10):** HTTP (Port 8082), HTTPS (Port 8444), SSH (Port 2222)
   ```bash
   ssh root@localhost -p 2222
   ```
 
 **Xử lý sự cố:**
 
-- **Containers không khởi động:** Chạy `docker compose logs` hoặc `docker compose logs nginx-bad` / `nginx-good` để xem lỗi cụ thể.
+- **Containers không khởi động:** Chạy `docker compose logs` hoặc `docker compose logs nginx_one_to_five` / `nginx_six_to_then` để xem lỗi cụ thể.
 - **Port đã được sử dụng:** Nếu port 2221 hoặc 2222 bị xung đột, chỉnh sửa file `docker-compose.yml` để thay đổi port mapping.
 
 ### 4. Tạo file JSON chứa AST của nginx.conf bằng Crossplane
@@ -137,23 +159,23 @@ Crossplane cho phép phân tích cấu hình Nginx thành định dạng JSON AS
 **Tạo file AST từ cấu hình nginx.conf:**
 
 ```bash
-crossplane parse configs/nginx_five_errors/nginx.conf --out contracts/config_ast_manual.json
+crossplane parse tests/vps-one-to-five/nginx.conf --out contracts/config_ast_manual.json
 ```
 
 ### 5. Tải cấu hình Nginx từ Server thông qua SSH (NginxFetcher)
 
-Sử dụng công cụ `core/fetcher.py` để kết nối SSH và tải toàn bộ cấu hình Nginx từ server về máy phân tích thông qua CLI.
+Sử dụng công cụ `core/scannerEng/fetcher.py` để kết nối SSH và tải toàn bộ cấu hình Nginx từ server về máy phân tích thông qua CLI.
 
-Ví dụ tải cấu hình từ Nginx "Bad" Server (Port 2221):
+Ví dụ tải cấu hình từ Nginx VPS 1–5 (Port 2221):
 
 ```bash
-python core/fetcher.py -P 2221
+python core/scannerEng/fetcher.py -P 2221
 ```
 
-Ví dụ tải cấu hình từ Nginx "Good" Server (Port 2222):
+Ví dụ tải cấu hình từ Nginx VPS 6–10 (Port 2222):
 
 ```bash
-python core/fetcher.py -P 2222
+python core/scannerEng/fetcher.py -P 2222
 ```
 
 Các tham số được hỗ trợ:
@@ -168,18 +190,18 @@ Các tham số được hỗ trợ:
 
 ### 6. Phân tích cấu hình Nginx sang JSON AST (NginxParser)
 
-Sử dụng module `core/parser.py` để tự động hóa việc phân tích cấu hình Nginx (đã được tải về bởi `fetcher.py`) thành định dạng JSON AST. Module này tích hợp sẵn khả năng **chuẩn hóa (normalize)** các đường dẫn `include` tuyệt đối (thường gặp như `/etc/nginx/...`) thành đường dẫn tương đối, đảm bảo `crossplane` có thể truy vết và phân tích toàn bộ các file tham chiếu mà không gặp lỗi.
+Sử dụng module `core/scannerEng/parser.py` để tự động hóa việc phân tích cấu hình Nginx (đã được tải về bởi `fetcher.py`) thành định dạng JSON AST. Module này tích hợp sẵn khả năng **chuẩn hóa (normalize)** các đường dẫn `include` tuyệt đối (thường gặp như `/etc/nginx/...`) thành đường dẫn tương đối, đảm bảo `crossplane` có thể truy vết và phân tích toàn bộ các file tham chiếu mà không gặp lỗi.
 
-**Ví dụ phân tích cấu hình từ Nginx "Bad" Server (Port 2221):**
+**Ví dụ phân tích cấu hình từ Nginx VPS 1–5 (Port 2221):**
 
 ```bash
-python core/parser.py -P 2221
+python core/scannerEng/parser.py -P 2221
 ```
 
-**Ví dụ phân tích cấu hình từ Nginx "Good" Server (Port 2222):**
+**Ví dụ phân tích cấu hình từ Nginx VPS 6–10 (Port 2222):**
 
 ```bash
-python core/parser.py -P 2222
+python core/scannerEng/parser.py -P 2222
 ```
 
 **Các tham số hỗ trợ:**
@@ -282,7 +304,7 @@ python core/remedyEng/backup.py
 
 > `backup.py` hiện dùng cấu hình test cứng (`127.0.0.1:2221`, user/pass `root/root`, source `/etc/nginx`) và tạo bản sao dạng `/etc/nginx_backup_YYYYMMDD_HHMMSS` trên server.
 
-**Bước 2:** Chạy injector với file AST của Nginx "Bad" Server (port 2221):
+**Bước 2:** Chạy injector với file AST của Nginx VPS 1–5 (port 2221):
 
 ```bash
 python core/remedyEng/injector.py -i contracts/config_ast_2221.json
@@ -370,10 +392,10 @@ Hiện file này chủ yếu phục vụ utility/debug nội bộ (đã có sẵ
 ```
 [Docker Server :2221]
         │
-        ▼  python core/fetcher.py -P 2221
+        ▼  python core/scannerEng/fetcher.py -P 2221
 [tmp/nginx_raw_2221/]  ← Cấu hình Nginx thô (tải về qua SSH)
         │
-        ▼  python core/parser.py -P 2221
+        ▼  python core/scannerEng/parser.py -P 2221
 [contracts/config_ast_2221.json]  ← AST JSON đầy đủ (crossplane)
         │
         ▼  python core/remedyEng/injector.py -i contracts/config_ast_2221.json
@@ -385,5 +407,52 @@ Hiện file này chủ yếu phục vụ utility/debug nội bộ (đã có sẵ
     ▼  python core/remedyEng/diff.py --origin tmp/nginx_raw_2221/nginx.conf --modified tmp/nginx_fixed_2221/nginx_fixed.conf
 [Unified Diff Output]  ← So sánh thay đổi trước khi apply ✅
 ```
+
+---
+
+## 🏗️ Kiến trúc tổng thể
+
+Dự án được thiết kế theo kiến trúc **4 tầng** (chi tiết xem [`general_data_flow.txt`](general_data_flow.txt)):
+
+| Tầng       | Mô tả                   | Thành phần                                                             |
+| ---------- | ----------------------- | ---------------------------------------------------------------------- |
+| **Tầng 1** | Frontend — Streamlit UI | Dashboard UI (Score, Failed Rules) + Remediation UI (Dry-Run, Approve) |
+| **Tầng 2** | Backend API — FastAPI   | Endpoints: `/scan`, `/dry-run`, `/approve`                             |
+| **Tầng 3** | Core Engines            | Scanner Engine (`scannerEng/`) + Remediation Engine (`remedyEng/`)     |
+| **Tầng 4** | Infrastructure          | SQLite DB + Docker Target Nginx Servers                                |
+
+Luồng dữ liệu Core Engines (chi tiết xem [`backend_data_flow.txt`](backend_data_flow.txt)):
+
+```
+Target Server → Fetcher → Parser → CIS Rules Evaluator → Locator & Injector → Builder → Diff Generator
+```
+
+---
+
+## 📋 Bảng quy tắc CIS được kiểm tra
+
+| #   | CIS Rule  | Mô tả tóm tắt                                     | Tài liệu chi tiết                                              |
+| --- | --------- | ------------------------------------------------- | -------------------------------------------------------------- |
+| 1   | CIS 2.4.1 | Chỉ lắng nghe trên các port được ủy quyền         | [`first-ten-recommendations.md`](first-ten-recommendations.md) |
+| 2   | CIS 2.4.2 | Từ chối request cho hostname không xác định       | ↑                                                              |
+| 3   | CIS 2.5.1 | Tắt `server_tokens` (ẩn phiên bản Nginx)          | ↑                                                              |
+| 4   | CIS 2.5.2 | Error/index page không tham chiếu NGINX           | ↑                                                              |
+| 5   | CIS 2.5.3 | Vô hiệu hóa serving hidden files                  | ↑                                                              |
+| 6   | CIS 3.1   | Bật detailed logging (JSON format)                | ↑                                                              |
+| 7   | CIS 3.2   | Bật access logging                                | ↑                                                              |
+| 8   | CIS 3.3   | Error logging ở mức `info`                        | ↑                                                              |
+| 9   | CIS 3.4   | Proxy pass source IP (X-Forwarded-For, X-Real-IP) | ↑                                                              |
+| 10  | CIS 4.1.1 | Redirect HTTP → HTTPS                             | ↑                                                              |
+
+---
+
+## 🧪 Chiến lược Test
+
+Hai VPS giả lập được thiết kế để mỗi bên vi phạm **đúng 5 rule** và tuân thủ **đúng 5 rule còn lại**, đảm bảo scanner phải phát hiện được cả hai loại trạng thái:
+
+| VPS Container       | Port SSH | Vi phạm             | Tuân thủ            |
+| ------------------- | -------- | ------------------- | ------------------- |
+| `nginx_one_to_five` | 2221     | Rule 1, 2, 3, 4, 5  | Rule 6, 7, 8, 9, 10 |
+| `nginx_six_to_then` | 2222     | Rule 6, 7, 8, 9, 10 | Rule 1, 2, 3, 4, 5  |
 
 ---
