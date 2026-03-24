@@ -1,20 +1,20 @@
 services:
-  nginx_five_errors:
+  nginx_one_to_five:
     build: .
-    container_name: nginx_five_errors
+    container_name: nginx_one_to_five
     ports:
       - "8081:80"
       - "8443:443"
       - "2221:22" # Port SSH của máy Five Errors là 2221
     volumes:
-      - ./configs/nginx_five_errors:/etc/nginx:ro
+      - ./tests/vps-one-to-five:/etc/nginx:ro
 
-  nginx_no_error:
+  nginx_six_to_then:
     build: .
-    container_name: nginx_no_error
+    container_name: nginx_six_to_then
     ports:
       - "8082:80"
       - "8444:443"
       - "2222:22" # Port SSH của máy No Error là 2222
     volumes:
-      - ./configs/nginx_no_error:/etc/nginx:ro
+      - ./tests/vps-six-to-then:/etc/nginx:ro
