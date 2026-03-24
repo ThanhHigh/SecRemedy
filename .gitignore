@@ -4,3 +4,4 @@ __pycache__/
 *.db
 tmp/
 backups/
+notes/
