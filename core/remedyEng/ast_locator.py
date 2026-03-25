@@ -25,7 +25,7 @@ def locate_blocks(parsed_ast: List[Dict[str, Any]], context_path: List[str]) -> 
     
     found_blocks = []
 
-    # Duyệt qua từng directive trong cấp độ hiện tại
+    # Duyệt qua từng directive trong cấp độ
     for item in parsed_ast:
         # Nếu directive khớp với target hiện tại và nó có chứa một 'block' (danh sách các directive con)
         if item.get("directive") == current_target and "block" in item:
