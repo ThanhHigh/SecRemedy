@@ -2,28 +2,56 @@
   "scan_id": 1,
   "server_ip": "192.168.1.100",
   "compliance_score": 60,
-  "created_at": "2026-03-08T11:04:56Z",
-  "status": "failed",
-  "failed_rules": [
+  "created_at": "2026-03-31T15:41:16Z",
+  "recommendations": [
     {
-      "rule_id": "CIS_2.1.3",
-      "rule_name": "Ensure server_tokens directive is set to off",
-      "severity": "High",
-      "target_context": ["http"],
-      "recommended_directive": {
-        "directive": "server_tokens",
-        "args": ["off"]
-      }
+      "id": "2.4.1",
+      "title": "Ensure NGINX only listens for network connections on authorized ports",
+      "description": "NGINX should be configured to listen only on authorized ports and protocols (TCP 80/443, UDP 443).",
+      "rationale": "Limiting listening ports ensures that no hidden or unintended services are exposed via NGINX.",
+      "impact": "Disabling unused ports reduces attack surface but might break HTTP/3 if UDP 443 is blocked.",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2222/nginx.conf",
+          "remediations": [
+            {
+              "action": "replace",
+              "context": ["config", 0, "parsed", 5, "block", 2],
+              "directive": "server_tokens",
+              "args": ["off"]
+            }
+          ]
+        }
+      ]
     },
     {
-      "rule_id": "CIS_5.1.3",
-      "rule_name": "Ensure X-Frame-Options header is configured",
-      "severity": "Medium",
-      "target_context": ["http", "server"],
-      "recommended_directive": {
-        "directive": "add_header",
-        "args": ["X-Frame-Options", "SAMEORIGIN", "always"]
-      }
+      "id": "2.4.2",
+      "title": "Ensure requests for unknown host names are rejected",
+      "description": "Catch-all default server blocks should reject unknown hostnames to prevent Host Header attacks.",
+      "rationale": "Prevents NGINX from serving applications to arbitrary domains pointing to the server's IP.",
+      "impact": "Direct access via IP or unconfigured CNAMEs will be rejected. This is intended behavior but requires that all valid domains are explicitly defined in their own server blocks.",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/nginx.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "context": ["config", 0, "parsed", 4],
+              "directive": "server",
+              "args": [
+                {
+                  "listen": ["80 default_server", "443 ssl default_server"],
+                  "server_name": "_",
+                  "ssl_certificate": "/etc/ssl/mock_certs/nginx.crt",
+                  "ssl_certificate_key": "/etc/ssl/mock_certs/nginx.key",
+                  "location": "/ { return 200 \"Welcome to nowhere\"; }"
+                }
+              ],
+              "note": "After adding this block, ensure all your valid applications have their own server blocks with explicit server_name directives."
+            }
+          ]
+        }
+      ]
     }
   ]
 }
