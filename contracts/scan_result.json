@@ -12,7 +12,7 @@
       "impact": "Disabling unused ports reduces attack surface but might break HTTP/3 if UDP 443 is blocked.",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2222/nginx.conf",
+          "file": "./tmp/nginx_raw_2221/nginx.conf",
           "remediations": [
             {
               "action": "replace",
@@ -36,7 +36,7 @@
           "remediations": [
             {
               "action": "add",
-              "context": ["config", 0, "parsed", 4],
+              "context": ["config", 0, "parsed", 5, "block"],
               "directive": "server",
               "args": [
                 {

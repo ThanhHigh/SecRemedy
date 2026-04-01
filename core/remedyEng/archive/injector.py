@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 import argparse
 
 from paths import ROOT_DIR
-from ast_locator import locate_blocks, extract_main_parsed_ast
+from core.remedyEng.archive.ast_locator import locate_blocks, extract_main_parsed_ast
 
 
 def build_default_output_path(input_path: str) -> str:

@@ -3,14 +3,17 @@ from __future__ import annotations
 import copy
 import importlib.util
 import inspect
+import json
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, Iterable, List, Type
 
 try:
     from .base import BaseRemediation
+    from .scan_result_remediation import ScanResultRemediator
 except ImportError:  # pragma: no cover - support direct script execution
     from base import BaseRemediation
+    from scan_result_remediation import ScanResultRemediator
 
 
 class RemediationManager:
@@ -135,3 +138,60 @@ class RemediationManager:
             if isinstance(item, dict) and item.get("rule_id"):
                 normalized.append(str(item["rule_id"]))
         return normalized
+
+    def run_from_scan_result(
+        self,
+        config_json: Any,
+        scan_result_json: Any,
+        target_rec_ids: List[str] | None = None,
+        dry_run: bool | None = None,
+    ) -> Dict[str, Any]:
+        """Apply remediations from scan_result.json to config.
+        
+        Args:
+            config_json: The parsed config structure
+            scan_result_json: The scan_result.json content (dict or loaded from file)
+            target_rec_ids: Optional list of recommendation IDs to apply.
+                          If None, apply all.
+            dry_run: Whether to apply in dry-run mode
+        
+        Returns:
+            Result dict with applied remediations and modified config
+        """
+        effective_dry_run = self.dry_run if dry_run is None else dry_run
+        
+        self._last_backup = copy.deepcopy(config_json)
+        
+        remeditor = ScanResultRemediator()
+        result = remeditor.apply_all_recommendations(
+            config_json, scan_result_json, target_rec_ids
+        )
+        
+        modified_config = result["config"]
+        
+        if effective_dry_run:
+            return {
+                "dry_run": True,
+                "backup_config": copy.deepcopy(self._last_backup),
+                "preview_config": modified_config,
+                "applied_remediations": result["total_applied"],
+                "failed_remediations": result["total_failed"],
+                "diffs": result["diffs"],
+                "errors": result.get("errors", []),
+            }
+        
+        return {
+            "dry_run": False,
+            "backup_config": copy.deepcopy(self._last_backup),
+            "modified_config": modified_config,
+            "applied_remediations": result["total_applied"],
+            "failed_remediations": result["total_failed"],
+            "diffs": result["diffs"],
+            "errors": result.get("errors", []),
+        }
+
+    @staticmethod
+    def load_scan_result(path: Path) -> Dict[str, Any]:
+        """Load scan_result.json file."""
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)

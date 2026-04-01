@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import copy
 from typing import Any, Dict, List
 
@@ -63,7 +61,7 @@ class HideVersionRule(BaseRemediation):
         return []
 
     @staticmethod
-    def _find_http_block(parsed: List[Dict[str, Any]]) -> List[Dict[str, Any]] | None:
+    def _find_http_block(parsed: List[Dict[str, Any]]) -> 'List[Dict[str, Any]] | None':
         for node in parsed:
             if not isinstance(node, dict):
                 continue
