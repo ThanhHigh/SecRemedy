@@ -1,0 +1,35 @@
+{
+  "scan_id": 1,
+  "server_ip": "0.0.0.0",
+  "compliance_score": 100,
+  "created_at": "2026-04-02T16:46:08Z",
+  "recommendations": [
+    {
+      "id": "2.4.1",
+      "title": "Ensure NGINX only listens for network connections on authorized ports",
+      "description": "NGINX should be configured to listen only on authorized ports and protocols (TCP 80/443, UDP 443).",
+      "rationale": "Limiting listening ports ensures that no hidden or unintended services are exposed via NGINX.",
+      "impact": "Disabling unused ports reduces attack surface but might break HTTP/3 if UDP 443 is blocked.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "2.4.2",
+      "title": "Ensure requests for unknown host names are rejected",
+      "description": "Catch-all default server blocks should reject unknown hostnames to prevent Host Header attacks.",
+      "rationale": "Prevents NGINX from serving applications to arbitrary domains pointing to the server's IP.",
+      "impact": "Direct access via IP or unconfigured CNAMEs will be rejected. This is intended behavior but requires that all valid domains are explicitly defined in their own server blocks.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "2.5.1",
+      "title": "Ensure server_tokens directive is set to off",
+      "description": "Disables the display of NGINX version number on error pages and response headers.",
+      "rationale": "Attackers can use version information to target known vulnerabilities.",
+      "impact": "None.",
+      "status": "pass",
+      "uncompliances": []
+    }
+  ]
+}

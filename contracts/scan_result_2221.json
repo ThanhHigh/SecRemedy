@@ -1,0 +1,145 @@
+{
+  "scan_id": 1,
+  "server_ip": "0.0.0.0",
+  "compliance_score": 0,
+  "created_at": "2026-04-02T16:59:36Z",
+  "recommendations": [
+    {
+      "id": "2.4.1",
+      "title": "Ensure NGINX only listens for network connections on authorized ports",
+      "description": "NGINX should be configured to listen only on authorized ports and protocols (TCP 80/443, UDP 443).",
+      "rationale": "Limiting listening ports ensures that no hidden or unintended services are exposed via NGINX.",
+      "impact": "Disabling unused ports reduces attack surface but might break HTTP/3 if UDP 443 is blocked.",
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/conf.d/admin.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "delete",
+              "context": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block",
+                1
+              ],
+              "directive": "listen"
+            }
+          ]
+        },
+        {
+          "file": "./tmp/nginx_raw_2221/conf.d/vendor.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "delete",
+              "context": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block",
+                1
+              ],
+              "directive": "listen"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2.4.2",
+      "title": "Ensure requests for unknown host names are rejected",
+      "description": "Catch-all default server blocks should reject unknown hostnames to prevent Host Header attacks.",
+      "rationale": "Prevents NGINX from serving applications to arbitrary domains pointing to the server's IP.",
+      "impact": "Direct access via IP or unconfigured CNAMEs will be rejected. This is intended behavior but requires that all valid domains are explicitly defined in their own server blocks.",
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/nginx.conf",
+          "remediations": [
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block"
+              ],
+              "position": 0,
+              "directive": "server",
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "args": [
+                    "_"
+                  ]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": [
+                    "on"
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "args": [
+                    "444"
+                  ]
+                }
+              ],
+              "note": "Add a catch-all default_server block to the http context. You must also provide valid ssl_certificate and ssl_certificate_key paths for the TLS listener."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2.5.1",
+      "title": "Ensure server_tokens directive is set to off",
+      "description": "Disables the display of NGINX version number on error pages and response headers.",
+      "rationale": "Attackers can use version information to target known vulnerabilities.",
+      "impact": "None.",
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/nginx.conf",
+          "remediations": [
+            {
+              "action": "replace",
+              "context": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                2
+              ],
+              "directive": "server_tokens",
+              "args": [
+                "off"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

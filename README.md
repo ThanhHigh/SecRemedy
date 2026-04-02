@@ -27,7 +27,11 @@ SecRemedy/
 │   │   ├── base_recom.py                 # BaseRecom: Recursive AST traversal + abstract evaluate()
 │   │   ├── fetcher.py                    # CLI: Tải cấu hình Nginx từ server qua SSH (Paramiko)
 │   │   ├── parser.py                     # CLI: Phân tích nginx.conf sang JSON AST (dùng crossplane)
-│   │   └── recommendations/              # (Dự kiến) Các class Detector kế thừa BaseRecom
+│   │   ├── scanner.py                    # CLI: Main Scanner Engine quét và đánh giá AST (hỗ trợ tham số dòng lệnh)
+│   │   └── recommendations/              # Các class Detector quản lý logic kiểm tra CIS
+│   │       ├── detector_241.py           # Detector cho CIS 2.4.1 (Listen port)
+│   │       ├── detector_242.py           # Detector cho CIS 2.4.2 (Unknown hostnames)
+│   │       └── detector_251.py           # Detector cho CIS 2.5.1 (Server tokens)
 │   └── remedyEng/                        # Remediation Engine — Plugin-based auto-remediation
 │       ├── base.py                       # BaseRemediation (ABC): check(), fix(), snapshot(), get_diff()
 │       ├── manager.py                    # RemediationManager: Auto-discover, orchestrate rule plugins
@@ -313,6 +317,25 @@ python core/scannerEng/parser.py -P 2222
 2. **Tiền xử lý:** Quét và chuẩn hóa các chỉ thị `include` bằng Regex để tránh lỗi "No such file or directory".
 3. **Trích xuất AST:** Sử dụng thư viện `crossplane` để chuyển đổi sang định dạng JSON.
 4. **Xuất kết quả:** Lưu Data Contract vào thư mục `contracts/` phục vụ cho bước quét bảo mật tiếp theo.
+
+---
+
+### 7. Quét Bảo Mật và Đánh Giá (Core Scanner)
+
+Sử dụng module `core/scannerEng/scanner.py` là entry point để phân tích AST JSON dựa trên các quy tắc CIS (đã được định nghĩa trong `recommendations/`), tổng hợp vi phạm và tạo ra **Scan Result Contract**.
+
+**Ví dụ chạy quét bảo mật cho Port 2221:**
+
+```bash
+python core/scannerEng/scanner.py -i contracts/parser_output_2221.json --host 127.0.0.1 --port 2221 -o contracts/scan_result_2221.json
+```
+
+**Các tham số:**
+
+- `-i`, `--input`: File Parser Output JSON (AST của Nginx config).
+- `-H`, `--host`: IP của máy chủ Nginx mục tiêu (Dùng để ghi metadata vào report).
+- `-P`, `--port`: Port SSH của máy chủ. Cần thiết để lưu lại trong báo cáo.
+- `-o`, `--output`: Vị trí file lưu kết quả Scan Result (Mặc định: `contracts/scan_result.json`).
 
 ---
 
