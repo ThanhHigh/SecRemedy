@@ -31,16 +31,13 @@ SecRemedy/
 │   └── remedyEng/                        # Remediation Engine — Plugin-based auto-remediation
 │       ├── base.py                       # BaseRemediation (ABC): check(), fix(), snapshot(), get_diff()
 │       ├── manager.py                    # RemediationManager: Auto-discover, orchestrate rule plugins
-│       ├── run_remediation.py            # CLI entry-point: --input, --rules, --dry-run, --output
-│       ├── rules/                        # Thư mục chứa các plugin remediation (auto-discovered)
-│       │   ├── __init__.py
-│       │   └── cis_2_1_1.py              # Plugin: CIS 2.1.1 — Ensure server_tokens is off
-│       ├── backup.py                     # CLI: Backup trước khi sửa file cấu hình của Nginx
-│       ├── ast_locator.py                # CLI: Định vị block trong cây AST theo context_path
-│       ├── injector.py                   # CLI: Inject/cập nhật directive vào AST dựa trên failed_rules
-│       ├── builder.py                    # CLI: Build ngược từ AST JSON sang nginx config text
-│       ├── diff.py                       # CLI: So sánh file nginx gốc và file đã remediate (dry-run review)
-│       └── paths.py                      # Khai báo đường dẫn gốc dùng chung cho remedy engine
+│       ├── run_remediation.py            # CLI entry-point: --input, --scan-result, --dry-run, --output
+│       ├── scan_result_remediation.py    # Processor: Apply scan_result violations to full AST with path normalization
+│       ├── paths.py                      # Khai báo đường dẫn gốc dùng chung cho remedy engine
+│       ├── rules_list.txt                # Danh sách các rule plugins có sẵn
+│       └── rules/                        # Thư mục chứa các plugin remediation (auto-discovered)
+│           ├── __init__.py
+│           └── cis_2_1_1.py              # Plugin: CIS 2.1.1 — Ensure server_tokens is off
 ├── database/                             # Tầng persistence — ORM và script khởi tạo DB
 │   ├── models.py                         # Định nghĩa ORM (SQLAlchemy): Server, ScanResult, FailedRule, Remediation
 │   └── test_db.py                        # Script khởi tạo và seed mock data vào SQLite
@@ -80,11 +77,7 @@ SecRemedy/
 │           ├── mime.types
 │           ├── fastcgi_params
 │           └── proxy_params
-├── tmp/                                  # (Tự sinh, gitignored) Dữ liệu tạm trong quá trình xử lý
-│   ├── ast_modified/                     # AST JSON sau khi inject remediation
-│   │   └── config_ast_<port>_modified.json
-│   ├── nginx_raw_<port>/                 # VD: nginx_raw_2221/ — toàn bộ /etc/nginx từ server
-│   └── nginx_fixed_<port>/              # File nginx.conf text sau khi build lại từ AST
+|
 ├── requirements.txt                      # Python dependencies (crossplane, paramiko, sqlalchemy, ...)
 ├── .gitignore                            # Loại trừ: venv/, tmp/, *.db, __pycache__/, backups/, notes/
 └── README.md                             # Tổng quan dự án (File này)
@@ -329,12 +322,13 @@ python core/scannerEng/parser.py -P 2222
 
 Remediation Engine đã được refactor sang kiến trúc **Plugin-based Strategy Pattern** với cơ chế auto-discovery:
 
-| Thành phần                | File                 | Vai trò                                                             |
-| ------------------------- | -------------------- | ------------------------------------------------------------------- |
-| **BaseRemediation (ABC)** | `base.py`            | Abstract base: `check()`, `fix()`, `snapshot()`, `get_diff()`       |
-| **RemediationManager**    | `manager.py`         | Auto-discover plugins trong `rules/`, orchestrate thứ tự thực thi   |
-| **CLI Entry-point**       | `run_remediation.py` | CLI wrapper: `--input`, `--rules`, `--dry-run`, `--output`          |
-| **Rule Plugins**          | `rules/*.py`         | Mỗi file = 1 class kế thừa `BaseRemediation` với `rule_id` duy nhất |
+| Thành phần                | File                      | Vai trò                                                                                 |
+| ------------------------- | ------------------------- | --------------------------------------------------------------------------------------- |
+| **BaseRemediation (ABC)** | `base.py`                 | Abstract base: `check()`, `fix()`, `snapshot()`, `get_diff()`                           |
+| **RemediationManager**    | `manager.py`              | Auto-discover plugins trong `rules/`, orchestrate thứ tự thực thi                       |
+| **Scan Result Processor** | `scan_result_remediation.py` | Xử lý Scan Result Contract: normalize paths, apply remediation, output full AST           |
+| **CLI Entry-point**       | `run_remediation.py`      | CLI wrapper: `--input`, `--scan-result`, `--dry-run`, `--output`                        |
+| **Rule Plugins**          | `rules/*.py`              | Mỗi file = 1 class kế thừa `BaseRemediation` với `rule_id` duy nhất                     |
 
 **Luồng hoạt động Plugin-based:**
 
@@ -356,28 +350,39 @@ RemediationManager.__init__()
 ### Chạy Remediation qua CLI (Plugin-based)
 
 ```bash
-# Dry-run (preview changes, không ghi file thật)
-python -m core.remedyEng.run_remediation \
+# Dry-run (preview changes from scan_result, không ghi file thật)
+python core/remedyEng/run_remediation.py \
   --input contracts/parser_output_2221.json \
-  --rules CIS-2.1.1 \
+  --scan-result contracts/scan_result.json \
   --dry-run
 
 # Apply (ghi file output)
-python -m core.remedyEng.run_remediation \
+python core/remedyEng/run_remediation.py \
   --input contracts/parser_output_2221.json \
-  --rules CIS-2.1.1 \
+  --scan-result contracts/scan_result.json \
   --output contracts/config_ast_2221_remediated.json
 ```
 
 **Tham số CLI của `run_remediation.py`:**
 
-| Tham số       | Bắt buộc | Mô tả                                                         |
-| ------------- | -------- | ------------------------------------------------------------- |
-| `--input`     | ✅       | Đường dẫn file JSON AST (crossplane parsed result)            |
-| `--rules`     | ✅       | Danh sách rule IDs, phân tách bằng dấu phẩy (VD: `CIS-2.1.1`) |
-| `--dry-run`   | ❌       | Preview changes mà không ghi file output                      |
-| `--output`    | ❌       | Đường dẫn file JSON output (mặc định: `<input>_preview.json`) |
-| `--rules-dir` | ❌       | Thư mục chứa rule plugins tùy chỉnh                           |
+| Tham số         | Bắt buộc | Mô tả                                                                  |
+| --------------- | -------- | ---------------------------------------------------------------------- |
+| `--input`       | ✅       | Đường dẫn file JSON AST (crossplane parsed result)                     |
+| `--scan-result` | ✅       | Đường dẫn file Scan Result Contract (từ Scanner Engine)                |
+| `--dry-run`     | ❌       | Preview changes mà không ghi file output                               |
+| `--output`      | ❌       | Đường dẫn file JSON output (mặc định: `<input>_preview.json`)          |
+
+**Luồng xử lý Scan Result:**
+
+1. **Load Full AST**: Đọc toàn bộ cấu trúc JSON từ parser_output (giữ nguyên wrapper `status`, `errors`, tất cả configs)
+2. **Load Scan Result**: Đọc kết quả quét (recommendations, uncompliances, violations)
+3. **Normalize Paths**: Chuẩn hóa đường dẫn file để đảm bảo matching chính xác giữa parser_output và scan_result
+4. **Validate Config Files**: Kiểm tra loại file (`.conf`, `.config`, v.v.)
+5. **Apply Remediations**: Với mỗi file có issue:
+   - Gọi `manager.run_from_scan_result()` để áp dụng các remediation cần thiết
+   - Cập nhật config trong AST output
+   - Với file không có issue: Giữ nguyên config gốc
+6. **Output Full AST**: Xuất AST hoàn chỉnh với tất cả configs (không chỉ config[0])
 
 ### Viết Rule Plugin mới
 
@@ -412,44 +417,6 @@ class MyNewRule(BaseRemediation):
 
 ---
 
-### Remediation Engine (Legacy — Injector Flow)
-
-> **Lưu ý:** Luồng Injector dưới đây vẫn hoạt động song song với kiến trúc Plugin-based mới. Dự kiến sẽ dần chuyển toàn bộ sang Plugin-based.
-
-#### Kiến trúc Injector
-
-| File             | Vai trò                                                                              |
-| ---------------- | ------------------------------------------------------------------------------------ |
-| `backup.py`      | Kết nối SSH bằng `paramiko` để backup thư mục cấu hình Nginx trên server/container   |
-| `ast_locator.py` | Định vị (locate) các block AST theo `context_path` (VD: `["http", "server"]`)        |
-| `injector.py`    | Inject/cập nhật directive an toàn vào block AST, xuất file `_modified.json`          |
-| `builder.py`     | Chuyển AST JSON đã chỉnh sửa về lại text cấu hình Nginx bằng `crossplane.build()`    |
-| `diff.py`        | So sánh `nginx.conf` gốc và file đã build sau remediate bằng Unified Diff            |
-| `paths.py`       | Tính `ROOT_DIR` của project để các module trong `remedyEng` dùng đường dẫn nhất quán |
-
-#### Luồng hoàn chỉnh: Fetch → Parse → Inject → Build → Diff
-
-```
-[Docker Server :2221]
-        │
-        ▼  python core/scannerEng/fetcher.py -P 2221
-[tmp/nginx_raw_2221/]  ← Cấu hình Nginx thô (tải về qua SSH)
-        │
-        ▼  python core/scannerEng/parser.py -P 2221
-[contracts/parser_output_2221.json]  ← AST JSON đầy đủ (crossplane)
-        │
-        ▼  python core/remedyEng/injector.py -i contracts/parser_output_2221.json
-[tmp/ast_modified/config_ast_2221_modified.json]  ← AST đã vá lỗi bảo mật ✅
-    │
-    ▼  python core/remedyEng/builder.py -i tmp/ast_modified/config_ast_2221_modified.json -o tmp/nginx_fixed_2221/nginx_fixed.conf
-[tmp/nginx_fixed_2221/nginx_fixed.conf]  ← File cấu hình Nginx text sau khi remediate ✅
-    │
-    ▼  python core/remedyEng/diff.py --origin tmp/nginx_raw_2221/nginx.conf --modified tmp/nginx_fixed_2221/nginx_fixed.conf
-[Unified Diff Output]  ← So sánh thay đổi trước khi apply ✅
-```
-
----
-
 ## 🏗️ Kiến trúc tổng thể
 
 Dự án được thiết kế theo kiến trúc **4 tầng** (chi tiết xem [`general_data_flow.txt`](docs/general_data_flow.txt)):
@@ -464,7 +431,7 @@ Dự án được thiết kế theo kiến trúc **4 tầng** (chi tiết xem [`
 Luồng dữ liệu Core Engines (chi tiết xem [`backend_data_flow.txt`](docs/backend_data_flow.txt)):
 
 ```
-Target Server → Fetcher → Parser → CIS Rules Evaluator → Locator & Injector → Builder → Diff Generator
+Target Server → Fetcher → Parser → CIS Rules Scanner → Scan Result Processor → Remediation Output
 ```
 
 ---

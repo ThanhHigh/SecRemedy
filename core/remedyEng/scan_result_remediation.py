@@ -26,6 +26,29 @@ class ScanResultRemediator:
         if self.debug:
             print(f"[DEBUG] {msg}")
 
+    def _normalize_context(self, config: Any, context: List[Any]) -> List[Any]:
+        """
+        Normalize context path from full AST format to extracted config format.
+        
+        If the context starts with ["config", 0] but we have an extracted config
+        (with "parsed" field directly), adjust by removing those prefixes.
+        
+        Args:
+            config: The config dict being processed
+            context: The original context path from scan_result
+        
+        Returns:
+            The normalized context path
+        """
+        # Check if context starts with "config" and we have an extracted config
+        if context and context[0] == "config" and isinstance(config, dict) and "parsed" in config:
+            # Remove "config", 0 prefix since we already have the extracted config
+            adjusted = context[2:] if len(context) > 2 else context[1:]
+            self._debug(f"Context normalized: {context} -> {adjusted}")
+            return adjusted
+        
+        return context
+
     def apply_remediation(
         self,
         config_json: Any,
@@ -34,6 +57,12 @@ class ScanResultRemediator:
     ) -> tuple[bool, Any]:
         """
         Apply a single remediation instruction to the config.
+        
+        This function:
+        1. Normalizes the context path for the current config format
+        2. Validates that the target exists at the given context
+        3. Applies the remediation action (replace or add)
+        4. Validates the result
         
         Args:
             config_json: The parsed config structure (could be wrapped or extracted)
@@ -49,34 +78,28 @@ class ScanResultRemediator:
         directive = remediation.get("directive", "")
         args = remediation.get("args", [])
 
-        self._debug(f"Applying remediation: action={action}, directive={directive}, file={file_path}")
+        self._debug(f"\nApplying remediation: action={action}, directive={directive}, file={file_path}")
         self._debug(f"Original context: {context}")
 
-        # Adjust context if it starts with "config" but we have an extracted config
-        # (i.e., the loaded config is already config[0], not the full wrapper)
-        if context and context[0] == "config" and isinstance(config, dict) and "parsed" in config:
-            # If config has "parsed" field directly, it's already extracted
-            # Remove "config", 0 prefix from context
-            adjusted_context = context[2:] if len(context) > 2 else context[1:]
-            self._debug(f"Adjusted context (removed 'config', 0): {adjusted_context}")
-            context = adjusted_context
-        
-        self._debug(f"Final context to navigate: {context}")
+        # Step 1: Normalize context for extracted config format
+        context = self._normalize_context(config, context)
+        self._debug(f"Normalized context: {context}")
 
-        # Try to navigate to target and debug what we find
+        # Step 2: Validate that target exists
         target = ASTNavigator.get_by_context(config, context)
         if target is None:
-            error_msg = f"Failed to navigate to context {context} - target is None (path doesn't exist)"
+            error_msg = f"Failed to navigate to context {context} - target is None (path doesn't exist in AST)"
             self._debug(f"ERROR: {error_msg}")
             self.errors.append(f"{file_path}: {error_msg}")
             return False, config
         
-        self._debug(f"Target found, type: {type(target).__name__}, content preview: {str(target)[:100]}")
+        self._debug(f"Target found, type: {type(target).__name__}, size: {len(str(target))} chars")
 
+        # Step 3: Apply the remediation action
         if action == "replace":
-            return self._apply_replace(config, context, directive, args)
+            return self._apply_replace(config, context, directive, args, file_path)
         elif action == "add":
-            return self._apply_add(config, context, directive, args)
+            return self._apply_add(config, context, directive, args, file_path)
         else:
             error_msg = f"Unknown action: {action}"
             self._debug(f"ERROR: {error_msg}")
@@ -89,33 +112,42 @@ class ScanResultRemediator:
         context: List[int | str],
         directive: str,
         args: Any,
+        file_path: str,
     ) -> tuple[bool, Any]:
         """Replace a directive's args at the given context."""
         target = ASTNavigator.get_by_context(config, context)
         if target is None:
-            self._debug(f"REPLACE failed: Cannot navigate to context {context}")
+            error_msg = f"REPLACE failed: Cannot navigate to context {context}"
+            self._debug(f"ERROR: {error_msg}")
+            self.errors.append(f"{file_path}: {error_msg}")
             return False, config
 
         if isinstance(target, dict):
             # Single directive case
             if target.get("directive") == directive:
-                self._debug(f"REPLACE: Found {directive} in dict, updating args")
+                self._debug(f"✓ REPLACE: Found '{directive}' in dict block, updating args")
                 target["args"] = copy.deepcopy(args)
                 return True, config
             else:
-                self._debug(f"REPLACE failed: Target is dict but directive mismatch. Expected '{directive}', got '{target.get('directive')}'")
+                error_msg = f"REPLACE failed: Target is dict but directive mismatch. Expected '{directive}', got '{target.get('directive')}'"
+                self._debug(f"ERROR: {error_msg}")
+                self.errors.append(f"{file_path}: {error_msg}")
                 return False, config
         elif isinstance(target, list):
             # List of directives case - find and replace
             for i, item in enumerate(target):
                 if isinstance(item, dict) and item.get("directive") == directive:
-                    self._debug(f"REPLACE: Found {directive} at index {i} in list, updating args")
+                    self._debug(f"✓ REPLACE: Found '{directive}' at index {i} in list, updating args")
                     item["args"] = copy.deepcopy(args)
                     return True, config
-            self._debug(f"REPLACE failed: Directive '{directive}' not found in list")
+            error_msg = f"REPLACE failed: Directive '{directive}' not found in list at context {context}"
+            self._debug(f"ERROR: {error_msg}")
+            self.errors.append(f"{file_path}: {error_msg}")
             return False, config
         else:
-            self._debug(f"REPLACE failed: Target is {type(target).__name__}, expected dict or list")
+            error_msg = f"REPLACE failed: Target is {type(target).__name__} at context {context}, expected dict or list"
+            self._debug(f"ERROR: {error_msg}")
+            self.errors.append(f"{file_path}: {error_msg}")
             return False, config
 
     def _apply_add(
@@ -124,21 +156,26 @@ class ScanResultRemediator:
         context: List[int | str],
         directive: str,
         args: Any,
+        file_path: str,
     ) -> tuple[bool, Any]:
         """Add a new directive/block at the given context."""
         target = ASTNavigator.get_by_context(config, context)
         if target is None:
-            self._debug(f"ADD failed: Cannot navigate to context {context}")
+            error_msg = f"ADD failed: Cannot navigate to context {context}"
+            self._debug(f"ERROR: {error_msg}")
+            self.errors.append(f"{file_path}: {error_msg}")
             return False, config
 
         if isinstance(target, list):
             # Add to a list at context
             new_item = {"directive": directive, "args": copy.deepcopy(args)}
-            self._debug(f"ADD: Appending new {directive} to list at context {context}")
+            self._debug(f"✓ ADD: Appending new '{directive}' block to list at context {context}")
             target.append(new_item)
             return True, config
         else:
-            self._debug(f"ADD failed: Target is {type(target).__name__} at context {context}, expected list. Cannot append.")
+            error_msg = f"ADD failed: Target is {type(target).__name__} at context {context}, expected list. Cannot append."
+            self._debug(f"ERROR: {error_msg}")
+            self.errors.append(f"{file_path}: {error_msg}")
             return False, config
 
     def apply_recommendation(
