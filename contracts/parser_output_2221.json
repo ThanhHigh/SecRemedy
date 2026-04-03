@@ -142,8 +142,70 @@
               ]
             },
             {
+              "directive": "server",
+              "line": 43,
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "line": 44,
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "line": 45,
+                  "args": [
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "line": 46,
+                  "args": [
+                    "_"
+                  ]
+                },
+                {
+                  "directive": "ssl_certificate",
+                  "line": 48,
+                  "args": [
+                    "/etc/ssl/mock_certs/nginx.crt"
+                  ]
+                },
+                {
+                  "directive": "ssl_certificate_key",
+                  "line": 49,
+                  "args": [
+                    "/etc/ssl/mock_certs/nginx.key"
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "line": 51,
+                  "args": [
+                    "/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "return",
+                      "line": 52,
+                      "args": [
+                        "200",
+                        "Welcome to nowhere"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
               "directive": "include",
-              "line": 42,
+              "line": 56,
               "args": [
                 "conf.d/*.conf"
               ],

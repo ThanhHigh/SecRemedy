@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 50,
-  "created_at": "2026-04-03T07:21:45Z",
+  "compliance_score": 40,
+  "created_at": "2026-04-03T09:38:14Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -60,52 +60,36 @@
           "file": "./tmp/nginx_raw_2221/nginx.conf",
           "remediations": [
             {
-              "action": "add_block",
+              "action": "add",
               "context": [
                 "config",
                 0,
                 "parsed",
                 5,
+                "block",
+                10,
                 "block"
               ],
-              "position": 0,
-              "directive": "server",
-              "block": [
-                {
-                  "directive": "listen",
-                  "args": [
-                    "80",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "443",
-                    "ssl",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "server_name",
-                  "args": [
-                    "_"
-                  ]
-                },
-                {
-                  "directive": "ssl_reject_handshake",
-                  "args": [
-                    "on"
-                  ]
-                },
-                {
-                  "directive": "return",
-                  "args": [
-                    "444"
-                  ]
-                }
+              "directive": "return",
+              "args": [
+                "444"
+              ]
+            },
+            {
+              "action": "add",
+              "context": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10,
+                "block"
               ],
-              "note": "Add a catch-all default_server block to the http context. You must also provide valid ssl_certificate and ssl_certificate_key paths for the TLS listener."
+              "directive": "ssl_reject_handshake",
+              "args": [
+                "on"
+              ]
             }
           ]
         }
@@ -197,6 +181,48 @@
       "impact": "May break Let's Encrypt validation unless exceptions are made.",
       "status": "fail",
       "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/nginx.conf",
+          "remediations": [
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
         {
           "file": "./tmp/nginx_raw_2221/conf.d/admin.emarket.me.conf",
           "remediations": [
@@ -541,8 +567,31 @@
       "description": "Redirects all unencrypted HTTP traffic to secure HTTPS connections.",
       "rationale": "Enforces encryption for all user communications.",
       "impact": "Slight performance overhead for TLS handshake.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/nginx.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "context": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10,
+                "block"
+              ],
+              "directive": "return",
+              "args": [
+                "301",
+                "https://$host$request_uri"
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }
