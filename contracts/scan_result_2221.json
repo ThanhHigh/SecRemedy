@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 0,
-  "created_at": "2026-04-02T16:59:36Z",
+  "compliance_score": 50,
+  "created_at": "2026-04-03T07:21:45Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -140,6 +140,409 @@
           ]
         }
       ]
+    },
+    {
+      "id": "2.5.2",
+      "title": "Ensure default error and index.html pages do not reference NGINX",
+      "description": "Replaces standard NGINX branding on 404, 500 error pages with generic content.",
+      "rationale": "Visual identification of server software aids reconnaissance.",
+      "impact": "Requires administrative effort to create/maintain custom pages.",
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/nginx.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "context": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block"
+              ],
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ]
+            },
+            {
+              "action": "add",
+              "context": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block"
+              ],
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2.5.3",
+      "title": "Ensure hidden file serving is disabled",
+      "description": "Blocks access to hidden files/directories (starting with a dot, e.g., .git, .env).",
+      "rationale": "Hidden files often contain sensitive metadata or environment configurations.",
+      "impact": "May break Let's Encrypt validation unless exceptions are made.",
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/conf.d/admin.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            },
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "./tmp/nginx_raw_2221/conf.d/customer.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                3,
+                "parsed",
+                0,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            },
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                3,
+                "parsed",
+                1,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "./tmp/nginx_raw_2221/conf.d/emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                4,
+                "parsed",
+                0,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            },
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "./tmp/nginx_raw_2221/conf.d/vendor.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                5,
+                "parsed",
+                0,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            },
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3.1",
+      "title": "Ensure detailed logging is enabled",
+      "description": "Configure structured logging (JSON) to facilitate incident response and SIEM integration.",
+      "rationale": "Structured logs provide searchable context without complex parsing.",
+      "impact": "Increases log volume/disk usage.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "3.2",
+      "title": "Ensure access logging is enabled",
+      "description": "Guarantees that all client requests are recorded for audit and security analysis.",
+      "rationale": "Essential for tracking system usage and detecting attacks.",
+      "impact": "High disk space usage if not rotated properly.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "3.3",
+      "title": "Ensure error logging is enabled and set to the info logging level",
+      "description": "Captures operational failures and server errors at the 'info' verbosity level.",
+      "rationale": "Required for diagnosing internal failures and anomalies.",
+      "impact": "Increases disk I/O and storage needs.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "3.4",
+      "title": "Ensure proxies pass source IP information",
+      "description": "Forwards the original client IP to upstream servers via X-Forwarded-For or X-Real-IP headers.",
+      "rationale": "Backend applications need client IPs for auditing and access control.",
+      "impact": "Allows visibility of true IPs; requires careful header handling to prevent spoofing.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "4.1.1",
+      "title": "Ensure HTTP is redirected to HTTPS",
+      "description": "Redirects all unencrypted HTTP traffic to secure HTTPS connections.",
+      "rationale": "Enforces encryption for all user communications.",
+      "impact": "Slight performance overhead for TLS handshake.",
+      "status": "pass",
+      "uncompliances": []
     }
   ]
 }

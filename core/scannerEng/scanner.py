@@ -24,6 +24,13 @@ from core.scannerEng.base_recom import BaseRecom
 from core.scannerEng.recommendations.detector_241 import Detector241
 from core.scannerEng.recommendations.detector_242 import Detector242
 from core.scannerEng.recommendations.detector_251 import Detector251
+from core.scannerEng.recommendations.detector_252 import Detector252
+from core.scannerEng.recommendations.detector_253 import Detector253
+from core.scannerEng.recommendations.detector_31 import Detector31
+from core.scannerEng.recommendations.detector_32 import Detector32
+from core.scannerEng.recommendations.detector_33 import Detector33
+from core.scannerEng.recommendations.detector_34 import Detector34
+from core.scannerEng.recommendations.detector_411 import Detector411
 from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
 
 
@@ -35,6 +42,13 @@ DETECTOR_REGISTRY: Dict[RecomID, Type[BaseRecom]] = {
     RecomID.CIS_2_4_1: Detector241,
     RecomID.CIS_2_4_2: Detector242,
     RecomID.CIS_2_5_1: Detector251,
+    RecomID.CIS_2_5_2: Detector252,
+    RecomID.CIS_2_5_3: Detector253,
+    RecomID.CIS_3_1: Detector31,
+    RecomID.CIS_3_2: Detector32,
+    RecomID.CIS_3_3: Detector33,
+    RecomID.CIS_3_4: Detector34,
+    RecomID.CIS_4_1_1: Detector411,
 }
 
 
@@ -251,7 +265,12 @@ def main():
                  if r.get("status") == "pass")
     failed = total - passed
 
-    print(f"[Scanner] 📊 Compliance Score: {result['compliance_score']}%")
+    print("\n[Scanner] 🔍 Chi tiết kết quả kiểm tra (Detailed Findings):")
+    for r in result["recommendations"]:
+        status_icon = "✅" if r["status"] == "pass" else "❌"
+        print(f"  {status_icon} {r['id']} - {r['title']}")
+
+    print(f"\n[Scanner] 📊 Compliance Score: {result['compliance_score']}%")
     print(f"[Scanner] 📋 Total: {total} | ✅ Pass: {passed} | ❌ Fail: {failed}")
 
 

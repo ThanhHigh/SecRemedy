@@ -7,7 +7,7 @@ services:
       - "8443:443"
       - "2221:22" # Port SSH của máy Five Errors là 2221
     volumes:
-      - ./tests/vps-one-to-five:/etc/nginx:ro
+      - ./configs/vps-one-to-five:/etc/nginx:ro
 
   nginx_six_to_then:
     build: .
@@ -17,4 +17,4 @@ services:
       - "8444:443"
       - "2222:22" # Port SSH của máy No Error là 2222
     volumes:
-      - ./tests/vps-six-to-then:/etc/nginx:ro
+      - ./configs/vps-six-to-then:/etc/nginx:ro

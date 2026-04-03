@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 40,
-  "created_at": "2026-04-03T08:27:18Z",
+  "compliance_score": 30,
+  "created_at": "2026-04-03T08:17:56Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -85,8 +85,49 @@
       "description": "Blocks access to hidden files/directories (starting with a dot, e.g., .git, .env).",
       "rationale": "Hidden files often contain sensitive metadata or environment configurations.",
       "impact": "May break Let's Encrypt validation unless exceptions are made.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add_block",
+              "context": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block"
+              ],
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "off"
+                  ]
+                },
+                {
+                  "directive": "log_not_found",
+                  "args": [
+                    "off"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "3.1",
@@ -176,7 +217,7 @@
                 "block",
                 6,
                 "block",
-                1
+                0
               ],
               "directive": "access_log",
               "args": [

@@ -327,15 +327,10 @@ Sử dụng module `core/scannerEng/scanner.py` là entry point để phân tíc
 **Ví dụ chạy quét bảo mật cho Port 2221:**
 
 ```bash
-python core/scannerEng/scanner.py -i contracts/parser_output_2221.json --host 127.0.0.1 --port 2221 -o contracts/scan_result_2221.json
+python core/scannerEng/scanner.py --port 2221
 ```
 
 **Các tham số:**
-
-- `-i`, `--input`: File Parser Output JSON (AST của Nginx config).
-- `-H`, `--host`: IP của máy chủ Nginx mục tiêu (Dùng để ghi metadata vào report).
-- `-P`, `--port`: Port SSH của máy chủ. Cần thiết để lưu lại trong báo cáo.
-- `-o`, `--output`: Vị trí file lưu kết quả Scan Result (Mặc định: `contracts/scan_result.json`).
 
 ---
 
@@ -345,13 +340,13 @@ python core/scannerEng/scanner.py -i contracts/parser_output_2221.json --host 12
 
 Remediation Engine đã được refactor sang kiến trúc **Plugin-based Strategy Pattern** với cơ chế auto-discovery:
 
-| Thành phần                | File                      | Vai trò                                                                                 |
-| ------------------------- | ------------------------- | --------------------------------------------------------------------------------------- |
-| **BaseRemediation (ABC)** | `base.py`                 | Abstract base: `check()`, `fix()`, `snapshot()`, `get_diff()`                           |
-| **RemediationManager**    | `manager.py`              | Auto-discover plugins trong `rules/`, orchestrate thứ tự thực thi                       |
-| **Scan Result Processor** | `scan_result_remediation.py` | Xử lý Scan Result Contract: normalize paths, apply remediation, output full AST           |
-| **CLI Entry-point**       | `run_remediation.py`      | CLI wrapper: `--input`, `--scan-result`, `--dry-run`, `--output`                        |
-| **Rule Plugins**          | `rules/*.py`              | Mỗi file = 1 class kế thừa `BaseRemediation` với `rule_id` duy nhất                     |
+| Thành phần                | File                         | Vai trò                                                                         |
+| ------------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| **BaseRemediation (ABC)** | `base.py`                    | Abstract base: `check()`, `fix()`, `snapshot()`, `get_diff()`                   |
+| **RemediationManager**    | `manager.py`                 | Auto-discover plugins trong `rules/`, orchestrate thứ tự thực thi               |
+| **Scan Result Processor** | `scan_result_remediation.py` | Xử lý Scan Result Contract: normalize paths, apply remediation, output full AST |
+| **CLI Entry-point**       | `run_remediation.py`         | CLI wrapper: `--input`, `--scan-result`, `--dry-run`, `--output`                |
+| **Rule Plugins**          | `rules/*.py`                 | Mỗi file = 1 class kế thừa `BaseRemediation` với `rule_id` duy nhất             |
 
 **Luồng hoạt động Plugin-based:**
 
@@ -388,12 +383,12 @@ python core/remedyEng/run_remediation.py \
 
 **Tham số CLI của `run_remediation.py`:**
 
-| Tham số         | Bắt buộc | Mô tả                                                                  |
-| --------------- | -------- | ---------------------------------------------------------------------- |
-| `--input`       | ✅       | Đường dẫn file JSON AST (crossplane parsed result)                     |
-| `--scan-result` | ✅       | Đường dẫn file Scan Result Contract (từ Scanner Engine)                |
-| `--dry-run`     | ❌       | Preview changes mà không ghi file output                               |
-| `--output`      | ❌       | Đường dẫn file JSON output (mặc định: `<input>_preview.json`)          |
+| Tham số         | Bắt buộc | Mô tả                                                         |
+| --------------- | -------- | ------------------------------------------------------------- |
+| `--input`       | ✅       | Đường dẫn file JSON AST (crossplane parsed result)            |
+| `--scan-result` | ✅       | Đường dẫn file Scan Result Contract (từ Scanner Engine)       |
+| `--dry-run`     | ❌       | Preview changes mà không ghi file output                      |
+| `--output`      | ❌       | Đường dẫn file JSON output (mặc định: `<input>_preview.json`) |
 
 **Luồng xử lý Scan Result:**
 
