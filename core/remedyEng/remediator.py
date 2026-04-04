@@ -12,6 +12,7 @@ from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
 
 
 
+
 class Remediator:
     """Apply remediations """
 

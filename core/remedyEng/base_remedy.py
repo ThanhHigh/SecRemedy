@@ -6,17 +6,26 @@ import json
 from abc import ABC, abstractmethod
 from typing import Any
 
+from core.recom_registry import Recommendation
 
 class BaseRemedy:
     """Base class for all remedies. """
 
-    def __init__(self) -> None:
+    def __init__(self, recommendation: Recommendation | None = None) -> None:
         self.id = "0.0.0"
         self.title = "Base Remediation Title"
         self.description = "Base Remediation Description"
         self.audit_procedure = "Base Remediation Audit Procedure"
         self.impact = "Base Remediation Impact"
         self.remediation = "Base Remediation Remediation"
+
+        if recommendation is not None:
+            self.id = recommendation.id.value
+            self.title = recommendation.title
+            self.description = recommendation.description
+            self.audit_procedure = recommendation.audit_procedure
+            self.impact = recommendation.impact
+            self.remediation = recommendation.remediation_procedure
 
     def remediate(self, scan_result: Any, ast_config: Any) -> Any:
         """
