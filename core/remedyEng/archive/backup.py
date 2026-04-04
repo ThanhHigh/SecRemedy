@@ -4,7 +4,7 @@ import logging
 
 import paramiko
 
-from paths import ROOT_DIR
+from core.remedyEng.archive.paths import ROOT_DIR
 
 # Cau hinh logging
 logging.basicConfig(

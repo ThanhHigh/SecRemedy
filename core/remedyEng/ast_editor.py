@@ -6,7 +6,7 @@ import copy
 from typing import Any, List, Union
 
 
-class ASTNavigator:
+class ASTEditor:
     """Navigate and modify Nginx AST structures using context paths."""
 
     @staticmethod
@@ -33,44 +33,6 @@ class ASTNavigator:
                 current = current[key]
         return current
 
-    @staticmethod
-    def set_by_context(data: Any, context: List[Union[str, int]], value: Any) -> bool:
-        """
-        Set a value at a specific location in the AST using a context path.
-        
-        Args:
-            data: The root AST data structure
-            context: List of keys/indices to navigate
-            value: The value to set
-        
-        Returns:
-            True if successful, False otherwise.
-        """
-        if not context:
-            return False
-
-        current = data
-        for key in context[:-1]:
-            if isinstance(key, int):
-                if not isinstance(current, list) or key >= len(current):
-                    return False
-                current = current[key]
-            else:
-                if not isinstance(current, dict) or key not in current:
-                    return False
-                current = current[key]
-
-        last_key = context[-1]
-        if isinstance(last_key, int):
-            if not isinstance(current, list) or last_key >= len(current):
-                return False
-            current[last_key] = copy.deepcopy(value)
-            return True
-        else:
-            if not isinstance(current, dict):
-                return False
-            current[last_key] = copy.deepcopy(value)
-            return True
 
     @staticmethod
     def append_to_context(data: Any, context: List[Union[str, int]], item: Any) -> bool:
@@ -85,7 +47,7 @@ class ASTNavigator:
         Returns:
             True if successful, False otherwise.
         """
-        target = ASTNavigator.get_by_context(data, context)
+        target = ASTEditor.get_by_context(data, context)
         if not isinstance(target, list):
             return False
         
@@ -106,7 +68,7 @@ class ASTNavigator:
         Returns:
             True if successful, False otherwise.
         """
-        target = ASTNavigator.get_by_context(data, context)
+        target = ASTEditor.get_by_context(data, context)
         if not isinstance(target, list) or index < 0 or index > len(target):
             return False
         
@@ -150,3 +112,43 @@ class ASTNavigator:
                 return False
             del current[last_key]
             return True
+
+
+    # @staticmethod
+    # def set_by_context(data: Any, context: List[Union[str, int]], value: Any) -> bool:
+    #     """
+    #     Set a value at a specific location in the AST using a context path.
+        
+    #     Args:
+    #         data: The root AST data structure
+    #         context: List of keys/indices to navigate
+    #         value: The value to set
+        
+    #     Returns:
+    #         True if successful, False otherwise.
+    #     """
+    #     if not context:
+    #         return False
+
+    #     current = data
+    #     for key in context[:-1]:
+    #         if isinstance(key, int):
+    #             if not isinstance(current, list) or key >= len(current):
+    #                 return False
+    #             current = current[key]
+    #         else:
+    #             if not isinstance(current, dict) or key not in current:
+    #                 return False
+    #             current = current[key]
+
+    #     last_key = context[-1]
+    #     if isinstance(last_key, int):
+    #         if not isinstance(current, list) or last_key >= len(current):
+    #             return False
+    #         current[last_key] = copy.deepcopy(value)
+    #         return True
+    #     else:
+    #         if not isinstance(current, dict):
+    #             return False
+    #         current[last_key] = copy.deepcopy(value)
+    #         return True

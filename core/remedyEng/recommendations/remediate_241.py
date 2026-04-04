@@ -2,12 +2,12 @@ import copy
 from typing import Any, Dict, List
 
 try:
-    from ..base import BaseRemediation
+    from ..base_remedy import BaseRemediation
 except ImportError:  # pragma: no cover - support direct script execution
     try:
-        from core.remedyEng.base import BaseRemediation
+        from core.remedyEng.base_remedy import BaseRemediation
     except ImportError:
-        from base import BaseRemediation
+        from core.remedyEng.base_remedy import BaseRemediation
 
 
 class HideVersionRule(BaseRemediation):

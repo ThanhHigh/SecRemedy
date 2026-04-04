@@ -3,7 +3,7 @@ import os
 from typing import List, Dict, Any
 import argparse
 
-from paths import ROOT_DIR
+from core.remedyEng.archive.paths import ROOT_DIR
 from core.remedyEng.archive.ast_locator import locate_blocks, extract_main_parsed_ast
 
 

@@ -6,14 +6,14 @@ import copy
 import json
 from typing import Any, Dict, List
 
-try:
-    from .ast_navigator import ASTNavigator
-except ImportError:  # pragma: no cover - support direct script execution
-    from ast_navigator import ASTNavigator
+
+from core.remedyEng.ast_editor import ASTEditor
+from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
 
 
-class ScanResultRemediator:
-    """Apply remediations from scan_result.json to config files."""
+
+class Remediator:
+    """Apply remediations """
 
     def __init__(self, debug: bool = True) -> None:
         self._before_state: Any | None = None
@@ -86,7 +86,7 @@ class ScanResultRemediator:
         self._debug(f"Normalized context: {context}")
 
         # Step 2: Validate that target exists
-        target = ASTNavigator.get_by_context(config, context)
+        target = ASTEditor.get_by_context(config, context)
         if target is None:
             error_msg = f"Failed to navigate to context {context} - target is None (path doesn't exist in AST)"
             self._debug(f"ERROR: {error_msg}")
@@ -115,7 +115,7 @@ class ScanResultRemediator:
         file_path: str,
     ) -> tuple[bool, Any]:
         """Replace a directive's args at the given context."""
-        target = ASTNavigator.get_by_context(config, context)
+        target = ASTEditor.get_by_context(config, context)
         if target is None:
             error_msg = f"REPLACE failed: Cannot navigate to context {context}"
             self._debug(f"ERROR: {error_msg}")
@@ -159,7 +159,7 @@ class ScanResultRemediator:
         file_path: str,
     ) -> tuple[bool, Any]:
         """Add a new directive/block at the given context."""
-        target = ASTNavigator.get_by_context(config, context)
+        target = ASTEditor.get_by_context(config, context)
         if target is None:
             error_msg = f"ADD failed: Cannot navigate to context {context}"
             self._debug(f"ERROR: {error_msg}")
