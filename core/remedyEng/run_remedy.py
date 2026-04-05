@@ -5,4 +5,4 @@ if __name__ == "__main__":
     remediator = Remediator()
 
     remediator.display_header()
-    remediator.call_all_remedy_info()
+    remediator.call_user_interact_TUI()

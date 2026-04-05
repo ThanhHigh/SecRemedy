@@ -2,6 +2,12 @@ from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
 from core.remedyEng.base_remedy import BaseRemedy
 
 REMEDY_FIX_EXAMPLE = "error_page 404 /404.html;\nerror_page 500 502 503 504 /50x.html;\n\nlocation = /50x.html {\n    root /var/www/html/errors;\n    internal;\n}"
+REMEDY_INPUT_REQUIRE = [
+    "error_page_40x", 
+    "error_page_50x", 
+    "location_50x_root",
+]
+
 
 class Remediate252(BaseRemedy):
     def __init__(self) -> None:
@@ -9,3 +15,4 @@ class Remediate252(BaseRemedy):
         self.has_input = True
         self.has_guide_detail = True
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
+        self.remedy_input_require = REMEDY_INPUT_REQUIRE

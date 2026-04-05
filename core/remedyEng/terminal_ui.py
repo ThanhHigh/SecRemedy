@@ -2,7 +2,13 @@ import argparse
 import json
 from pathlib import Path
 
+from typing import Any, List
+
+from core.remedyEng.debug_print import debug_print
+
 parser = argparse.ArgumentParser()
+
+
 
 
 class TerminalUI:
@@ -27,12 +33,24 @@ class TerminalUI:
     def get_instance(cls) -> "TerminalUI":
         """Return the shared singleton instance."""
         return cls()
-    
+   
     def display_remedy_header(self) -> None:
         """Display a header for the remediation process."""
         print("=" * 60)
         print("Starting Remediation Process 🚀".center(60))
         print("=" * 60)
+
+    def display_remedy_closer(self) -> None:
+        """Display a closing message for the remediation process."""
+        print("\n" + "=" * 60)
+        print("Remediation Process Completed 🎉".center(60))
+        print("=" * 60 + "\n")
+
+    def display_remedy_rejected(self, remedy) -> None:
+        """Display a message when a remedy is rejected by the user."""
+        print("\n" + "-" * 60)
+        print(f"[NOT APPLIED]: {remedy.id} - {remedy.title}".center(60))
+        print("-" * 60 + "\n")
 
     def get_ast_config(self) -> dict:
         """Load the AST config from a specified directory."""
@@ -82,12 +100,39 @@ class TerminalUI:
     def display_remedy_info(self, remedy) -> None:
         """Display information about the remedy being applied."""
         print("\n" + "-" * 60)
-        print(f"Applying Remedy: {remedy.title}".center(60))
+        print(f"Applying Remedy: {remedy.id} - {remedy.title}".center(60))
         print("-" * 60)
         print(f"Description: {remedy.description}")
         print(f"Audit Procedure: {remedy.audit_procedure}")
         print(f"Impact: {remedy.impact}")
         print(f"Remediation Steps: {remedy.remediation}")
-        if remedy.remedy_detail:
-            print(f"Additional Details: {remedy.remedy_detail}")
+        if remedy.has_guide_detail:
+            print(f"Additional Details: \n{remedy.remedy_guide_detail}")
         print("-" * 60 + "\n")
+
+    def display_remedy_decision(self, pre_diff: bool) -> bool:
+        """Ask the user whether to apply the remedy."""
+        if (pre_diff):
+            print("Do you want to apply this remedy before seeing the diff? (y/n)")
+        else:
+            print("Do you want to apply this remedy after seeing the diff? (y/n)")
+        while True:
+            user_input = input().strip().lower()
+            if user_input in ("y", "yes"):
+                return True
+            elif user_input in ("n", "no"):
+                return False
+            else:
+                print("Invalid input. Please enter 'y' or 'n'.")
+        
+    def user_input(self, remedy_require_inputs: List[str], user_inputs_list, remedy_id: str) -> None:
+        print(f"Remedy {remedy_id} requires additional information from you.")
+        for require in remedy_require_inputs:
+            print(f"Please provide: \n{require}")
+            user_input = input().strip()
+            user_inputs_list.append(user_input)
+
+        # For debug
+        # Is the user input list is work as desire
+        debug_print(f"{remedy_id}: User provided inputs: {user_inputs_list}")
+

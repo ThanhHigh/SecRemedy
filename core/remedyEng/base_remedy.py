@@ -19,8 +19,13 @@ class BaseRemedy:
 
     has_guide_detail: bool = True
     remedy_guide_detail: str = ""
+
+    user_pre_decision: bool = True #Apply the remedy or not before apply diff
+    user_final_desision: bool = True #Apply the remedy or not after apply diff 
+
     has_input: bool = False
-    user_inputs: List[str] = []
+    remedy_input_require: List[str] = []
+    user_inputs: List[Any] = []
 
 
     def __init__(self, recommendation: Recommendation | None = None) -> None:

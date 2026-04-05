@@ -60,25 +60,50 @@ class Remediator:
         self.ast_config = TerminalUI.get_instance().get_ast_config()
         self.ast_scan = TerminalUI.get_instance().get_ast_scan()
         
-    
-    # For in Remediation Registry, each Remediate call the function TerminalUI of specific for that remedita, display information,
+    # For in Remediation Registry, each Remediate call the function TerminalUI of specific for that remedita, display information,z
     # Input for user if has, In TerminalUI wait for user input, get the information, start to apply Remediate as hard code
     # Each of output the difference between before and after, so to user agree or not, if agree write to new AST, if not then copy the old AST
     # Finally all the Loop get the new AST, check for syntax, if valid build them to new config files
     # if not valid, print the error and stop the process.
 
-    def call_the_UI(self, remedy: BaseRemedy) -> None:
+    def call_the_UI(self, remedy_cls: BaseRemedy) -> None:
         """Call the TerminalUI to display information and get user input if needed."""
-        remedy = remedy() # Instantiate the remedy class
+        remedy = remedy_cls() # Instantiate the remedy class
         TerminalUI.get_instance().display_remedy_info(remedy)
 
-    def call_all_remedy_info(self) -> None:
+    def call_UI_remedy_info(self) -> None:
         """Call the TerminalUI to display information for all remedies."""
-        for remedy in self.REMEDIATION_REGISTRY.values():
-            if remedy == self.REMEDIATION_REGISTRY[RecomID.CIS_3_1]:
-                self.call_the_UI(remedy)
+        for remedy_cls in self.REMEDIATION_REGISTRY.values():
+            if remedy_cls == self.REMEDIATION_REGISTRY[RecomID.CIS_2_4_1]:
+                self.call_the_UI(remedy_cls)
 
+    def call_user_TUI_input(self) -> None:
+        """Call the TerminalUI to get input from user for all remedies that require input."""
+        for remedy_cls in self.REMEDIATION_REGISTRY.values():
+            remedy = remedy_cls() # Instantiate the remedy class
+            if remedy.has_input:
+                TerminalUI.get_instance().user_input(
+                    remedy_require_inputs=remedy.remedy_input_require,
+                    user_inputs_list=remedy.user_inputs, 
+                    remedy_id=remedy.id
+                )
 
+    def call_user_interact_TUI(self) -> None:
+        """Combine TUI remedy info and TUI user input"""
+        for remedy_cls in self.REMEDIATION_REGISTRY.values():
+            remedy = remedy_cls() # Instantiate the remedy class
+            TerminalUI.get_instance().display_remedy_info(remedy)
+            pre_decision = TerminalUI.get_instance().display_remedy_decision(pre_diff=True)
+            if pre_decision:
+                if remedy.has_input:
+                    TerminalUI.get_instance().user_input(
+                        remedy_require_inputs=remedy.remedy_input_require,
+                        user_inputs_list=remedy.user_inputs, 
+                        remedy_id=remedy.id
+                    )
+            else:
+                TerminalUI.get_instance().display_remedy_rejected(remedy)    
+            
 
 
 
