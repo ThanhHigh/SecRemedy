@@ -4,12 +4,24 @@ import copy
 import difflib
 import json
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, List
 
 from core.recom_registry import Recommendation
 
 class BaseRemedy:
     """Base class for all remedies. """
+    id: str
+    title: str
+    description: str
+    audit_procedure: str
+    impact: str
+    remediation: str
+
+    has_guide_detail: bool = True
+    remedy_guide_detail: str = ""
+    has_input: bool = False
+    user_inputs: List[str] = []
+
 
     def __init__(self, recommendation: Recommendation | None = None) -> None:
         self.id = "0.0.0"
