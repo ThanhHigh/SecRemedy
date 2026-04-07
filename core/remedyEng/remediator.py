@@ -21,6 +21,7 @@ from core.remedyEng.recommendations.remediate_33 import Remediate33
 from core.remedyEng.recommendations.remediate_34 import Remediate34
 from core.remedyEng.recommendations.remediate_411 import Remediate411
 
+from core.remedyEng.ast_editor import ASTEditor
 from core.remedyEng.terminal_ui import TerminalUI
 
 class Remediator:
@@ -110,12 +111,118 @@ class Remediator:
             remedy.read_child_scan_result(self.ast_scan) # Get the AST scan first
             remedy.read_child_ast_config(self.ast_config)
     
-    def apply_remediations(self) -> None:
+    def apply_remediations(self) -> dict:
+        """
+        Orchestrate the full remediation flow for all applicable rules.
+        
+        Flow:
+        1. Instantiate each remedy from REMEDIATION_REGISTRY
+        2. For each remedy:
+           a. Display remedy info via TerminalUI
+           b. Collect user inputs if required
+           c. Get decision from user (pre-interaction)
+           d. If approved: Call remedy.remediate() to apply fixes
+           e. Display diff and get final decision
+           f. If approved: Merge modified AST back into full ast_config
+        3. Return: Updated ast_config with all approved remediations
+        
+        Returns:
+            Modified ast_config dictionary
+        """
+        modified_ast_config = copy.deepcopy(self.ast_config)
+        
         for remedy_cls in self.REMEDIATION_REGISTRY.values():
             remedy = remedy_cls()
-
             
+            # Display remedy information
+            TerminalUI.get_instance().display_remedy_info(remedy)
             
+            # Ask if user wants to proceed
+            pre_decision = TerminalUI.get_instance().display_remedy_decision(pre_diff=True)
+            if not pre_decision:
+                TerminalUI.get_instance().display_remedy_rejected(remedy)
+                continue
+            
+            # Collect user inputs if needed
+            if remedy.has_input:
+                TerminalUI.get_instance().user_input(
+                    remedy_require_inputs=remedy.remedy_input_require,
+                    user_inputs_list=remedy.user_inputs,
+                    remedy_id=remedy.id
+                )
+            
+            # Extract violations and AST sections for this rule
+            remedy.read_child_scan_result(self.ast_scan)
+            remedy.read_child_ast_config(modified_ast_config)
+            
+            # Skip if no violations for this rule
+            if not remedy.child_scan_result:
+                print(f"No violations found for Rule {remedy.id}. Skipping.")
+                continue
+            
+            # Apply remediation
+            remedy.remediate()
+            
+            # Display diff (would show before/after comparison)
+            # TODO: Implement diff display
+            
+            # Ask for final approval
+            final_decision = TerminalUI.get_instance().display_remedy_decision(pre_diff=False)
+            if not final_decision:
+                TerminalUI.get_instance().display_remedy_rejected(remedy)
+                continue
+            
+            # Merge modifications back into full ast_config
+            modified_ast_config = self.merge_remediation(
+                modified_ast_config,
+                remedy.child_ast_modified
+            )
+        
+        return modified_ast_config
+    
+    def merge_remediation(self, ast_config: dict, child_ast_modified: dict) -> dict:
+        """
+        Merge file-grouped modifications back into the full ast_config.
+        
+        For each file in child_ast_modified:
+        1. Find the file entry in ast_config["config"] array
+        2. Replace its "parsed" section with the modified version
+        
+        Args:
+            ast_config: Full AST config to merge into
+            child_ast_modified: File-grouped modifications {file_path: {parsed: [...]}}
+        
+        Returns:
+            Updated ast_config with merged modifications
+        """
+        if not isinstance(child_ast_modified, dict) or not child_ast_modified:
+            return ast_config
+        
+        if not isinstance(ast_config, dict):
+            return ast_config
+        
+        # Deep copy to avoid modifying original
+        result = copy.deepcopy(ast_config)
+        config_list = result.get("config", [])
+        
+        if not isinstance(config_list, list):
+            return result
+        
+        # For each modified file
+        for file_path, modified_data in child_ast_modified.items():
+            if not isinstance(modified_data, dict) or "parsed" not in modified_data:
+                continue
+            
+            # Find the file in config array
+            file_index = ASTEditor._find_file_in_config(result, file_path)
+            if file_index == -1:
+                continue
+            
+            # Replace the parsed section
+            if file_index < len(config_list):
+                config_list[file_index]["parsed"] = copy.deepcopy(modified_data["parsed"])
+        
+        return result
 
 
 
