@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Type
 import argparse
 
 from core.remedyEng.base_remedy import BaseRemedy
-from core.remedyEng.ast_editor import ASTEditor
 from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
 
 from core.remedyEng.recommendations.remediate_241 import Remediate241
@@ -55,12 +54,12 @@ class Remediator:
         """Display a header for the remediation process."""
         TerminalUI.get_instance().display_remedy_header()
 
-    def get_scan_results(self) -> None:
+    def get_input_ast(self) -> None:
         """Get the File Names from user and return 2 ASTs """
         self.ast_config = TerminalUI.get_instance().get_ast_config()
         self.ast_scan = TerminalUI.get_instance().get_ast_scan()
         
-    # For in Remediation Registry, each Remediate call the function TerminalUI of specific for that remedita, display information,z
+    # For in Remediation Registry, each Remediate call the function TerminalUI of specific for that remediation, display information
     # Input for user if has, In TerminalUI wait for user input, get the information, start to apply Remediate as hard code
     # Each of output the difference between before and after, so to user agree or not, if agree write to new AST, if not then copy the old AST
     # Finally all the Loop get the new AST, check for syntax, if valid build them to new config files
@@ -102,7 +101,20 @@ class Remediator:
                         remedy_id=remedy.id
                     )
             else:
-                TerminalUI.get_instance().display_remedy_rejected(remedy)    
+                TerminalUI.get_instance().display_remedy_rejected(remedy)
+
+    def split_ast_input(self) -> None:
+        """Split the AST input into specific AST for each remedy."""
+        for remedy_cls in self.REMEDIATION_REGISTRY.values():
+            remedy = remedy_cls() # Instantiate the remedy class
+            remedy.read_child_scan_result(self.ast_scan) # Get the AST scan first
+            remedy.read_child_ast_config(self.ast_config)
+    
+    def apply_remediations(self) -> None:
+        for remedy_cls in self.REMEDIATION_REGISTRY.values():
+            remedy = remedy_cls()
+
+            
             
 
 

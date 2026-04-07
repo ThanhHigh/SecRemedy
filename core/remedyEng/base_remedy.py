@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, List
 
 from core.recom_registry import Recommendation
+from core.remedyEng.ast_editor import ASTEditor
 
 class BaseRemedy:
     """Base class for all remedies. """
@@ -27,6 +28,10 @@ class BaseRemedy:
     remedy_input_require: List[str] = []
     user_inputs: List[Any] = []
 
+    child_scan_result: Any = None #Locator for Child AST config
+    child_ast_config: Any = None
+    child_ast_modified: Any = None
+
 
     def __init__(self, recommendation: Recommendation | None = None) -> None:
         self.id = "0.0.0"
@@ -44,7 +49,27 @@ class BaseRemedy:
             self.impact = recommendation.impact
             self.remediation = recommendation.remediation_procedure
 
-    def remediate(self, scan_result: Any, ast_config: Any) -> Any:
+    def read_child_scan_result(self, scan_result: Any) -> None:
+        """Get the specific uncompliance entry from scan_result.json that this remedy addresses."""
+        # This is a placeholder implementation. Subclasses should override this method.
+        rule_id = self.id
+        result = ASTEditor.to_context_scan(
+            scan_result= scan_result,
+            rule_id= rule_id
+        )
+        self.child_scan_result = result
+
+    def read_child_ast_config(self, ast_config: Any) -> None:
+        """Get the AST of the config file to be remediated."""
+        # This is a placeholder implementation. Subclasses should override this method.
+        if self.child_scan_result is not None:
+            self.child_ast_config = ASTEditor.get_child_ast_config(
+                data= ast_config,
+                context= self.child_scan_result
+            )
+
+
+    def remediate(self) -> Any:
         """
         Main method to apply remediation.
         Args:
@@ -54,6 +79,7 @@ class BaseRemedy:
             A remediated AST config JSON for this rule.
         """
         # This is a placeholder implementation. Subclasses should override this method.
+        
         
 
     def interact_with_user(self) -> None:
