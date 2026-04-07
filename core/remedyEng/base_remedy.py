@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import copy
-import difflib
-import json
-from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any, Dict, List
 
 from core.recom_registry import Recommendation
 from core.remedyEng.ast_editor import ASTEditor
+from core.remedyEng.diff_generator import generate_ast_fallback_diff, generate_unified_diff
 
 class BaseRemedy:
     """Base class for all remedies. """
@@ -31,6 +29,7 @@ class BaseRemedy:
     child_scan_result: Any = {} #File-grouped remediations: {file_path: [remediations]}
     child_ast_config: Any = {} #File-grouped AST configs: {file_path: {parsed: [...]}}
     child_ast_modified: Any = {} #File-grouped modified configs: {file_path: {parsed: [...]}}
+    file_approval_status: Dict[str, bool] = {}
 
 
     def __init__(self, recommendation: Recommendation | None = None) -> None:
@@ -45,6 +44,7 @@ class BaseRemedy:
         self.child_scan_result = {}
         self.child_ast_config = {}
         self.child_ast_modified = {}
+        self.file_approval_status = {}
 
         if recommendation is not None:
             self.id = recommendation.id.value
@@ -149,6 +149,42 @@ class BaseRemedy:
     def interact_with_user(self) -> None:
         """Prompt user for any required variables before remediation."""
         pass
+
+    def get_affected_files(self) -> List[str]:
+        """Return file paths modified by the current remedy."""
+        return list(self.child_ast_modified.keys())
+
+    def get_violation_count(self, file_path: str) -> int:
+        """Count violations for a file in the current remedy."""
+        violations = self.child_scan_result.get(file_path, [])
+        if not isinstance(violations, list):
+            return 0
+        return len(violations)
+
+    def build_file_diff_payload(self, file_path: str) -> Dict[str, Any]:
+        """Build per-file diff payload with config diff and AST fallback."""
+        before_entry = self.child_ast_config.get(file_path, {})
+        after_entry = self.child_ast_modified.get(file_path, {})
+
+        before_ast = before_entry.get("parsed", [])
+        after_ast = after_entry.get("parsed", [])
+
+        before_text = ASTEditor.ast_to_config_text(before_ast)
+        after_text = ASTEditor.ast_to_config_text(after_ast)
+
+        mode = "config"
+        if before_text and after_text:
+            diff_text = generate_unified_diff(before_text, after_text, file_path)
+        else:
+            mode = "ast"
+            diff_text = generate_ast_fallback_diff(before_ast, after_ast, file_path)
+
+        return {
+            "file_path": file_path,
+            "violation_count": self.get_violation_count(file_path),
+            "mode": mode,
+            "diff_text": diff_text,
+        }
 
 
     

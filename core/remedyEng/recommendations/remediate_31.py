@@ -37,7 +37,7 @@ class Remediate31(BaseRemedy):
         log_format_name = self.user_inputs[1].strip()
         log_format_def = self.user_inputs[2].strip()
         
-        if not log_file_path or not log_format_name:
+        if not log_file_path or not log_format_name: #Future implement the default for those value
             return
         
         # Process each file that has violations

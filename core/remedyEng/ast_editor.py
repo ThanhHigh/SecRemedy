@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import copy
+import json
 from typing import Any, Dict, List, Union
+
+import crossplane
 
 
 class ASTEditor:
@@ -269,6 +272,22 @@ class ASTEditor:
                 return False
             del current[last_key]
             return True
+
+    @staticmethod
+    def ast_to_config_text(parsed_ast: Any, indent_spaces: int = 4) -> str:
+        """Render a parsed AST list to nginx config text."""
+        if not isinstance(parsed_ast, list):
+            return ""
+
+        try:
+            return crossplane.build(parsed_ast, indent=indent_spaces, tabs=False)
+        except Exception:
+            return ""
+
+    @staticmethod
+    def ast_to_json_text(ast_data: Any) -> str:
+        """Render AST data to stable JSON text for diff fallback."""
+        return json.dumps(ast_data, indent=2, sort_keys=True)
 
 
     # @staticmethod

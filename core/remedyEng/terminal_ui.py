@@ -124,6 +124,49 @@ class TerminalUI:
                 return False
             else:
                 print("Invalid input. Please enter 'y' or 'n'.")
+
+    def display_remedy_file_diff(self, remedy_id: str, file_path: str, violation_count: int, mode: str, diff_text: str) -> None:
+        """Display per-file diff for one remedy review step."""
+        print("\n" + "=" * 60)
+        print(f"Reviewing {remedy_id} -> {file_path}".center(60))
+        print("=" * 60)
+        print(f"Violations in file: {violation_count}")
+        if mode == "ast":
+            print("Diff mode: AST fallback (config render unavailable)")
+        else:
+            print("Diff mode: Config text")
+        print("-" * 60)
+        if diff_text:
+            print(diff_text)
+        else:
+            print("No effective changes detected for this file.")
+        print("-" * 60)
+
+    def display_file_diff_decision(self) -> bool:
+        """Ask whether to apply changes for the currently displayed file."""
+        print("Apply this file change? (y/n)")
+        while True:
+            user_input = input().strip().lower()
+            if user_input in ("y", "yes"):
+                return True
+            if user_input in ("n", "no"):
+                return False
+            print("Invalid input. Please enter 'y' or 'n'.")
+
+    def display_remedy_summary(self, remedy_id: str, accepted: int, rejected: int, unchanged: int, fallback: int) -> None:
+        """Display per-remedy review summary after file-level decisions."""
+        print("\n" + "~" * 60)
+        print(f"Summary for Remedy {remedy_id}".center(60))
+        print("~" * 60)
+        print(f"Accepted files : {accepted}")
+        print(f"Rejected files : {rejected}")
+        print(f"Unchanged files: {unchanged}")
+        print(f"AST fallback   : {fallback}")
+        print("~" * 60 + "\n")
+
+    def display_output_saved(self, output_path: str) -> None:
+        """Display where remediated AST was written."""
+        print(f"Remediated AST saved to: {output_path}")
         
     def user_input(self, remedy_require_inputs: List[str], user_inputs_list, remedy_id: str) -> None:
         print(f"Remedy {remedy_id} requires additional information from you.")

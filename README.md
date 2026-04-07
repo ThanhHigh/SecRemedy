@@ -390,6 +390,48 @@ python core/remedyEng/run_remediation.py \
 | `--dry-run`     | ❌       | Preview changes mà không ghi file output                      |
 | `--output`      | ❌       | Đường dẫn file JSON output (mặc định: `<input>_preview.json`) |
 
+### Chạy RemedyEng hiện tại (Interactive Diff Review)
+
+Luồng interactive đang dùng entrypoint [core/remedyEng/run_remedy.py](core/remedyEng/run_remedy.py):
+
+```bash
+python -m core.remedyEng.run_remedy
+```
+
+Khi chạy, nhập lần lượt:
+
+1. Đường dẫn parser output JSON (ví dụ: `contracts/parser_output_2221.json`)
+2. Đường dẫn scan result JSON (ví dụ: `contracts/scan_result_2221.json`)
+3. Quyết định cho từng remedy trước khi xem diff (`y/n`)
+4. Nếu remedy cần input, nhập theo prompt
+5. Với từng file bị thay đổi, chọn apply diff (`y/n`)
+
+Kết quả sau khi hoàn tất:
+
+1. Hiển thị summary cho từng remedy (accepted/rejected/unchanged/fallback)
+2. Lưu AST sau remediation vào `contracts/remediated_output.json`
+
+### Lệnh Test RemedyEng (tự động)
+
+1. Test khả năng `crossplane.build` cho toàn bộ remedy và 2 bộ dữ liệu mẫu:
+
+```bash
+python tests/validate_crossplane_build_all_remedies.py
+```
+
+2. Smoke test full apply flow (bao gồm default user inputs + diff review flow không cần nhập tay):
+
+```bash
+python tests/remedy_eng_apply_flow_smoke.py
+```
+
+3. Chạy nhanh cả 2 test trong 1 lệnh:
+
+```bash
+python tests/validate_crossplane_build_all_remedies.py && \
+python tests/remedy_eng_apply_flow_smoke.py
+```
+
 **Luồng xử lý Scan Result:**
 
 1. **Load Full AST**: Đọc toàn bộ cấu trúc JSON từ parser_output (giữ nguyên wrapper `status`, `errors`, tất cả configs)

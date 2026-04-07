@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import copy
-import json
-from typing import Any, Dict, List, Type
-import argparse
+from typing import Dict, Type
 
 from core.remedyEng.base_remedy import BaseRemedy
-from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
+from core.recom_registry import RecomID
 
 from core.remedyEng.recommendations.remediate_241 import Remediate241
 from core.remedyEng.recommendations.remediate_242 import Remediate242
@@ -162,22 +160,55 @@ class Remediator:
             
             # Apply remediation
             remedy.remediate()
-            
-            # Display diff (would show before/after comparison)
-            # TODO: Implement diff display
-            
-            # Ask for final approval
-            final_decision = TerminalUI.get_instance().display_remedy_decision(pre_diff=False)
-            if not final_decision:
+
+            approved_changes = {}
+            accepted_count = 0
+            rejected_count = 0
+            unchanged_count = 0
+            fallback_count = 0
+            for file_path in remedy.get_affected_files():
+                payload = remedy.build_file_diff_payload(file_path)
+
+                if payload["mode"] == "ast":
+                    fallback_count += 1
+
+                TerminalUI.get_instance().display_remedy_file_diff(
+                    remedy_id=remedy.id,
+                    file_path=file_path,
+                    violation_count=payload["violation_count"],
+                    mode=payload["mode"],
+                    diff_text=payload["diff_text"],
+                )
+
+                if not payload["diff_text"]:
+                    remedy.file_approval_status[file_path] = False
+                    unchanged_count += 1
+                    continue
+
+                file_decision = TerminalUI.get_instance().display_file_diff_decision()
+                remedy.file_approval_status[file_path] = file_decision
+
+                if file_decision:
+                    accepted_count += 1
+                    approved_changes[file_path] = remedy.child_ast_modified[file_path]
+                else:
+                    rejected_count += 1
+
+            TerminalUI.get_instance().display_remedy_summary(
+                remedy_id=remedy.id,
+                accepted=accepted_count,
+                rejected=rejected_count,
+                unchanged=unchanged_count,
+                fallback=fallback_count,
+            )
+
+            if not approved_changes:
                 TerminalUI.get_instance().display_remedy_rejected(remedy)
                 continue
-            
-            # Merge modifications back into full ast_config
-            modified_ast_config = self.merge_remediation(
-                modified_ast_config,
-                remedy.child_ast_modified
-            )
+
+            modified_ast_config = self.merge_remediation(modified_ast_config, approved_changes)
         
+        self.ast_config = modified_ast_config
         return modified_ast_config
     
     def merge_remediation(self, ast_config: dict, child_ast_modified: dict) -> dict:
