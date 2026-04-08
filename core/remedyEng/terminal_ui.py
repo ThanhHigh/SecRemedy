@@ -167,6 +167,58 @@ class TerminalUI:
     def display_output_saved(self, output_path: str) -> None:
         """Display where remediated AST was written."""
         print(f"Remediated AST saved to: {output_path}")
+
+    def display_validation_header(self, iteration: int) -> None:
+        """Display validation loop header."""
+        print("\n" + "#" * 60)
+        print(f"Validation Loop - Iteration {iteration}".center(60))
+        print("#" * 60)
+
+    def display_validation_ok(self, config_path: str) -> None:
+        """Display successful nginx syntax check."""
+        print(f"Syntax check PASSED: {config_path}")
+
+    def display_validation_warning(self, message: str) -> None:
+        """Display warning in validation/replay flow."""
+        print(f"[WARNING] {message}")
+
+    def display_validation_errors(self, error_paths: List[str], raw_error: str) -> None:
+        """Display parsed failing paths and concise raw error output."""
+        print("\n" + "!" * 60)
+        print("Syntax check FAILED".center(60))
+        print("!" * 60)
+        if error_paths:
+            print("Wrong paths detected:")
+            for path in error_paths:
+                print(f"- {path}")
+        else:
+            print("Wrong paths detected: (none extracted)")
+        print("-" * 60)
+        if raw_error:
+            print(raw_error.strip())
+        print("!" * 60)
+
+    def ask_post_error_action(self) -> str:
+        """Ask what to do when syntax check fails."""
+        print("Choose action: [r] rollback one remedy, [a] reapply one remedy, [s] stop")
+        while True:
+            user_input = input().strip().lower()
+            if user_input in {"r", "rollback"}:
+                return "rollback"
+            if user_input in {"a", "reapply"}:
+                return "reapply"
+            if user_input in {"s", "stop"}:
+                return "stop"
+            print("Invalid input. Enter r, a, or s.")
+
+    def ask_remedy_id(self, candidate_ids: List[str]) -> str:
+        """Ask user to choose one remedy id from candidates or free text."""
+        if candidate_ids:
+            print("Candidate remedies:")
+            for remedy_id in candidate_ids:
+                print(f"- {remedy_id}")
+        print("Enter remedy id:")
+        return input().strip()
         
     def user_input(self, remedy_require_inputs: List[str], user_inputs_list, remedy_id: str) -> None:
         print(f"Remedy {remedy_id} requires additional information from you.")

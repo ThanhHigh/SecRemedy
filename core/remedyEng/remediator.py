@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Dict, Type
+from typing import Dict, List, Optional, Type
 
 from core.remedyEng.base_remedy import BaseRemedy
 from core.recom_registry import RecomID
@@ -26,6 +26,8 @@ class Remediator:
     """Apply remediation through all Child Remedies base on Results, interact with User, Generate new AST """
     ast_config: dict = {}
     ast_scan: dict = {}
+    ast_baseline: dict = {}
+    applied_history: List[dict] = []
 
     
 
@@ -47,7 +49,10 @@ class Remediator:
     }
 
     def __init__(self) -> None:
-        pass
+        self.ast_config = {}
+        self.ast_scan = {}
+        self.ast_baseline = {}
+        self.applied_history = []
 
     def display_header(self) -> None:
         """Display a header for the remediation process."""
@@ -108,6 +113,15 @@ class Remediator:
             remedy = remedy_cls() # Instantiate the remedy class
             remedy.read_child_scan_result(self.ast_scan) # Get the AST scan first
             remedy.read_child_ast_config(self.ast_config)
+
+    def _prepare_remedy(self, remedy: BaseRemedy, ast_config: dict) -> bool:
+        """Populate remedy state and return True only when violations exist."""
+        remedy.read_child_scan_result(self.ast_scan)
+        if not remedy.child_scan_result:
+            return False
+
+        remedy.read_child_ast_config(ast_config)
+        return bool(remedy.child_ast_config)
     
     def apply_remediations(self) -> dict:
         """
@@ -127,10 +141,16 @@ class Remediator:
         Returns:
             Modified ast_config dictionary
         """
-        modified_ast_config = copy.deepcopy(self.ast_config)
+        self.ast_baseline = copy.deepcopy(self.ast_config)
+        self.applied_history = []
+        modified_ast_config = copy.deepcopy(self.ast_baseline)
         
         for remedy_cls in self.REMEDIATION_REGISTRY.values():
             remedy = remedy_cls()
+
+            if not self._prepare_remedy(remedy, modified_ast_config):
+                print(f"No violations found for Rule {remedy.id}. Skipping.")
+                continue
             
             # Display remedy information
             TerminalUI.get_instance().display_remedy_info(remedy)
@@ -148,15 +168,6 @@ class Remediator:
                     user_inputs_list=remedy.user_inputs,
                     remedy_id=remedy.id
                 )
-            
-            # Extract violations and AST sections for this rule
-            remedy.read_child_scan_result(self.ast_scan)
-            remedy.read_child_ast_config(modified_ast_config)
-            
-            # Skip if no violations for this rule
-            if not remedy.child_scan_result:
-                print(f"No violations found for Rule {remedy.id}. Skipping.")
-                continue
             
             # Apply remediation
             remedy.remediate()
@@ -207,9 +218,155 @@ class Remediator:
                 continue
 
             modified_ast_config = self.merge_remediation(modified_ast_config, approved_changes)
+
+            self.applied_history.append(
+                {
+                    "remedy_id": remedy.id,
+                    "remedy_class": remedy_cls.__name__,
+                    "user_inputs": list(remedy.user_inputs),
+                    "approved_files": sorted(list(approved_changes.keys())),
+                    "touched_files": sorted(list(remedy.get_affected_files())),
+                }
+            )
         
         self.ast_config = modified_ast_config
         return modified_ast_config
+
+    def get_remedy_class_by_id(self, remedy_id: str) -> Optional[Type[BaseRemedy]]:
+        """Resolve a remediation class from registry by rule id string."""
+        for remedy_cls in self.REMEDIATION_REGISTRY.values():
+            remedy = remedy_cls()
+            if remedy.id == remedy_id:
+                return remedy_cls
+        return None
+
+    def replay_history(self, excluded_remedy_id: Optional[str] = None) -> dict:
+        """Rebuild AST from baseline by replaying approved remedy history."""
+        rebuilt = copy.deepcopy(self.ast_baseline)
+        for record in self.applied_history:
+            remedy_id = record.get("remedy_id", "")
+            if excluded_remedy_id and remedy_id == excluded_remedy_id:
+                continue
+
+            remedy_cls = self.get_remedy_class_by_id(remedy_id)
+            if remedy_cls is None:
+                continue
+
+            rebuilt = self.apply_remedy_record(remedy_cls, rebuilt, record)
+
+        self.ast_config = rebuilt
+        return rebuilt
+
+    def apply_remedy_record(self, remedy_cls: Type[BaseRemedy], ast_input: dict, record: dict) -> dict:
+        """Apply one remedy non-interactively using a stored record."""
+        modified_ast_config = copy.deepcopy(ast_input)
+        remedy = remedy_cls()
+
+        stored_inputs = record.get("user_inputs", [])
+        if isinstance(stored_inputs, list):
+            remedy.user_inputs = list(stored_inputs)
+
+        remedy.read_child_scan_result(self.ast_scan)
+        remedy.read_child_ast_config(modified_ast_config)
+        if not remedy.child_scan_result:
+            return modified_ast_config
+
+        remedy.remediate()
+        approved_files = set(record.get("approved_files", []))
+        approved_changes = {
+            file_path: remedy.child_ast_modified[file_path]
+            for file_path in remedy.get_affected_files()
+            if file_path in approved_files and file_path in remedy.child_ast_modified
+        }
+
+        if not approved_changes:
+            return modified_ast_config
+
+        return self.merge_remediation(modified_ast_config, approved_changes)
+
+    def apply_single_remedy_interactive(self, remedy_id: str, ast_input: dict) -> tuple[dict, Optional[dict]]:
+        """Apply only one remedy interactively and return updated AST and record."""
+        remedy_cls = self.get_remedy_class_by_id(remedy_id)
+        if remedy_cls is None:
+            TerminalUI.get_instance().display_validation_warning(
+                f"Cannot find remedy class for rule {remedy_id}."
+            )
+            return ast_input, None
+
+        modified_ast_config = copy.deepcopy(ast_input)
+        remedy = remedy_cls()
+
+        if not self._prepare_remedy(remedy, modified_ast_config):
+            TerminalUI.get_instance().display_validation_warning(
+                f"No violations found for Rule {remedy.id}."
+            )
+            return modified_ast_config, None
+
+        TerminalUI.get_instance().display_remedy_info(remedy)
+        pre_decision = TerminalUI.get_instance().display_remedy_decision(pre_diff=True)
+        if not pre_decision:
+            TerminalUI.get_instance().display_remedy_rejected(remedy)
+            return modified_ast_config, None
+
+        if remedy.has_input:
+            remedy.user_inputs = []
+            TerminalUI.get_instance().user_input(
+                remedy_require_inputs=remedy.remedy_input_require,
+                user_inputs_list=remedy.user_inputs,
+                remedy_id=remedy.id,
+            )
+
+        remedy.remediate()
+        approved_changes = {}
+        accepted_count = 0
+        rejected_count = 0
+        unchanged_count = 0
+        fallback_count = 0
+
+        for file_path in remedy.get_affected_files():
+            payload = remedy.build_file_diff_payload(file_path)
+            if payload["mode"] == "ast":
+                fallback_count += 1
+
+            TerminalUI.get_instance().display_remedy_file_diff(
+                remedy_id=remedy.id,
+                file_path=file_path,
+                violation_count=payload["violation_count"],
+                mode=payload["mode"],
+                diff_text=payload["diff_text"],
+            )
+
+            if not payload["diff_text"]:
+                unchanged_count += 1
+                continue
+
+            file_decision = TerminalUI.get_instance().display_file_diff_decision()
+            if file_decision:
+                accepted_count += 1
+                approved_changes[file_path] = remedy.child_ast_modified[file_path]
+            else:
+                rejected_count += 1
+
+        TerminalUI.get_instance().display_remedy_summary(
+            remedy_id=remedy.id,
+            accepted=accepted_count,
+            rejected=rejected_count,
+            unchanged=unchanged_count,
+            fallback=fallback_count,
+        )
+
+        if not approved_changes:
+            return modified_ast_config, None
+
+        merged = self.merge_remediation(modified_ast_config, approved_changes)
+        record = {
+            "remedy_id": remedy.id,
+            "remedy_class": remedy_cls.__name__,
+            "user_inputs": list(remedy.user_inputs),
+            "approved_files": sorted(list(approved_changes.keys())),
+            "touched_files": sorted(list(remedy.get_affected_files())),
+        }
+        return merged, record
     
     def merge_remediation(self, ast_config: dict, child_ast_modified: dict) -> dict:
         """
