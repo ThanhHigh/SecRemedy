@@ -3,7 +3,22 @@ from core.remedyEng.base_remedy import BaseRemedy
 from core.remedyEng.ast_editor import ASTEditor
 import copy
 
-REMEDY_FIX_EXAMPLE = ""
+REMEDY_FIX_EXAMPLE = """Rule 2.5.1 Example (Disable Server Tokens):
+
+Prevents nginx from advertising its version in response headers
+and error pages.
+
+This is a simple directive with no user configuration needed.
+
+Result: server_tokens off;
+placed in the http block (or server block for local override)
+
+Verify:
+✓ curl -I http://your-server | grep -i server
+  (Header should NOT show nginx/version)
+✓ Request error page (404, 500, etc.)
+  (Should NOT show "nginx" or version)
+"""
 REMEDY_INPUT_REQUIRE = []
 
 
@@ -11,7 +26,7 @@ class Remediate251(BaseRemedy):
     def __init__(self) -> None:
         super().__init__(RECOMMENDATION_REGISTRY[RecomID.CIS_2_5_1])
         self.has_input = False
-        self.has_guide_detail = False
+        self.has_guide_detail = True
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
 
@@ -20,6 +35,7 @@ class Remediate251(BaseRemedy):
         Apply remediation for Rule 2.5.1: Ensure server_tokens directive is set to off.
         
         Action: REPLACE - Sets server_tokens args to ["off"]
+        This has no user input - automatically fixes to "off"
         """
         self.child_ast_modified = {}
         
@@ -49,42 +65,54 @@ class Remediate251(BaseRemedy):
                 directive = violation.get("directive", "")
                 args = violation.get("args", [])
                 
-                # For rule 2.5.1, we expect action="replace"
+                # For rule 2.5.1, we expect action="replace" with args=["off"]
                 if action != "replace" or directive != "server_tokens":
                     continue
                 
                 # Convert context to relative path within this file
-                # Original context: ["config", 0, "parsed", N, ...]
-                # We need: [N, ...] (relative to parsed)
-                relative_context = self._get_relative_context(context)
+                relative_context = self._relative_context(context)
                 if not relative_context:
                     continue
                 
                 # Navigate to the target and modify
                 target = ASTEditor.get_child_ast_config(parsed_copy, relative_context)
                 if target and isinstance(target, dict) and target.get("directive") == "server_tokens":
-                    target["args"] = copy.deepcopy(args)
+                    # Ensure it's exactly ["off"]
+                    target["args"] = ["off"]
             
             # Store modified config
             self.child_ast_modified[file_path] = {
                 "parsed": parsed_copy
             }
-    
-    @staticmethod
-    def _get_relative_context(full_context):
-        """
-        Convert full context path to relative context within parsed section.
-        
-        Full context: ["config", 0, "parsed", 5, "block", 2]
-        Relative context: [5, "block", 2]
-        """
-        if not isinstance(full_context, list):
-            return []
-        
-        # Find "parsed" key in context
-        try:
-            parsed_index = full_context.index("parsed")
-            # Return everything after "parsed"
-            return full_context[parsed_index + 1:]
-        except (ValueError, IndexError):
-            return []
+
+    def get_user_guidance(self) -> str:
+        """Return guidance for server_tokens rule."""
+        return """Rule 2.5.1 (Disable Server Tokens):
+
+This rule has NO user input - it's automatic.
+
+What it does:
+├─ Adds directive: server_tokens off;
+├─ Placed in http block (global default)
+└─ Can be overridden per server block if needed
+
+Purpose:
+├─ Hides nginx version in response headers
+├─ Won't display version on error pages
+└─ Reduces attack surface (less fingerprinting info)
+
+Result - nginx.conf will contain:
+http {
+  ...
+  server_tokens off;
+  ...
+}
+
+Verify:
+✓ curl -I http://your-server | grep -i server
+  (Should NOT show: "Server: nginx/version")
+✓ Navigate to 404 page
+  (Should NOT mention "nginx")
+
+Impact: No performance impact, purely informational.
+"""

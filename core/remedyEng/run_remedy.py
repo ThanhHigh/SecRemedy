@@ -1,3 +1,4 @@
+import argparse
 import json
 import re
 import subprocess
@@ -138,11 +139,37 @@ def _persist_ast_output(ast_config: Dict[str, Any], output_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    remediator = Remediator()
+    parser = argparse.ArgumentParser(description="Run SecRemedy remediation pipeline")
+    parser.add_argument(
+        "--input",
+        type=str,
+        help="Path to parser output JSON AST (optional; if omitted, prompt in TUI)",
+    )
+    parser.add_argument(
+        "--scan-result",
+        type=str,
+        help="Path to scan result JSON (optional; if omitted, prompt in TUI)",
+    )
+    parser.add_argument(
+        "--strict-placement",
+        action="store_true",
+        help="Enable strict directive placement for rules that require ordering (e.g., CIS 2.4.2)",
+    )
+    parser.add_argument(
+        "--json-schema-strict",
+        action="store_true",
+        help="Enable strict JSON log schema checks for CIS 3.1",
+    )
+    args = parser.parse_args()
+
+    remediator = Remediator(
+        strict_placement=args.strict_placement,
+        strict_json_validation=args.json_schema_strict,
+    )
     ui = TerminalUI.get_instance()
 
     remediator.display_header()
-    remediator.get_input_ast()
+    remediator.get_input_ast(config_path=args.input, scan_path=args.scan_result)
     remediator.ast_config = remediator.apply_remediations()
 
     output_path = Path("contracts/remediated_output.json").resolve()

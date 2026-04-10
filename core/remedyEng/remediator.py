@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
 from typing import Dict, List, Optional, Type
 
 from core.remedyEng.base_remedy import BaseRemedy
@@ -48,20 +50,52 @@ class Remediator:
         RecomID.CIS_4_1_1: Remediate411,
     }
 
-    def __init__(self) -> None:
+    def __init__(self, strict_placement: bool = False, strict_json_validation: bool = False) -> None:
         self.ast_config = {}
         self.ast_scan = {}
         self.ast_baseline = {}
         self.applied_history = []
+        self.strict_placement = strict_placement
+        self.strict_json_validation = strict_json_validation
 
     def display_header(self) -> None:
         """Display a header for the remediation process."""
         TerminalUI.get_instance().display_remedy_header()
 
-    def get_input_ast(self) -> None:
+    def get_input_ast(self, config_path: Optional[str] = None, scan_path: Optional[str] = None) -> None:
         """Get the File Names from user and return 2 ASTs """
-        self.ast_config = TerminalUI.get_instance().get_ast_config()
-        self.ast_scan = TerminalUI.get_instance().get_ast_scan()
+        if config_path:
+            with Path(config_path).expanduser().resolve().open("r", encoding="utf-8") as f:
+                self.ast_config = json.load(f)
+        else:
+            self.ast_config = TerminalUI.get_instance().get_ast_config()
+
+        if scan_path:
+            with Path(scan_path).expanduser().resolve().open("r", encoding="utf-8") as f:
+                self.ast_scan = json.load(f)
+        else:
+            self.ast_scan = TerminalUI.get_instance().get_ast_scan()
+
+    def _configure_remedy_flags(self, remedy: BaseRemedy) -> None:
+        """Inject global CLI flags into remedy instances."""
+        remedy.strict_placement = self.strict_placement
+        remedy.strict_json_validation = self.strict_json_validation
+
+    def _filter_validated_changes(self, remedy: BaseRemedy) -> dict:
+        """Keep only per-file AST mutations that pass structural validation."""
+        validated = {}
+        for file_path, modified in remedy.child_ast_modified.items():
+            before_ast = remedy.child_ast_config.get(file_path, {}).get("parsed")
+            after_ast = modified.get("parsed") if isinstance(modified, dict) else None
+            is_valid, errors = remedy._validate_ast_mutation(before_ast, after_ast)
+            if is_valid:
+                validated[file_path] = modified
+                continue
+
+            TerminalUI.get_instance().display_validation_warning(
+                f"Rule {remedy.id} failed AST validation for {file_path}: {'; '.join(errors)}"
+            )
+        return validated
         
     # For in Remediation Registry, each Remediate call the function TerminalUI of specific for that remediation, display information
     # Input for user if has, In TerminalUI wait for user input, get the information, start to apply Remediate as hard code
@@ -116,6 +150,7 @@ class Remediator:
 
     def _prepare_remedy(self, remedy: BaseRemedy, ast_config: dict) -> bool:
         """Populate remedy state and return True only when violations exist."""
+        self._configure_remedy_flags(remedy)
         remedy.read_child_scan_result(self.ast_scan)
         if not remedy.child_scan_result:
             return False
@@ -163,14 +198,13 @@ class Remediator:
             
             # Collect user inputs if needed
             if remedy.has_input:
-                TerminalUI.get_instance().user_input(
-                    remedy_require_inputs=remedy.remedy_input_require,
-                    user_inputs_list=remedy.user_inputs,
-                    remedy_id=remedy.id
-                )
+                if not TerminalUI.get_instance().collect_and_validate_user_inputs(remedy):
+                    TerminalUI.get_instance().display_remedy_rejected(remedy)
+                    continue
             
             # Apply remediation
             remedy.remediate()
+            remedy.child_ast_modified = self._filter_validated_changes(remedy)
 
             approved_changes = {}
             accepted_count = 0
@@ -261,6 +295,7 @@ class Remediator:
         """Apply one remedy non-interactively using a stored record."""
         modified_ast_config = copy.deepcopy(ast_input)
         remedy = remedy_cls()
+        self._configure_remedy_flags(remedy)
 
         stored_inputs = record.get("user_inputs", [])
         if isinstance(stored_inputs, list):
@@ -272,6 +307,7 @@ class Remediator:
             return modified_ast_config
 
         remedy.remediate()
+        remedy.child_ast_modified = self._filter_validated_changes(remedy)
         approved_files = set(record.get("approved_files", []))
         approved_changes = {
             file_path: remedy.child_ast_modified[file_path]
@@ -309,14 +345,12 @@ class Remediator:
             return modified_ast_config, None
 
         if remedy.has_input:
-            remedy.user_inputs = []
-            TerminalUI.get_instance().user_input(
-                remedy_require_inputs=remedy.remedy_input_require,
-                user_inputs_list=remedy.user_inputs,
-                remedy_id=remedy.id,
-            )
+            if not TerminalUI.get_instance().collect_and_validate_user_inputs(remedy):
+                TerminalUI.get_instance().display_remedy_rejected(remedy)
+                return modified_ast_config, None
 
         remedy.remediate()
+        remedy.child_ast_modified = self._filter_validated_changes(remedy)
         approved_changes = {}
         accepted_count = 0
         rejected_count = 0

@@ -22,6 +22,13 @@ class Remediate252(BaseRemedy):
     def remediate(self) -> None:
         """Apply remediation for Rule 2.5.2 by adding/updating custom error_page directives."""
         self.child_ast_modified = {}
+        
+        # Validate user inputs first
+        is_valid, error_msg = self._validate_user_inputs()
+        if not is_valid:
+            print(f"  Validation error: {error_msg}")
+            return
+        
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
             return
 
@@ -70,16 +77,6 @@ class Remediate252(BaseRemedy):
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     @staticmethod
-    def _relative_context(full_context):
-        if not isinstance(full_context, list):
-            return []
-        try:
-            idx = full_context.index("parsed")
-            return full_context[idx + 1 :]
-        except (ValueError, IndexError):
-            return []
-
-    @staticmethod
     def _upsert_error_page(block_list, args):
         if not isinstance(block_list, list):
             return
@@ -123,3 +120,223 @@ class Remediate252(BaseRemedy):
                 item["args"] = copy.deepcopy(args)
                 return
         block_list.append({"directive": directive, "args": copy.deepcopy(args)})
+    
+    def _validate_user_inputs(self) -> tuple[bool, str]:
+        """
+        Validate user inputs for Rule 2.5.2 (custom error pages).
+        
+        Validates paths are not empty and warns if they contain "nginx" (branding).
+        """
+        err_40x = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else ""
+        err_50x = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
+        root_50x = self.user_inputs[2].strip() if len(self.user_inputs) > 2 else ""
+        
+        # At least one error page path required
+        if not err_40x and not err_50x:
+            return (False, "At least one error page path required (40x or 50x)")
+        
+        # Check for nginx branding in error pages
+        if err_40x and "nginx" in err_40x.lower():
+            print(f"  Warning: Error page may contain nginx branding. Consider: {err_40x}")
+        if err_50x and "nginx" in err_50x.lower():
+            print(f"  Warning: Error page may contain nginx branding. Consider: {err_50x}")
+        
+        return (True, "")
+    
+    def get_user_guidance(self) -> str:
+        """
+        Provide step-by-step guidance for Rule 2.5.2 user input.
+        
+        Explains how to create custom error pages to replace default
+        nginx error pages.
+        """
+        guidance = """
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  Rule 2.5.2: Replace Default Error Pages                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+WHY THIS MATTERS:
+  Default nginx error pages show:
+    • Server version (e.g., "nginx/1.24.0")
+    • Nginx branding
+    • Minimal HTML
+  
+  This reveals information to attackers and looks unprofessional. This rule
+  replaces defaults with custom HTML that:
+    • Hides server version and brand
+    • Shows professional branded error messages
+    • Improves user experience with helpful links/support info
+
+WHAT THIS RULE DOES:
+  Adds error_page directives that point to custom HTML files:
+    • error_page 404 /404.html;        → Custom 404 Not Found page
+    • error_page 500 502 503 504 /50x.html;
+                                       → Custom server error page (5xx)
+  
+  Also creates location block with root and internal flag for serving error pages
+
+STEP-BY-STEP INSTRUCTIONS:
+
+  [STEP 1] 404 Error Page Path
+    This is the path to your custom "Not Found" page.
+    
+    Options:
+      • /404.html        → Simple path (creates public location = /404.html)
+      • /errors/404.html → Nested in errors directory
+      • /static/404.html → In static assets folder
+      • Leave blank      → Auto-use /40x.html
+    
+    Examples:
+      ✓ /404.html                      (Simple path at domain root)
+      ✓ /errors/404.html               (Organized in subdirectory)
+      ✗ /var/www/html/404.html         (Don't use filesystem path - use web path)
+      ✗ https://example.com/404.html   (Don't use absolute URL - use relative web path)
+      ✗ error404.html                  (Missing leading / - must be absolute web path)
+
+  [STEP 2] 5xx Error Page Path
+    This is the path to your custom "Server Error" page (500, 502, 503, 504).
+    
+    IMPORTANT: These error codes all map to ONE file (not different files).
+    This is why nginx groups them: error_page 500 502 503 504 /50x.html;
+    
+    Options:
+      • /50x.html        → Standard name
+      • /error.html      → Generic error page
+      • /errors/50x.html → In errors directory
+      • Leave blank      → Auto-use /50x.html
+    
+    Examples:
+      ✓ /50x.html                      (Standard naming)
+      ✓ /error.html                    (Generic handler)
+      ✗ /500.html,/502.html,/503.html  (Wrong - must be single path for all 5xx)
+      ✗ internal/error.html            (Relative paths not supported - must start with /)
+
+  [STEP 3] 5xx Error Page Root Directory
+    Where nginx should find the 50x error page file on disk.
+    
+    CRITICAL: The root path MUST match your nginx configuration structure.
+    
+    Common patterns:
+    
+    PATTERN A: Static files in /var/www/html
+      Enter: /var/www/html
+      Config result:
+        ────────────────────────────────────────
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root /var/www/html;
+            internal;
+        }
+        ────────────────────────────────────────
+      File location on disk: /var/www/html/50x.html
+    
+    PATTERN B: Errors in dedicated subdirectory
+      Enter: /var/www/html/errors
+      File location on disk: /var/www/html/errors/50x.html
+    
+    PATTERN C: Per-domain static files
+      Enter: /var/www/example.com/public
+      File location on disk: /var/www/example.com/public/50x.html
+    
+    Examples:
+      ✓ /var/www/html              (Standard web root)
+      ✓ /var/www/example.com/public (Domain-specific root)
+      ✗ /var/www                   (Too broad, files not here)
+      ✗ /etc/nginx/html            (Nginx config directory, not web files)
+      ✗ html                       (Relative path, must be absolute)
+
+CREATE ERROR PAGE FILES:
+
+  On your server, create the HTML files:
+  
+    # Create 404 error page
+    cat > /var/www/html/404.html << 'EOF'
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Page Not Found</title>
+        <style>
+            body { font-family: Arial; text-align: center; margin-top: 100px; }
+            h1 { color: #333; }
+            p { color: #666; }
+        </style>
+    </head>
+    <body>
+        <h1>404 - Page Not Found</h1>
+        <p>Sorry, the page you're looking for doesn't exist.</p>
+        <p><a href="/">Return to Home</a></p>
+    </body>
+    </html>
+    EOF
+    
+    # Create 50x error page
+    cat > /var/www/html/50x.html << 'EOF'
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Server Error</title>
+        <style>
+            body { font-family: Arial; text-align: center; margin-top: 100px; }
+            h1 { color: #c00; }
+            p { color: #666; }
+        </style>
+    </head>
+    <body>
+        <h1>500 - Server Error</h1>
+        <p>Something went wrong on our end. Please try again later.</p>
+        <p><a href="/">Return to Home</a></p>
+    </body>
+    </html>
+    EOF
+
+VERIFICATION & TESTING:
+
+  After remediation, check nginx config:
+    grep -A 5 "error_page" nginx.conf
+  
+    Expected output:
+    ────────────────────────────────────────────────────────────────
+    http {
+        ...
+        error_page 404 /404.html;
+        error_page 500 502 503 504 /50x.html;
+        
+        location = /50x.html {
+            root /var/www/html;
+            internal;
+        }
+    }
+    ────────────────────────────────────────────────────────────────
+  
+    Syntax-oriented checks in remediation flow:
+        - run nginx -t in the built-in validation loop
+        - review generated diff includes error_page directives and location = /50x.html block
+
+COMMON MISTAKES:
+  ✗ Using filesystem paths:      /var/www/html/404.html  (should be /404.html)
+  ✗ Absolute URLs:               https://example.com/404  (should be relative /404)
+  ✗ Relative paths:              errors/404.html          (should be /errors/404.html)
+  ✗ Different files per 5xx code: error_page 500 /500.html 502 /502.html
+                                  (nginx only supports one path for all 5xx)
+  ✗ Wrong root directory:         root /etc/nginx          (should be web root, not config dir)
+  ✗ Missing 'internal' flag:      Exposes internal error pages to anyone
+
+BRANDING BEST PRACTICE:
+  Your custom error pages should:
+    ✓ Match your site branding (logo, colors)
+    ✓ Be helpful (search box, site map link, support contact)
+    ✓ NOT reveal server software version
+    ✓ NOT contain "nginx", "Apache", "IIS", etc.
+  
+  Examples of good error messages:
+    "Something went wrong. Our team is on it. Email support@example.com"
+    "Page not found. Try searching or visit our home page."
+    "Service temporarily unavailable. Check back in a few minutes."
+
+────────────────────────────────────────────────────────────────────────────────
+PROMPT: Enter comma-separated values:
+        1. 404 error page path (e.g., /404.html)
+        2. 5xx error page path (e.g., /50x.html)
+        3. Root directory for error pages (e.g., /var/www/html)
+        """
+        return guidance.strip()

@@ -110,6 +110,23 @@ class TerminalUI:
             print(f"Additional Details: \n{remedy.remedy_guide_detail}")
         print("-" * 60 + "\n")
 
+    def display_user_guidance(self, remedy) -> None:
+        """Display step-by-step input guidance for a remedy."""
+        try:
+            guidance = remedy.get_user_guidance()
+        except Exception as exc:
+            self.display_validation_warning(f"Could not render guidance for {remedy.id}: {exc}")
+            return
+
+        if not guidance:
+            return
+
+        print("\n" + "=" * 60)
+        print(f"Input Guidance: {remedy.id}".center(60))
+        print("=" * 60)
+        print(guidance)
+        print("=" * 60 + "\n")
+
     def display_remedy_decision(self, pre_diff: bool) -> bool:
         """Ask the user whether to apply the remedy."""
         if (pre_diff):
@@ -230,4 +247,30 @@ class TerminalUI:
         # For debug
         # Is the user input list is work as desire
         debug_print(f"{remedy_id}: User provided inputs: {user_inputs_list}")
+
+    def collect_and_validate_user_inputs(self, remedy) -> bool:
+        """Collect inputs for one remedy and validate before applying remediation."""
+        if not remedy.has_input:
+            return True
+
+        self.display_user_guidance(remedy)
+
+        while True:
+            remedy.user_inputs = []
+            for require in remedy.remedy_input_require:
+                print(f"Please provide:\n{require}")
+                user_input = input().strip()
+                remedy.user_inputs.append(user_input)
+
+            is_valid, error_msg = remedy._validate_user_inputs()
+            if is_valid:
+                debug_print(f"{remedy.id}: Validated user inputs: {remedy.user_inputs}")
+                return True
+
+            print(f"[VALIDATION ERROR] {error_msg}")
+            print("Retry this remedy input? (y/n)")
+            retry = input().strip().lower()
+            if retry not in {"y", "yes"}:
+                self.display_validation_warning(f"Skipping {remedy.id} due to invalid inputs.")
+                return False
 

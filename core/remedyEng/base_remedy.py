@@ -150,6 +150,111 @@ class BaseRemedy:
         """Prompt user for any required variables before remediation."""
         pass
 
+    # ==================== Foundation Validation Helpers ====================
+
+    @staticmethod
+    def _relative_context(full_context: List) -> List:
+        """
+        Convert full context path to relative context within parsed section.
+        
+        Full context: ["config", 0, "parsed", 5, "block", 2]
+        Relative context: [5, "block", 2]
+        
+        Args:
+            full_context: Full context path from scanner
+            
+        Returns:
+            Relative path starting after "parsed", or empty list if invalid
+        """
+        if not isinstance(full_context, list):
+            return []
+        
+        try:
+            parsed_index = full_context.index("parsed")
+            return full_context[parsed_index + 1:]
+        except (ValueError, IndexError):
+            return []
+
+    @staticmethod
+    def _validate_log_level(level: str) -> bool:
+        """
+        Validate that log level is one of nginx allowed values.
+        
+        Valid levels: debug, info, notice, warn, error, crit, alert, emerg
+        
+        Args:
+            level: Log level string to validate
+            
+        Returns:
+            True if valid, False otherwise
+        """
+        allowed_levels = ["debug", "info", "notice", "warn", "error", "crit", "alert", "emerg"]
+        return level.strip().lower() in allowed_levels
+
+    def _validate_user_inputs(self) -> tuple[bool, str]:
+        """
+        Validate user inputs before applying remediation. Override in subclasses.
+        
+        Default implementation accepts all inputs.
+        Override in specific remediate_*.py classes to add custom validation.
+        
+        Returns:
+            (is_valid: bool, error_message: str)
+            If is_valid=True, error_message should be empty
+            If is_valid=False, error_message describes the validation error
+        """
+        return (True, "")
+
+    def _validate_ast_mutation(self, before_ast: Any, after_ast: Any) -> tuple[bool, List[str]]:
+        """
+        Validate that AST mutation is structurally sound.
+        
+        Basic checks:
+        - Both ASTs are lists
+        - No obvious structural corruption
+        
+        Can be overridden for rule-specific validation.
+        
+        Args:
+            before_ast: AST before mutation
+            after_ast: AST after mutation
+            
+        Returns:
+            (is_valid: bool, error_messages: List[str])
+            If is_valid=True, error_messages should be empty list
+        """
+        errors = []
+        
+        if not isinstance(before_ast, list):
+            errors.append("Before AST is not a list")
+        if not isinstance(after_ast, list):
+            errors.append("After AST is not a list")
+        
+        if errors:
+            return (False, errors)
+        
+        # Basic checks passed
+        return (True, [])
+
+    def get_user_guidance(self) -> str:
+        """
+        Return step-by-step guidance for user input.
+        
+        Format:
+        Rule X.Y.Z Example (Brief Title):
+        ├─ Input Needed: [description]
+        ├─ Example: [exact example]
+        ├─ Common Mistake: [what users get wrong]
+        ├─ Result: [resulting nginx config]
+        └─ Verify: [how to check it worked]
+        
+        Override in subclasses with specific guidance.
+        
+        Returns:
+            Formatted guidance string for terminal display
+        """
+        return f"Rule {self.id}: {self.title}\n{self.description}"
+
     def get_affected_files(self) -> List[str]:
         """Return file paths modified by the current remedy."""
         return list(self.child_ast_modified.keys())
