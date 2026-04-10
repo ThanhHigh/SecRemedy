@@ -4,11 +4,11 @@ from core.remedyEng.ast_editor import ASTEditor
 import copy
 import json
 
-REMEDY_FIX_EXAMPLE = "http {\n    log_format main_access_json escape=json '{'\n        '\"timestamp\":           \"$time_iso8601\",'\n        '\"remote_addr\":         \"$remote_addr\",'\n        '\"remote_user\":         \"$remote_user\",'\n        '\"server_name\":         \"$server_name\",'\n        '\"request_method\":       \"$request_method\",'\n        '\"request_uri\":          \"$request_uri\",'\n        '\"status\":               $status,'\n        '\"body_bytes_sent\":      $body_bytes_sent,'\n        '\"http_referer\":         \"$http_referer\",'\n        '\"http_user_agent\":      \"$http_user_agent\",'\n        '\"x_forwarded_for\":      \"$http_x_forwarded_for\",'\n        '\"request_id\":           \"$request_id\"'\n    '}';\n\n    # Apply the format globally or per server\n    access_log /var/log/nginx/access.json main_access_json;\n}"
+REMEDY_FIX_EXAMPLE = 'Rule 3.1 Example (JSON Logging Format):\n├─ Input 1: Log file path (e.g., /var/log/nginx/access.json)\n├─ Input 2: Log format name (e.g., main_access_json)\n├─ Input 3: JSON format definition\n│\n├─ Example JSON input:\n{\"timestamp\": \"$time_iso8601\", \"remote_addr\": \"$remote_addr\", \"status\": \"$status\", \"request\": \"$request\", \"bytes_sent\": \"$body_bytes_sent\"}\n│\n├─ Important:\n│  └─ Must be valid JSON\n│  └─ Use nginx variables (start with $)\n│  └─ String values wrapped in quotes: \"$var\"\n│  └─ Numeric values without quotes: $status, $body_bytes_sent\n│\n├─ Result in nginx.conf:\nlog_format main_access_json escape=json \'{\"timestamp\": \"$time_iso8601\", \"remote_addr\": \"$remote_addr\", \"status\": $status, \"request\": \"$request\", \"bytes_sent\": $body_bytes_sent}\';\naccess_log /var/log/nginx/access.json main_access_json;\n│\n├─ Use --json-schema-strict for stricter validation\n└─ Verify: nginx -t validation loop and generated diff output\n'
 REMEDY_INPUT_REQUIRE = [
     "Log file path (e.g., /var/log/nginx/access.json):",
     "Log format name (e.g., main_access_json):",
-    "Log format definition (JSON string):",
+    "Log format definition as JSON (copy-paste ready):",
 ]
 
 
@@ -19,26 +19,121 @@ class Remediate31(BaseRemedy):
         self.has_guide_detail = True
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
+        self.strict_json_validation = False  # Set via CLI --json-schema-strict
+
+    def _validate_user_inputs(self) -> tuple[bool, str]:
+        """
+        Validate user inputs for JSON logging configuration.
+        
+        Returns:
+            (is_valid: bool, error_message: str)
+        """
+        if len(self.user_inputs) < 3:
+            return (False, "Missing required inputs: log_file_path, log_format_name, log_format_definition")
+        
+        log_file_path = self.user_inputs[0].strip()
+        log_format_name = self.user_inputs[1].strip()
+        log_format_def = self.user_inputs[2].strip()
+        
+        # Validate log file path
+        if not log_file_path:
+            return (False, "Log file path cannot be empty")
+        if not log_file_path.startswith("/"):
+            return (False, "Log file path must be absolute (start with /)")
+        
+        # Validate format name
+        if not log_format_name:
+            return (False, "Log format name cannot be empty")
+        if not log_format_name.replace("_", "").isalnum():
+            return (False, "Log format name must be alphanumeric with underscores only")
+        
+        # Validate JSON format definition
+        if not log_format_def:
+            return (False, "Log format definition cannot be empty")
+        
+        # Try to parse as JSON
+        try:
+            format_dict = json.loads(log_format_def)
+            if not isinstance(format_dict, dict):
+                return (False, "Log format definition must be a JSON object (dict)")
+            if not format_dict:
+                return (False, "Log format definition cannot be an empty object")
+        except json.JSONDecodeError as e:
+            return (False, f"Log format is not valid JSON: {str(e)}")
+        
+        # If strict validation enabled, check for nginx conventions
+        if self.strict_json_validation:
+            for key, value in format_dict.items():
+                # Check that keys are reasonable field names
+                if not key.replace("_", "").isalnum():
+                    return (False, f"Key '{key}' in JSON is not a valid field name (alphanumeric + _ only)")
+                # Warn if value doesn't look like nginx variable (print warning, not error)
+                value_str = str(value)
+                if not ("$" in value_str or value_str.isdigit()):
+                    print(f"  Warning: Value for key '{key}' doesn't appear to be a nginx variable: {value_str}")
+        
+        return (True, "")
+
+    def _build_log_format_string(self, log_format_name: str, log_format_dict: dict) -> str:
+        """
+        Build a single JSON string for nginx log_format directive.
+        
+        Converts dict {'timestamp': '$time_iso8601', 'status': '$status'} 
+        to string: '{\"timestamp\": \"$time_iso8601\", \"status\": $status}'
+        
+        Note: String values get quotes, numeric/variable values don't.
+        
+        Args:
+            log_format_name: Name of the format (unused here, for reference)
+            log_format_dict: Dictionary of key-value pairs for log format
+            
+        Returns:
+            Properly formatted JSON string for use as single nginx arg
+        """
+        json_parts = []
+        for key, value in log_format_dict.items():
+            value_str = str(value).strip()
+            # If value starts with $ (nginx variable) or is a number, don't quote it
+            if value_str.startswith("$") or value_str.isdigit():
+                json_parts.append(f'"{key}": {value_str}')
+            else:
+                # Otherwise treat as string and quote it
+                json_parts.append(f'"{key}": "{value_str}"')
+        
+        formatted_json = "{" + ", ".join(json_parts) + "}"
+        return formatted_json
 
     def remediate(self) -> None:
         """
-        Apply remediation for Rule 3.1: Ensure HTTP access logging is configured.
+        Apply remediation for Rule 3.1: Ensure HTTP access logging with JSON format.
         
-        Actions: ADD_BLOCK (log_format) + ADD (access_log)
-        Uses user inputs: [log_file_path, log_format_name, define_log_format]
+        Actions: 
+        - ADD_BLOCK (log_format directive with escape=json and JSON string)
+        - ADD (access_log directive pointing to log file and format)
+        
+        User inputs: [log_file_path, log_format_name, log_format_definition_json]
         """
         self.child_ast_modified = {}
         
-        # Validate user inputs
-        if len(self.user_inputs) < 3:
+        # Validate user inputs first
+        is_valid, error_msg = self._validate_user_inputs()
+        if not is_valid:
+            print(f"  Validation error: {error_msg}")
             return
         
         log_file_path = self.user_inputs[0].strip()
         log_format_name = self.user_inputs[1].strip()
         log_format_def = self.user_inputs[2].strip()
         
-        if not log_file_path or not log_format_name: #Future implement the default for those value
+        # Parse JSON format definition
+        try:
+            format_dict = json.loads(log_format_def)
+        except json.JSONDecodeError:
+            print("  Error: Could not parse JSON format definition")
             return
+        
+        # Build the JSON format string
+        json_format_string = self._build_log_format_string(log_format_name, format_dict)
         
         # Process each file that has violations
         for file_path, remediations in self.child_ast_config.items():
@@ -66,42 +161,26 @@ class Remediate31(BaseRemedy):
                 directive = violation.get("directive", "")
                 
                 # Convert context to relative path
-                relative_context = self._get_relative_context(context)
+                relative_context = self._relative_context(context)
                 if not relative_context:
                     continue
                 
-                # Add log_format directive (with block containing format definition)
+                # Add log_format directive with JSON escape parameter
                 if action == "add_block" and directive == "log_format":
-                    # Parse log format definition if it's a JSON string
-                    try:
-                        format_dict = json.loads(log_format_def) if log_format_def.startswith("{") else {"__raw__": log_format_def}
-                    except:
-                        format_dict = {"__raw__": log_format_def}
-                    
+                    # FIXED: Build args as exactly 2 elements:
+                    # [format_name, "escape=json '<JSON_STRING>'"]
                     log_format_directive = {
                         "directive": "log_format",
-                        "args": [log_format_name, "escape=json"],
-                        "block": []
+                        "args": [
+                            log_format_name,
+                            f"escape=json '{json_format_string}'"
+                        ]
                     }
-                    
-                    # If format_dict is a dict, add its key-value pairs as args
-                    if isinstance(format_dict, dict) and "__raw__" not in format_dict:
-                        # Build args from dict
-                        log_format_directive["args"] = [log_format_name, "escape=json", "{"]
-                        for key, value in format_dict.items():
-                            log_format_directive["args"].append(f'"{key}":{value},')
-                        log_format_directive["args"][-1] = log_format_directive["args"][-1][:-1]  # Remove trailing comma
-                        log_format_directive["args"].append("}")
-                    else:
-                        # Use raw string
-                        log_format_directive["args"] = [log_format_name, "escape=json", "{"]
-                        log_format_directive["args"].extend(log_format_def.split(","))
-                        log_format_directive["args"].append("}")
                     
                     # Add to the target location
                     ASTEditor.append_to_context(parsed_copy, relative_context, log_format_directive)
                 
-                # Add access_log directive
+                # Add access_log directive that uses the defined format
                 elif action == "add" and directive == "access_log":
                     access_log_directive = {
                         "directive": "access_log",
@@ -115,22 +194,7 @@ class Remediate31(BaseRemedy):
             self.child_ast_modified[file_path] = {
                 "parsed": parsed_copy
             }
-    
-    @staticmethod
-    def _get_relative_context(full_context):
-        """
-        Convert full context path to relative context within parsed section.
-        
-        Full context: ["config", 0, "parsed", 5, "block", 14]
-        Relative context: [5, "block", 14]
-        """
-        if not isinstance(full_context, list):
-            return []
-        
-        # Find "parsed" key in context
-        try:
-            parsed_index = full_context.index("parsed")
-            # Return everything after "parsed"
-            return full_context[parsed_index + 1:]
-        except (ValueError, IndexError):
-            return []
+
+    def get_user_guidance(self) -> str:
+        """Return step-by-step guidance for JSON logging input."""
+        return 'Rule 3.1 Example (JSON Logging Configuration):\n├─ Input 1: Log file path\n│          Example: /var/log/nginx/access.json\n│          Must be absolute path (start with /)\n│\n├─ Input 2: Log format name\n│          Example: main_access_json\n│          Name to reference in access_log directive\n│\n├─ Input 3: JSON format definition (copy-paste ready)\n│          Example: {"timestamp": "$time_iso8601", "status": "$status", "request": "$request"}\n│\n├─ Important Points:\n│  - Must be valid JSON (copy from example)\n│  - String variables: wrap in quotes: "$time_iso8601"\n│  - Numeric fields: no quotes: $status, $body_bytes_sent\n│\n├─ Result will be: log_format main_access_json escape=json \'{"timestamp": "$time_iso8601", "status": $status, "request": "$request"}\';\n│\n└─ Verify: nginx -t validation output and generated diff (no runtime log tail check)\n   Use --json-schema-strict flag for stricter validation before applying\n'
