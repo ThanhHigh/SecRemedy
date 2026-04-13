@@ -33,7 +33,7 @@ Kiểm tra các cấu hình chứa cổng không nằm trong danh sách `[80, 44
 - **Kiểm tra cấu trúc dữ liệu phản hồi (4 test cases):**
   - **`file`:** Phải trả về đúng đường dẫn file cấu hình chứa cổng sai.
   - **`remediations`:** Phải là một list chứa đối tượng khắc phục.
-  - **`action`:** Hành động khắc phục bắt buộc là `"delete"` hoặc `"modify"` (để loại bỏ hoặc vô hiệu hóa dòng cấu hình sai).
+  - **`action`:** Hành động khắc phục bắt buộc là `"delete"` hoặc `"replace"` (để loại bỏ hoặc vô hiệu hóa dòng cấu hình sai).
   - **`directive`:** Mục tiêu là `"listen"`.
 
 ---

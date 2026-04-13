@@ -14,10 +14,12 @@ Chiến lược Kiểm thử
 import pytest
 from core.scannerEng.recommendations.detector_241 import Detector241
 
+
 @pytest.fixture
 def detector():
     """Trả về một instance Detector241 mới cho mỗi test."""
     return Detector241()
+
 
 def _dir(directive: str, args: list = None, block: list = None) -> dict:
     """Hàm hỗ trợ: tạo một directive dictionary tối thiểu của crossplane."""
@@ -28,13 +30,16 @@ def _dir(directive: str, args: list = None, block: list = None) -> dict:
         res["block"] = block
     return res
 
+
 def _server_block(directives: list) -> dict:
     """Hàm hỗ trợ: tạo một block 'server' giả lập."""
     return _dir("server", [], directives)
 
+
 def _http_block(servers: list) -> dict:
     """Hàm hỗ trợ: tạo một block 'http' chứa các 'server'."""
     return _dir("http", [], servers)
+
 
 def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
     """Hàm hỗ trợ: bọc các directive trong một cấu trúc parser_output tối thiểu."""
@@ -62,7 +67,8 @@ class TestMetadata:
     def test_level_assignment(self, detector):
         # Thông thường được khai báo trong profile hoặc tags
         assert hasattr(detector, "profile") or hasattr(detector, "level")
-        level_info = getattr(detector, "profile", getattr(detector, "level", ""))
+        level_info = getattr(detector, "profile",
+                             getattr(detector, "level", ""))
         assert "level 1" in str(level_info).lower()
 
     def test_has_required_attributes(self, detector):
@@ -146,11 +152,13 @@ class TestEvaluateCompliant:
 
     # --- Cấu hình kết hợp nhiều cổng hợp lệ (4 test cases) ---
     def test_mixed_80_and_443(self, detector):
-        server = _server_block([_dir("listen", ["80"]), _dir("listen", ["443", "ssl"])])
+        server = _server_block(
+            [_dir("listen", ["80"]), _dir("listen", ["443", "ssl"])])
         assert self._eval(detector, _http_block([server])) is None
 
     def test_mixed_8080_and_3000(self, detector):
-        server = _server_block([_dir("listen", ["8080"]), _dir("listen", ["3000"])])
+        server = _server_block(
+            [_dir("listen", ["8080"]), _dir("listen", ["3000"])])
         assert self._eval(detector, _http_block([server])) is None
 
     def test_mixed_all_authorized(self, detector):
@@ -190,8 +198,10 @@ class TestEvaluateCompliant:
     def test_valid_ports_in_included_http_file(self, detector):
         parser_output = {
             "config": [
-                {"file": "/etc/nginx/nginx.conf", "parsed": [_http_block([_dir("include", ["conf.d/*.conf"])])]},
-                {"file": "/etc/nginx/conf.d/app.conf", "parsed": [_server_block([_dir("listen", ["3000"])])]}
+                {"file": "/etc/nginx/nginx.conf",
+                    "parsed": [_http_block([_dir("include", ["conf.d/*.conf"])])]},
+                {"file": "/etc/nginx/conf.d/app.conf",
+                    "parsed": [_server_block([_dir("listen", ["3000"])])]}
             ]
         }
         assert detector.scan(parser_output) == []
@@ -199,8 +209,10 @@ class TestEvaluateCompliant:
     def test_valid_ports_in_included_https_file(self, detector):
         parser_output = {
             "config": [
-                {"file": "/etc/nginx/nginx.conf", "parsed": [_http_block([_dir("include", ["conf.d/*.conf"])])]},
-                {"file": "/etc/nginx/conf.d/ssl.conf", "parsed": [_server_block([_dir("listen", ["443", "ssl"])])]}
+                {"file": "/etc/nginx/nginx.conf",
+                    "parsed": [_http_block([_dir("include", ["conf.d/*.conf"])])]},
+                {"file": "/etc/nginx/conf.d/ssl.conf",
+                    "parsed": [_server_block([_dir("listen", ["443", "ssl"])])]}
             ]
         }
         assert detector.scan(parser_output) == []
@@ -265,24 +277,28 @@ class TestEvaluateNonCompliant:
 
     # --- Trộn lẫn cổng hợp lệ và không hợp lệ (4 test cases) ---
     def test_mixed_80_and_8081(self, detector):
-        server = _server_block([_dir("listen", ["80"]), _dir("listen", ["8081"])])
+        server = _server_block(
+            [_dir("listen", ["80"]), _dir("listen", ["8081"])])
         result = self._eval(detector, _http_block([server]))
         assert result is not None
         assert len(result["remediations"]) >= 1
 
     def test_mixed_3000_and_4000(self, detector):
-        server = _server_block([_dir("listen", ["3000"]), _dir("listen", ["4000"])])
+        server = _server_block(
+            [_dir("listen", ["3000"]), _dir("listen", ["4000"])])
         result = self._eval(detector, _http_block([server]))
         assert result is not None
         assert len(result["remediations"]) >= 1
 
     def test_mixed_443_and_8443(self, detector):
-        server = _server_block([_dir("listen", ["443", "ssl"]), _dir("listen", ["8443", "ssl"])])
+        server = _server_block(
+            [_dir("listen", ["443", "ssl"]), _dir("listen", ["8443", "ssl"])])
         result = self._eval(detector, _http_block([server]))
         assert result is not None
 
     def test_mixed_ipv6_80_and_81(self, detector):
-        server = _server_block([_dir("listen", ["[::]:80"]), _dir("listen", ["[::]:81"])])
+        server = _server_block(
+            [_dir("listen", ["[::]:80"]), _dir("listen", ["[::]:81"])])
         result = self._eval(detector, _http_block([server]))
         assert result is not None
 
@@ -307,11 +323,11 @@ class TestEvaluateNonCompliant:
         assert isinstance(result["remediations"], list)
         assert len(result["remediations"]) >= 1
 
-    def test_response_action_is_delete_or_modify(self, detector):
+    def test_response_action_is_delete_or_replace(self, detector):
         server = _server_block([_dir("listen", ["81"])])
         result = self._eval(detector, _http_block([server]))
         action = result["remediations"][0]["action"]
-        assert action in ["delete", "modify"]
+        assert action in ["delete", "replace"]
 
     def test_response_directive_is_listen(self, detector):
         server = _server_block([_dir("listen", ["81"])])
@@ -344,7 +360,8 @@ class TestScan:
     def test_full_secure_all_valid_distributed(self, detector):
         parser_output = _make_parser_output([_http_block([
             _server_block([_dir("listen", ["80"]), _dir("listen", ["8080"])]),
-            _server_block([_dir("listen", ["443", "ssl"]), _dir("listen", ["3000"])])
+            _server_block([_dir("listen", ["443", "ssl"]),
+                          _dir("listen", ["3000"])])
         ])])
         assert detector.scan(parser_output) == []
 
@@ -352,8 +369,10 @@ class TestScan:
     def test_multiple_files_with_violations(self, detector):
         parser_output = {
             "config": [
-                {"file": "/etc/nginx/conf.d/admin.conf", "parsed": [_server_block([_dir("listen", ["9090"])])]},
-                {"file": "/etc/nginx/conf.d/api.conf", "parsed": [_server_block([_dir("listen", ["8443", "ssl"])])]}
+                {"file": "/etc/nginx/conf.d/admin.conf",
+                    "parsed": [_server_block([_dir("listen", ["9090"])])]},
+                {"file": "/etc/nginx/conf.d/api.conf",
+                    "parsed": [_server_block([_dir("listen", ["8443", "ssl"])])]}
             ]
         }
         findings = detector.scan(parser_output)
@@ -365,8 +384,10 @@ class TestScan:
     def test_multiple_files_app1_app2(self, detector):
         parser_output = {
             "config": [
-                {"file": "/etc/nginx/conf.d/app.conf", "parsed": [_server_block([_dir("listen", ["81"])])]},
-                {"file": "/etc/nginx/conf.d/app2.conf", "parsed": [_server_block([_dir("listen", ["82"])])]}
+                {"file": "/etc/nginx/conf.d/app.conf",
+                    "parsed": [_server_block([_dir("listen", ["81"])])]},
+                {"file": "/etc/nginx/conf.d/app2.conf",
+                    "parsed": [_server_block([_dir("listen", ["82"])])]}
             ]
         }
         findings = detector.scan(parser_output)
@@ -375,8 +396,10 @@ class TestScan:
     def test_valid_in_one_invalid_in_another(self, detector):
         parser_output = {
             "config": [
-                {"file": "/etc/nginx/conf.d/valid.conf", "parsed": [_server_block([_dir("listen", ["80"])])]},
-                {"file": "/etc/nginx/conf.d/invalid.conf", "parsed": [_server_block([_dir("listen", ["8081"])])]}
+                {"file": "/etc/nginx/conf.d/valid.conf",
+                    "parsed": [_server_block([_dir("listen", ["80"])])]},
+                {"file": "/etc/nginx/conf.d/invalid.conf",
+                    "parsed": [_server_block([_dir("listen", ["8081"])])]}
             ]
         }
         findings = detector.scan(parser_output)
@@ -394,7 +417,8 @@ class TestScan:
 
     def test_grouping_three_invalid_ports(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_dir("listen", ["81"]), _dir("listen", ["82"]), _dir("listen", ["83"])])
+            _server_block([_dir("listen", ["81"]), _dir(
+                "listen", ["82"]), _dir("listen", ["83"])])
         ])])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
@@ -413,19 +437,21 @@ class TestScan:
     def test_commented_invalid_port_ignored(self, detector):
         # Crossplane ignores comments, so parsed list for commented directive is empty
         parser_output = _make_parser_output([_http_block([
-            _server_block([]) # Simulating commented out listen
+            _server_block([])  # Simulating commented out listen
         ])])
         assert detector.scan(parser_output) == []
 
     def test_commented_invalid_with_active_valid(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_dir("listen", ["80"])]) # Simulating `# listen 81;` and active `listen 80;`
+            # Simulating `# listen 81;` and active `listen 80;`
+            _server_block([_dir("listen", ["80"])])
         ])])
         assert detector.scan(parser_output) == []
 
     def test_commented_invalid_with_active_invalid(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_dir("listen", ["9000"])]) # Active invalid, commented invalid not shown
+            # Active invalid, commented invalid not shown
+            _server_block([_dir("listen", ["9000"])])
         ])])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
@@ -454,5 +480,5 @@ class TestScan:
         ])])
         findings = detector.scan(parser_output)
         remediation = findings[0]["remediations"][0]
-        assert remediation["action"] in ["delete", "modify"]
+        assert remediation["action"] in ["delete", "replace"]
         assert remediation["directive"] == "listen"

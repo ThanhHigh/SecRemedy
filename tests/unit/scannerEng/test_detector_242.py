@@ -332,12 +332,12 @@ class TestEvaluateNonCompliant:
         assert isinstance(result["remediations"], list)
         assert len(result["remediations"]) >= 1
 
-    def test_response_action_is_add_or_modify(self, detector):
+    def test_response_action_is_add_or_replace(self, detector):
         server = _server_block(
             [_dir("listen", ["80"]), _dir("return", ["200"])])
         result = self._eval(detector, _http_block([server]))
         action = result["remediations"][0]["action"]
-        assert action in ["add", "modify"]
+        assert action in ["add", "replace"]
 
     def test_response_directive_is_server(self, detector):
         server = _server_block(
