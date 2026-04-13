@@ -1,56 +1,55 @@
 # Tài liệu Kiểm thử: CIS Benchmark 2.5.3 (Detector 253)
 
-**Mục tiêu:** Đảm bảo tính năng phục vụ các file ẩn (hidden files) bị vô hiệu hóa. Hệ thống phân tích cấu hình NGINX để đảm bảo có khối `location` từ chối truy cập vào các file hoặc thư mục bắt đầu bằng dấu chấm (ví dụ: `.git`, `.env`), nhằm tránh rò rỉ mã nguồn, thông tin cấu hình và dữ liệu nhạy cảm.
+**Mục tiêu:** Đảm bảo việc cung cấp các file và thư mục ẩn (bắt đầu bằng dấu chấm, ví dụ: `.git`, `.env`) bị vô hiệu hóa (chuẩn CIS Benchmark 2.5.3). Các file ẩn thường chứa metadata nhạy cảm, lịch sử phiên bản hoặc cấu hình môi trường. Việc NGINX phục vụ các file này có thể làm lộ thông tin quan trọng (như thông tin đăng nhập database, mã nguồn), dẫn đến rủi ro bị tấn công toàn diện. Hệ thống sử dụng thư viện `crossplane` để phân tích đệ quy cấu hình NGINX, kiểm tra ngữ cảnh `server` để đảm bảo có khối `location` ngăn chặn quyền truy cập vào các file ẩn (ví dụ: `location ~ /\. { deny all; }`), và lưu ý việc xử lý ngoại lệ cho Let's Encrypt (`.well-known`).
 
 ---
 
 ## 1. Kiểm tra Siêu dữ liệu (Metadata Sanity Checks) - 4 Test Cases
 Kiểm tra các thông tin siêu dữ liệu (metadata) của class `Detector253` để đảm bảo định danh và mô tả chính xác theo chuẩn CIS.
 - **ID (1 test case):** Kiểm tra ID của detector phải là `"2.5.3"`.
-- **Tiêu đề (1 test case):** Đảm bảo tiêu đề chứa nội dung liên quan đến việc vô hiệu hóa phục vụ file ẩn (`"Ensure hidden file serving is disabled"`).
+- **Tiêu đề (1 test case):** Đảm bảo tiêu đề phản ánh đúng yêu cầu (`"Ensure hidden file serving is disabled (Manual)"`).
 - **Mức độ (1 test case):** Phải được gán cho Level 1 (Webserver, Proxy, Loadbalancer).
-- **Thuộc tính bắt buộc (1 test case):** Đảm bảo class có đầy đủ các thuộc tính thông tin như `description` (mô tả), `audit_procedure` (quy trình kiểm tra), `impact` (tác động), và `remediation` (biện pháp khắc phục).
+- **Thuộc tính bắt buộc (1 test case):** Đảm bảo class có đầy đủ các thuộc tính thông tin như `description` (mô tả), `audit_procedure` (quy trình kiểm tra), `impact` (tác động), và `remediation` (biện pháp khắc phục) để hiển thị trên Frontend Dashboard.
 
 ---
 
 ## 2. Kiểm thử hàm `evaluate()`: Các trường hợp tuân thủ (Compliant Cases) - 24 Test Cases
-Kiểm tra các cấu hình hợp lệ có chứa chỉ thị `location` để chặn truy cập vào các file ẩn. Hàm kiểm tra không phát hiện vi phạm (trả về `None`).
-- **Khai báo từ chối tiêu chuẩn (5 test cases):** Khối `server` có chứa `location ~ /\. { deny all; }` để từ chối tất cả yêu cầu.
-- **Khai báo từ chối bằng mã trạng thái (5 test cases):** Khối `server` sử dụng `return` thay cho `deny`, ví dụ `location ~ /\. { return 404; }` hoặc `return 403;`.
-- **Có ngoại lệ hợp lệ (Let's Encrypt) (5 test cases):** Cấu hình chặn file ẩn nhưng có cho phép các ngoại lệ cần thiết như ACME challenge: `location ~ /\.well-known/acme-challenge { allow all; }`.
-- **Vị trí file cấu hình include (4 test cases):** Chỉ thị từ chối file ẩn được bao gồm (include) từ một file snippet dùng chung, ví dụ `include snippets/deny-hidden-files.conf;` và AST parser có thể phân tích được.
-- **Khai báo Regular Expression nâng cao (5 test cases):** Các biểu thức chính quy phức tạp nhưng đảm bảo chặn an toàn các file ẩn như `location ~ /\.(?!well-known).* { deny all; }`.
+Kiểm tra các khối cấu hình tuân thủ việc thiết lập block `location` ngăn chặn truy cập file ẩn. Hàm kiểm tra không phát hiện vi phạm (trả về `None`).
+- **Thiết lập an toàn tại khối `server` (6 test cases):** Các trường hợp cấu hình chi tiết định nghĩa `location ~ /\. { deny all; }` (hoặc `return 404;`) ở từng block `server` cụ thể để chặn truy cập file ẩn.
+- **Sử dụng include snippet cho cấu hình bảo mật (6 test cases):** Đảm bảo block `server` có chứa chỉ thị `include` gọi tới một file snippet tái sử dụng, trong đó có chứa luật ngăn chặn file ẩn hợp lệ.
+- **Có ngoại lệ an toàn cho Let's Encrypt (6 test cases):** Cấu hình chặn file ẩn (`location ~ /\.`) nhưng có đặt ngoại lệ ưu tiên hợp lệ cho thư mục `.well-known/acme-challenge` (ví dụ: `location ^~ /.well-known/acme-challenge/ { allow all; }`), đảm bảo quá trình xác thực chứng chỉ không bị hỏng.
+- **Kết hợp với các chỉ thị location phức tạp khác (6 test cases):** Khối `location` ẩn nằm cùng với các cấu hình phức tạp khác trong `server` block mà bộ quét vẫn hiểu và đánh giá đúng luật.
 
 ---
 
-## 3. Kiểm thử hàm `evaluate()`: Các trường hợp vi phạm (Non-Compliant Cases) - 20 Test Cases
-Kiểm tra các cấu hình không định nghĩa việc chặn file ẩn, dẫn đến nguy cơ NGINX phục vụ các file nhạy cảm.
-- **Thiếu location chặn hoàn toàn (5 test cases):** Khối `server` không có bất kỳ khối `location` nào chứa regex chặn file ẩn (`/\.`).
-- **Chặn không đầy đủ (5 test cases):** Chỉ chặn một số file ẩn cụ thể thay vì tất cả (ví dụ `location ~ /\.ht { deny all; }` hoặc `location ~ /\.git { deny all; }`), bỏ sót `.env` hoặc các file ẩn khác.
-- **Hành động không bảo mật (4 test cases):** Có định nghĩa `location ~ /\. { ... }` nhưng bên trong lại là `allow all;` hoặc không có chỉ thị từ chối truy cập.
-- **Kiểm tra cấu trúc dữ liệu phản hồi (6 test cases):**
-  - **`file`:** Phải trả về đúng đường dẫn file cấu hình có khối server bị vi phạm.
+## 3. Kiểm thử hàm `evaluate()`: Các trường hợp vi phạm (Non-Compliant Cases) - 22 Test Cases
+Kiểm tra các cấu hình thiếu sót khiến NGINX tiếp tục phục vụ các file ẩn, kích hoạt cảnh báo vi phạm để chuyển dữ liệu JSON Contract cho module Auto-Remediation (Thành viên 2).
+- **Không khai báo `location` chặn file ẩn (Implicitly default) (6 test cases):** Khối `server` hoàn toàn không có block `location` nào sử dụng regex `~ /\.`. NGINX mặc định sẽ phục vụ các file này nếu chúng tồn tại trên web root. Đây là vi phạm phổ biến nhất.
+- **Khai báo sai cú pháp hoặc chặn không triệt để (5 test cases):** Có cấu hình `location` chặn dấu chấm nhưng dùng regex sai, hoặc bên trong thiếu `deny all;` hay `return` (ví dụ: dùng `allow all` thay vì chặn).
+- **Ngoại lệ bị đặt sai thứ tự (4 test cases):** Khối ngoại lệ Let's Encrypt được đặt nhưng do dùng regex không ưu tiên khiến cho thứ tự phân giải bị đè bởi block bắt file ẩn chung, dẫn đến rủi ro chặn Let's Encrypt hoặc để lọt file nhạy cảm.
+- **Kiểm tra cấu trúc dữ liệu phản hồi JSON Contract (7 test cases):**
+  - **`file`:** Phải trả về đúng đường dẫn file cấu hình NGINX chứa khối `server` cần bổ sung.
   - **`remediations`:** Phải là một list chứa đối tượng khắc phục.
-  - **`action`:** Hành động khắc phục bắt buộc là `"add"` (để thêm khối `location` chặn file ẩn vào).
-  - **`directive`:** Mục tiêu là `"location"`.
-  - **`context`:** Phải xác định đúng block `server` cần chèn cấu hình khắc phục.
+  - **`action`:** Chủ yếu là `"add_block"` hoặc `"insert_block"` (thêm khối `location` mới).
+  - **`directive`:** Mục tiêu là khối `"location"`.
+  - **`value`:** Giá trị mong muốn (ví dụ: block location mẫu với `deny all;`).
+  - **`context`:** Phải chứa đối tượng định vị chính xác vị trí AST (ví dụ: node của khối `server`) để công cụ diff/Dry-Run có thể hoạt động chính xác.
 
 ---
 
-## 4. Kiểm thử hàm `scan()`: Toàn bộ đường ống (Full Pipeline Integration) - 15 Test Cases
-Các bài test kiểm tra tích hợp toàn diện thông qua việc mô phỏng dữ liệu phân tích AST từ `crossplane`, đảm bảo hệ thống quét và nhận diện trên toàn bộ ngữ cảnh cấu hình NGINX.
-- **Cấu hình an toàn đầy đủ (3 test cases):**
-  - Toàn bộ các file `nginx.conf` và các file vhost trong `conf.d/` đều có khối `location` chặn file ẩn trong tất cả các `server` blocks phục vụ nội dung web.
-  - *(Hệ thống trả về mảng rỗng `[]`)*
-- **Nhiều file cấu hình vi phạm (3 test cases):** Quét thấy một số khối `server` có chặn nhưng một số khối khác trong file `api.conf` hoặc `default.conf` thì không. Hệ thống báo cáo chi tiết vi phạm tại từng file và từng block.
-- **Gom nhóm lỗi (Grouping) (3 test cases):** Nếu trong cùng một file cấu hình có nhiều khối `server` vi phạm lỗi không chặn file ẩn, hệ thống sẽ gom nhóm các lỗi này theo file một cách rành mạch.
-- **Xử lý khối server rỗng hoặc redirect (3 test cases):** Bỏ qua các khối `server` chỉ dùng để redirect (như `return 301`) mà không có `root` hoặc không thực sự phục vụ file tĩnh, tránh báo lỗi giả.
-- **Tính toàn vẹn của kết quả Schema (3 test cases):** Xác nhận đối tượng kết quả `scan()` chứa đủ thông tin để Auto-Remediation có thể tự động bơm khối `location ~ /\. { deny all; access_log off; log_not_found off; }` vào đúng khối `server`.
+## 4. Kiểm thử hàm `scan()`: Toàn bộ đường ống (Full Pipeline Integration) - 20 Test Cases
+Các bài test kiểm tra tích hợp toàn diện thông qua việc mô phỏng dữ liệu phân tích AST đệ quy từ `crossplane` trên toàn bộ thư mục NGINX.
+- **Cấu hình an toàn trên toàn bộ hệ thống đa server (3 test cases):** Hệ thống bao gồm nhiều file `conf.d/*.conf`, tất cả các `server` block đều có khai báo luật chặn file ẩn. *(Hệ thống trả về mảng rỗng `[]`)*
+- **Nhận diện sự vắng mặt của chỉ thị ở hệ thống đa tệp (3 test cases):** Phân tích toàn bộ cây thư mục và phát hiện một số virtual host (`server` block) trong `conf.d/` không tự định nghĩa block `location` chặn file ẩn.
+- **Gom nhóm lỗi (Grouping) và cảnh báo (3 test cases):** Phân biệt chính xác virtual host nào bị lỗi và khoanh vùng chính xác file bị lỗi mà không báo nhầm các server block an toàn.
+- **Xử lý các ngoại lệ cấu hình (3 test cases):** Xử lý an toàn khi file cấu hình hoàn toàn trống, hoặc chỉ chứa block không liên quan (như `http`, `stream` không có `server`), đảm bảo logic quét không bị gián đoạn.
+- **Tương tác với Include Directive phức tạp (5 test cases):** Khả năng đệ quy `crossplane` (ví dụ: `nginx.conf` -> `include conf.d/*` -> định nghĩa `server`). Nếu `server` block trong file con thiếu block `location` ẩn, báo cáo phải trỏ đúng file con đó.
+- **Tính toàn vẹn của kết quả Schema cho Auto-Remediation (3 test cases):** Đảm bảo JSON Contract do Thành viên 1 tạo ra cung cấp tọa độ dòng chính xác để Thành viên 2 chèn khối `location ~ /\. { deny all; }` vào cấu hình. Việc này đòi hỏi AST định vị đúng khối `server` để sửa chữa, cho phép lệnh `nginx -t` kiểm tra cấu trúc ngoặc sau khi Dry-Run.
 
 ---
 
 ## 5. Độ bao phủ của bộ test (Test Coverage)
-Bộ test cases cho `Detector253` được thiết kế chặt chẽ nhằm triệt tiêu rủi ro lộ lọt cấu hình, metadata qua các file ẩn:
-- **Tổng số lượng test cases:** **63 test cases** (4 + 24 + 20 + 15)
+Bộ test cases cho `Detector253` được thiết kế chặt chẽ nhằm bảo vệ máy chủ khỏi nguy cơ rò rỉ mã nguồn và metadata nền tảng, bám sát các tiêu chí của đồ án tốt nghiệp:
+- **Tổng số lượng test cases:** **70 test cases** (4 + 24 + 22 + 20)
 - **Độ bao phủ code dự kiến (Line Coverage):** **> 94%**
-- **Phân tích:** Việc chặn các file ẩn (hidden files) là một khía cạnh bảo mật đặc biệt quan trọng để ngăn chặn rò rỉ mã nguồn (như thư mục `.git`) hoặc thông tin đăng nhập (như file `.env`). Mặc dù CIS Benchmark 2.5.3 đánh giá là thủ công (Manual), nhưng việc tự động hóa kiểm tra bằng AST parser giúp tăng cường độ tin cậy. Các trường hợp ngoại lệ như `.well-known` phục vụ cho SSL/TLS cũng được đảm bảo kiểm tra kỹ lưỡng, hỗ trợ cơ chế Auto-Remediation chèn luật chặn một cách an toàn mà không làm hỏng quy trình cấp phát chứng chỉ số của Let's Encrypt.
+- **Phân tích (Context Đồ án):** Tương tự CIS 2.5.2, CIS 2.5.3 tập trung vào việc xử lý trường hợp **"thiếu sót"** (missing block). NGINX mặc định không cấm truy cập file ẩn, nên Scanner (Thành viên 1) phải tìm kiếm sự vắng mặt của block `location` ẩn trong toàn bộ các khối `server`. JSON Contract sinh ra phải hướng dẫn rõ ràng cho module Auto-Remediation (Thành viên 2) chèn thêm chỉ thị `"add_block"` một cách an toàn mà không phá vỡ cú pháp hoặc ảnh hưởng tới chứng chỉ Let's Encrypt hiện hữu. Điều này giúp hệ thống tự động hoàn thiện cấu hình mà vẫn đảm bảo tính ổn định (Zero-Downtime) sau khi chạy `nginx -t`.

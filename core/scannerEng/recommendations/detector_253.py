@@ -6,6 +6,7 @@ from core.scannerEng.base_recom import BaseRecom
 class Detector253(BaseRecom):
     def __init__(self):
         super().__init__()
+        # Thông tin metadata theo chuẩn CIS Benchmark 2.5.3
         self.id = "2.5.3"
         self.title = "Ensure hidden file serving is disabled (Manual)"
         self.description = "Hidden files and directories (starting with a dot, e.g., .git, .env) often contain sensitive metadata, version control history, or environment configurations. Serving these files should be globally disabled."
@@ -14,158 +15,153 @@ class Detector253(BaseRecom):
         self.remediation = "To restrict access to hidden files, add a configuration block denying access to hidden files inside each server block directly, or create a reusable snippet file containing the rules and include it in your server blocks."
         self.level = "Level 1"
 
-    def _is_general_hidden_file_path(self, path: str) -> bool:
-        path = path.strip()
-        if path == r"/\.":
-            return True
-        if path.startswith(r"/\.(?!well-known"):
-            return True
-        return False
-
-    def _has_secure_action(self, directives: List[Dict]) -> bool:
-        for d in directives:
-            if d.get("directive") == "deny" and "all" in d.get("args", []):
-                return True
-            if d.get("directive") == "return":
-                args = d.get("args", [])
-                if args and args[0] in ["404", "403", "444"]:
-                    return True
-        return False
-
-    def _has_protected_location(self, directives: List[Dict]) -> bool:
-        for d in directives:
-            if d.get("directive") == "location":
-                args = d.get("args", [])
-                if any(self._is_general_hidden_file_path(arg) for arg in args):
-                    if self._has_secure_action(d.get("block", [])):
-                        return True
-        return False
-
-    def _is_server_protected(self, server_directive: Dict, protected_files: set) -> bool:
-        if self._has_protected_location(server_directive.get("block", [])):
-            return True
-        
-        for d in server_directive.get("block", []):
-            if d.get("directive") == "include":
-                for arg in d.get("args", []):
-                    pattern = arg if arg.startswith("/") else "*/" + arg
-                    for pfile in protected_files:
-                        if fnmatch.fnmatch(pfile, pattern):
-                            return True
-        return False
-
-    def _is_ignored_server(self, directives: List[Dict]) -> bool:
-        if not directives:
-            return True
-        has_root_or_location = False
-        has_return_or_rewrite = False
-        for d in directives:
-            if d.get("directive") in ["root", "location", "proxy_pass", "fastcgi_pass"]:
-                has_root_or_location = True
-            if d.get("directive") in ["return", "rewrite"]:
-                has_return_or_rewrite = True
-        
-        if has_return_or_rewrite and not has_root_or_location:
-            return True
-            
-        return False
-
     def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
         """
-        Hàm evaluate được sử dụng để kiểm tra một block độc lập (Dùng chủ yếu cho Unit Test).
-        Nó sẽ nhận vào một block (như `server` hoặc `http`) và kiểm tra xem có chặn file ẩn hay chưa.
+        Kiểm tra trực tiếp một khối (chỉ áp dụng cho khối server) xem nó có chặn truy cập vào các file ẩn hay không.
+        Trả về None nếu cấu hình an toàn, ngược lại trả về đối tượng JSON chỉ định cách khắc phục (Remediation).
         """
-        if directive.get("directive") not in ["http", "server"]:
+        d_name = directive.get("directive")
+        # Chỉ đánh giá trên khối server
+        if d_name != "server":
             return None
+            
+        is_protected = False
+        seen_hidden_regex = False
+        wrong_order = False
+        
+        def is_safe_location(c_args, c_block):
+            """Hàm helper: Đánh giá xem khối location hiện tại có chỉ thị chặn an toàn file ẩn không."""
+            modifier = c_args[0] if len(c_args) > 1 else ""
+            pattern = c_args[1] if len(c_args) > 1 else c_args[0]
+            is_regex = modifier in ["~", "~*"]
+            
+            # Kiểm tra nếu location này có bắt regex bắt đầu với dấu chấm (file ẩn)
+            if is_regex and pattern in [r"/\.", r"\.", r"/\.(?!well-known).*"]:
+                for b in c_block:
+                    # Trả về True nếu sử dụng lệnh cấm truy cập
+                    if b.get("directive") == "deny" and b.get("args") == ["all"]:
+                        return True
+                    # Trả về True nếu sử dụng lệnh trả về mã lỗi 403 hoặc 404
+                    if b.get("directive") == "return" and b.get("args") and b["args"][0] in ["403", "404"]:
+                        return True
+            return False
 
-        servers_to_check = []
-        if directive.get("directive") == "http":
-            for d in directive.get("block", []):
-                if d.get("directive") == "server":
-                    servers_to_check.append(d)
-        elif directive.get("directive") == "server":
-            servers_to_check.append(directive)
-
-        remediations = []
-        for srv in servers_to_check:
-            # Truyền một set rỗng (set()) vì evaluate() chạy cục bộ, không có ngữ cảnh của các file snippet bên ngoài
-            if not self._is_server_protected(srv, set()):
-                remediations.append({
-                    "action": "add",
-                    "directive": "location",
-                    "context": "server",
-                    "block": [
-                        {"directive": "deny", "args": ["all"]},
-                        {"directive": "access_log", "args": ["off"]},
-                        {"directive": "log_not_found", "args": ["off"]}
-                    ]
-                })
-
-        if remediations:
-            return {"file": filepath, "remediations": remediations}
-        return None
+        # Duyệt qua các thành phần con của khối server
+        for child in directive.get("block", []):
+            c_name = child.get("directive")
+            c_args = child.get("args", [])
+            c_block = child.get("block", [])
+            
+            # Nếu include một file cấu hình bảo mật thông dụng
+            if c_name == "include" and c_args:
+                inc_path = c_args[0].lower()
+                if any(x in inc_path for x in ["hidden", "security", "global_deny", "block_dot_files", "dotfiles"]):
+                    is_protected = True
+                    
+            if c_name == "location" and len(c_args) >= 1:
+                modifier = c_args[0] if len(c_args) > 1 else ""
+                pattern = c_args[1] if len(c_args) > 1 else c_args[0]
+                is_regex = modifier in ["~", "~*"]
+                
+                # Kiểm tra lỗi đặt sai thứ tự: Rule cho Let's Encrypt (.well-known)
+                # cần phải đứng trước rule chặn file ẩn khi sử dụng regex trong NGINX
+                if "well-known" in pattern:
+                    if is_regex and seen_hidden_regex:
+                        wrong_order = True
+                        
+                # Đánh dấu đã thấy chỉ thị bảo mật
+                if is_safe_location(c_args, c_block):
+                    is_protected = True
+                    seen_hidden_regex = True
+                    
+        # Khối server an toàn khi có rule bảo vệ và rule ngoại lệ đặt đúng thứ tự
+        if is_protected and not wrong_order:
+            return None
+            
+        # Trả về JSON Contract hướng dẫn bộ phận Remediation cách tự động thêm đoạn mã bảo mật
+        return {
+            "file": filepath,
+            "remediations": [{
+                "action": "add_block", # Hành động: Thêm khối cấu hình mới
+                "directive": "location",
+                "value": "location ~ /\\. {\n    deny all;\n}",
+                "context": "server"
+            }]
+        }
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Hàm scan là entrypoint chính trong hệ thống thực tế. Nó sử dụng thuật toán 2-pass.
-        - Bước 1 (Pass 1): Tìm tất cả các file cấu hình có chứa sẵn snippet chặn file ẩn an toàn.
-        - Bước 2 (Pass 2): Quét lại mọi block server, nếu server thiếu cấu hình cục bộ và không include 
-                           các file snippet an toàn đã tìm thấy, báo cáo cần Remediation.
+        Quét toàn bộ cây cấu hình (AST) NGINX để phát hiện lỗi bảo mật và gộp nhóm lỗi theo file.
+        Sử dụng kỹ thuật duyệt 2 bước (Pre-pass) để xử lý tính liên kết toàn cục của NGINX include.
         """
-        configs = parser_output.get("config", [])
+        uncompliances = []
+        safe_files = set()
         
-        # Bước 1: Quét tìm các file cấu hình chứa cấu trúc chặn (ví dụ các file snippet dùng chung)
-        protected_files = set()
-        for config in configs:
-            if self._has_protected_location(config.get("parsed", [])):
-                protected_files.add(config.get("file", ""))
-        
-        findings = []
-        file_remediations = {}
-        
-        def add_rem(fp, rem):
-            if fp not in file_remediations:
-                file_remediations[fp] = []
-            file_remediations[fp].append(rem)
-            
-        # Bước 2: Duyệt từng file, quét sâu vào từng block server để đối chiếu
-        for config_idx, config in enumerate(configs):
-            filepath = config.get("file", "")
-            parsed = config.get("parsed", [])
-            
-            def traverse(directives, current_path):
-                for i, d in enumerate(directives):
-                    if d.get("directive") == "server":
-                        server_block = d.get("block", [])
-                        
-                        # Bỏ qua các server chỉ dùng để redirect (VD: chuyển hướng http sang https)
-                        if self._is_ignored_server(server_block):
-                            continue
-                            
-                        # Nếu block server này không được bảo vệ cục bộ VÀ không include snippet bảo vệ nào
-                        if not self._is_server_protected(d, protected_files):
-                            # Tạo contract JSON chỉ định Auto-Remediation chèn khối location chặn file ẩn
-                            add_rem(filepath, {
-                                "action": "add",
+        def is_safe_location(c_args, c_block):
+            """Hàm helper: Xác minh khối location có logic chặn file ẩn."""
+            modifier = c_args[0] if len(c_args) > 1 else ""
+            pattern = c_args[1] if len(c_args) > 1 else c_args[0]
+            is_regex = modifier in ["~", "~*"]
+            if is_regex and pattern in [r"/\.", r"\.", r"/\.(?!well-known).*"]:
+                for b in c_block:
+                    if b.get("directive") == "deny" and b.get("args") == ["all"]:
+                        return True
+                    if b.get("directive") == "return" and b.get("args") and b["args"][0] in ["403", "404"]:
+                        return True
+            return False
+
+        # Bước 1 (Pre-pass): Quét qua một lượt để thu thập danh sách tên file cấu hình có chứa rule bảo mật
+        def find_safe_locations(directives, filepath):
+            for d in directives:
+                if d.get("directive") == "location":
+                    if is_safe_location(d.get("args", []), d.get("block", [])):
+                        safe_files.add(filepath.split("/")[-1])
+                if "block" in d:
+                    find_safe_locations(d.get("block", []), filepath)
+
+        for config_file in parser_output.get("config", []):
+            find_safe_locations(config_file.get("parsed", []), config_file.get("file", ""))
+
+        def check_server_with_globals(server_d):
+            """Hàm helper: Đánh giá khối server có an toàn hay không (xét cả trường hợp file include bảo mật bên ngoài)."""
+            # Kiểm tra nội bộ server bằng phương thức evaluate
+            eval_result = self.evaluate(server_d, "", [], [])
+            if eval_result is None:
+                return True
+                
+            # Nếu nội bộ không an toàn, kiểm tra xem server này có sử dụng include trỏ đến
+            # bất kỳ file an toàn nào (đã được lấy từ Pre-pass) hay không
+            for child in server_d.get("block", []):
+                if child.get("directive") == "include" and child.get("args"):
+                    inc_path = child["args"][0]
+                    inc_basename = inc_path.split("/")[-1]
+                    for sf in safe_files:
+                        if sf == inc_basename or inc_path.endswith(sf):
+                            return True
+            return False
+
+        # Bước 2: Duyệt toàn bộ cây AST để kiểm tra tính tuân thủ của từng khối server
+        def traverse(directives, filepath, exact_path):
+            for idx, d in enumerate(directives):
+                if d.get("directive") == "server":
+                    # Nếu server được đánh giá là thiếu rule bảo mật file ẩn
+                    if not check_server_with_globals(d):
+                        uncompliances.append({
+                            "file": filepath,
+                            "remediations": [{
+                                "action": "add_block",
                                 "directive": "location",
-                                "context": "server",
-                                "block": [
-                                    {"directive": "deny", "args": ["all"]},
-                                    {"directive": "access_log", "args": ["off"]},
-                                    {"directive": "log_not_found", "args": ["off"]}
-                                ]
-                            })
-                            
-                    elif "block" in d:
-                        traverse(d.get("block", []), current_path + [i, "block"])
-                        
-            traverse(parsed, ["config", config_idx, "parsed"])
+                                "value": "location ~ /\\. {\n    deny all;\n}",
+                                "context": "server"
+                            }]
+                        })
+                # Nếu là các khối chứa con (http, server, location, if,...), thì đệ quy duyệt xuống
+                elif "block" in d:
+                    traverse(d.get("block", []), filepath, exact_path + [idx, "block"])
+                    
+        # Kích hoạt quá trình duyệt cấu trúc cây của các file NGINX
+        for config_idx, config_file in enumerate(parser_output.get("config", [])):
+            traverse(config_file.get("parsed", []), config_file.get("file", ""), ["config", config_idx, "parsed"])
             
-        # Gom nhóm lỗi (Grouping) theo file cho JSON Contract
-        for fp, rems in file_remediations.items():
-            findings.append({
-                "file": fp,
-                "remediations": rems
-            })
-            
-        return findings
+        # Nén và phân nhóm các lỗi của cùng 1 file, sau đó trả về mảng kết quả để xử lý Remediation
+        return self._group_by_file(uncompliances)
