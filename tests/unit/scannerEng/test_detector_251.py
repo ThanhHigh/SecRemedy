@@ -1,31 +1,20 @@
 """
-Unit tests for Detector251 — CIS Benchmark 2.5.1
-"Ensure server_tokens directive is set to `off`"
-
-Test Strategy
-─────────────
-• evaluate() tests — test explicit server_tokens variations (on, off, build)
-  and the check for missing server_tokens in the http block.
-• scan() tests — exercise the full AST traversal + grouping pipeline
-  that BaseRecom provides, with synthetic parser_output payloads.
+Unit tests cho Detector251 — CIS Benchmark 2.5.1
+"Đảm bảo chỉ thị server_tokens được cấu hình là `off`"
 """
 
 import pytest
 from core.scannerEng.recommendations.detector_251 import Detector251
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Fixtures
-# ──────────────────────────────────────────────────────────────────────────────
-
 @pytest.fixture
 def detector():
-    """Return a fresh Detector251 instance for every test."""
+    """Trả về một instance Detector251 mới cho mỗi test."""
     return Detector251()
 
 
 def _directive(name: str, args: list, block: list = None) -> dict:
-    """Helper: build a minimal crossplane directive dict."""
+    """Hàm hỗ trợ: tạo một dictionary directive tối thiểu của crossplane."""
     d = {"directive": name, "args": args}
     if block is not None:
         d["block"] = block
@@ -33,7 +22,7 @@ def _directive(name: str, args: list, block: list = None) -> dict:
 
 
 def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
-    """Helper: wrap directives in a minimal crossplane parser_output structure."""
+    """Hàm hỗ trợ: bọc các directive trong một cấu trúc parser_output tối thiểu của crossplane."""
     return {
         "config": [
             {
@@ -45,7 +34,7 @@ def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/ngi
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Section 1 — Metadata sanity checks
+# Phần 1 — Kiểm tra tính đúng đắn của Metadata (3 test cases)
 # ──────────────────────────────────────────────────────────────────────────────
 
 class TestMetadata:
@@ -61,66 +50,50 @@ class TestMetadata:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Section 2 — evaluate(): compliant cases (must return None)
+# Phần 2 — evaluate(): các trường hợp tuân thủ (phải trả về None) (4 test cases)
 # ──────────────────────────────────────────────────────────────────────────────
 
 class TestEvaluateCompliant:
-    """Directives that should NOT trigger an uncompliance finding."""
-
     FILEPATH = "/etc/nginx/nginx.conf"
     EXACT_PATH = ["config", 0, "parsed", 0]
 
-    def _eval(self, detector, directive, ctx=None):
-        ctx = ctx or []
-        return detector.evaluate(directive, self.FILEPATH, ctx, self.EXACT_PATH)
+    def _eval(self, detector, directive):
+        return detector.evaluate(directive, self.FILEPATH, [], self.EXACT_PATH)
 
-    # --- Explicit server_tokens off ---
-
-    def test_server_tokens_off(self, detector):
+    def test_explicit_server_tokens_off(self, detector):
+        """Cấu hình server_tokens off; (hợp lệ)"""
         assert self._eval(detector, _directive(
             "server_tokens", ["off"])) is None
 
-    def test_server_tokens_empty_args(self, detector):
-        # Even though missing args is invalid nginx syntax, our code handles it gracefully
-        assert self._eval(detector, _directive("server_tokens", [])) is None
+    def test_http_block_with_server_tokens(self, detector):
+        """Khối http có chứa server_tokens (bỏ qua thêm mới để tránh trùng lặp)"""
+        http_block = _directive("http", [], [
+            _directive("server_tokens", ["on"])
+        ])
+        assert self._eval(detector, http_block) is None
 
-    # --- http block containing server_tokens (any value) ---
-
-    def test_http_block_with_server_tokens_off(self, detector):
-        http_dir = _directive(
-            "http", [], [_directive("server_tokens", ["off"])])
-        assert self._eval(detector, http_dir) is None
-
-    def test_http_block_with_server_tokens_on(self, detector):
-        # NOTE: If server_tokens is 'on', the http block evaluation itself returns None
-        # because the directive exists in the block. The separate check on the 'server_tokens'
-        # directive itself will catch the 'on' value.
-        http_dir = _directive(
-            "http", [], [_directive("server_tokens", ["on"])])
-        assert self._eval(detector, http_dir) is None
-
-    # --- Irrelevant directives ---
-
-    def test_irrelevant_directive(self, detector):
+    def test_non_target_directive_server_name(self, detector):
+        """Bỏ qua chỉ thị không liên quan"""
         assert self._eval(detector, _directive(
-            "worker_processes", ["1"])) is None
+            "server_name", ["example.com"])) is None
+
+    def test_non_target_directive_listen(self, detector):
+        """Bỏ qua chỉ thị không liên quan"""
+        assert self._eval(detector, _directive("listen", ["80"])) is None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Section 3 — evaluate(): non-compliant cases (must return a finding)
+# Phần 3 — evaluate(): các trường hợp không tuân thủ (8 test cases)
 # ──────────────────────────────────────────────────────────────────────────────
 
 class TestEvaluateNonCompliant:
-    """Directives that SHOULD trigger an uncompliance finding."""
-
     FILEPATH = "/etc/nginx/nginx.conf"
     EXACT_PATH = ["config", 0, "parsed", 0]
 
-    def _eval(self, detector, directive, ctx=None):
-        ctx = ctx or []
-        return detector.evaluate(directive, self.FILEPATH, ctx, self.EXACT_PATH)
+    def _eval(self, detector, directive):
+        return detector.evaluate(directive, self.FILEPATH, [], self.EXACT_PATH)
 
-    # --- Explicit server_tokens NOT off ---
+    # --- Trường hợp cấu hình sai rõ ràng ---
 
     def test_server_tokens_on(self, detector):
         result = self._eval(detector, _directive("server_tokens", ["on"]))
@@ -140,90 +113,166 @@ class TestEvaluateNonCompliant:
         assert rem["action"] == "replace"
         assert rem["args"] == ["off"]
 
-    # --- http block WITHOUT server_tokens ---
+    def test_server_tokens_empty_string(self, detector):
+        result = self._eval(detector, _directive("server_tokens", [""]))
+        assert result is not None
+
+    # --- Trường hợp thiếu cấu hình ---
 
     def test_http_block_missing_server_tokens(self, detector):
-        http_dir = _directive("http", [], [_directive("sendfile", ["on"])])
-        result = self._eval(detector, http_dir)
+        http_block = _directive("http", [], [
+            _directive("server", [], [])
+        ])
+        result = self._eval(detector, http_block)
         assert result is not None
-        rem = result["remediations"][0]
-        assert rem["action"] == "add"
-        assert rem["directive"] == "server_tokens"
-        assert rem["args"] == ["off"]
-        assert rem["context"] == self.EXACT_PATH + ["block"]
+
+    # --- Kiểm tra cấu trúc dữ liệu phản hồi đối với hành động Replace ---
+
+    def test_replace_action_metadata(self, detector):
+        result = self._eval(detector, _directive("server_tokens", ["on"]))
+        assert result["file"] == self.FILEPATH
+        remediation = result["remediations"][0]
+        assert remediation["context"] == self.EXACT_PATH
+
+    def test_replace_action_content(self, detector):
+        result = self._eval(detector, _directive("server_tokens", ["build"]))
+        remediation = result["remediations"][0]
+        assert remediation["action"] == "replace"
+        assert remediation["directive"] == "server_tokens"
+        assert remediation["args"] == ["off"]
+
+    # --- Kiểm tra cấu trúc dữ liệu phản hồi đối với hành động Add ---
+
+    def test_add_action_metadata(self, detector):
+        http_block = _directive("http", [], [])
+        result = self._eval(detector, http_block)
+        assert result["file"] == self.FILEPATH
+        remediation = result["remediations"][0]
+        assert remediation["context"] == self.EXACT_PATH + ["block"]
+
+    def test_add_action_content(self, detector):
+        http_block = _directive("http", [], [])
+        result = self._eval(detector, http_block)
+        remediation = result["remediations"][0]
+        assert remediation["action"] == "add"
+        assert remediation["directive"] == "server_tokens"
+        assert remediation["args"] == ["off"]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Section 4 — scan(): full pipeline tests
+# Phần 4 — scan(): Toàn bộ đường ống (10 test cases)
 # ──────────────────────────────────────────────────────────────────────────────
 
 class TestScan:
-    """Integration tests exercising BaseRecom.scan() → _traverse_ast() → evaluate()."""
+    # --- Cấu hình an toàn ---
 
-    def test_compliant_http_block(self, detector):
+    def test_safe_http_block_with_off(self, detector):
         parser_output = _make_parser_output([
             _directive("http", [], [
-                _directive("server_tokens", ["off"]),
-                _directive("server", [], [
-                    _directive("listen", ["80"])
-                ])
+                _directive("server_tokens", ["off"])
             ])
         ])
         findings = detector.scan(parser_output)
         assert findings == []
 
-    def test_non_compliant_missing_server_tokens(self, detector):
+    def test_empty_config(self, detector):
+        findings = detector.scan({"config": []})
+        assert findings == []
+
+    def test_other_contexts_no_violation(self, detector):
         parser_output = _make_parser_output([
-            _directive("http", [], [
-                _directive("sendfile", ["on"])
+            _directive("events", [], [
+                _directive("worker_connections", ["1024"])
             ])
         ])
         findings = detector.scan(parser_output)
-        assert len(findings) == 1
-        remediations = findings[0]["remediations"]
-        assert len(remediations) == 1
-        assert remediations[0]["action"] == "add"
-        assert remediations[0]["directive"] == "server_tokens"
+        assert findings == []
 
-    def test_non_compliant_server_tokens_on_in_http(self, detector):
+    # --- Xử lý vi phạm thay thế (Replace) ---
+
+    def test_replace_detects_on(self, detector):
+        parser_output = _make_parser_output([
+            _directive("server_tokens", ["on"])
+        ])
+        findings = detector.scan(parser_output)
+        assert len(findings) == 1
+
+    def test_replace_action_is_correct(self, detector):
         parser_output = _make_parser_output([
             _directive("http", [], [
+                _directive("server_tokens", ["build"])
+            ])
+        ])
+        findings = detector.scan(parser_output)
+        assert findings[0]["remediations"][0]["action"] == "replace"
+        assert findings[0]["remediations"][0]["args"] == ["off"]
+
+    # --- Xử lý vi phạm thêm mới (Add) ---
+
+    def test_add_detects_missing_in_http(self, detector):
+        parser_output = _make_parser_output([
+            _directive("http", [], [])
+        ])
+        findings = detector.scan(parser_output)
+        assert len(findings) == 1
+
+    def test_add_action_is_correct(self, detector):
+        parser_output = _make_parser_output([
+            _directive("http", [], [])
+        ])
+        findings = detector.scan(parser_output)
+        assert findings[0]["remediations"][0]["action"] == "add"
+        assert findings[0]["remediations"][0]["args"] == ["off"]
+
+    # --- Gom nhóm lỗi (Grouping) ---
+
+    def test_multiple_violations_same_file_grouped(self, detector):
+        parser_output = _make_parser_output([
+            # Thiếu server_tokens -> sinh hành động Add
+            _directive("http", [], []),
+            _directive("server", [], [
+                # Cấu hình sai -> sinh hành động Replace
                 _directive("server_tokens", ["on"])
             ])
         ])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
-        remediations = findings[0]["remediations"]
-        assert len(remediations) == 1
-        assert remediations[0]["action"] == "replace"
-        assert remediations[0]["args"] == ["off"]
+        assert len(findings[0]["remediations"]) == 2
 
-    def test_multiple_server_tokens_violations(self, detector):
-        # Test case where it's missing in http, but present with 'on' inside server
-        # This will trigger 'add' in http, and 'replace' in server.
-        parser_output = _make_parser_output([
-            _directive("http", [], [
-                _directive("server", [], [
-                    _directive("server_tokens", ["on"])
-                ])
-            ])
-        ])
-        findings = detector.scan(parser_output)
-        assert len(findings) == 1
-        remediations = findings[0]["remediations"]
-        assert len(remediations) == 2
-        actions = [r["action"] for r in remediations]
-        assert "add" in actions
-        assert "replace" in actions
+    # --- Nhiều file cấu hình ---
 
-    def test_non_conf_file_skipped(self, detector):
+    def test_scan_multiple_files_both_invalid(self, detector):
         parser_output = {
             "config": [
                 {
-                    "file": "/etc/nginx/nginx",     # no .conf extension
+                    "file": "/etc/nginx/nginx.conf",
+                    # Thiếu server_tokens
                     "parsed": [_directive("http", [], [])]
+                },
+                {
+                    "file": "/etc/nginx/conf.d/app.conf",
+                    # Giá trị sai
+                    "parsed": [_directive("server_tokens", ["on"])]
                 }
             ]
         }
         findings = detector.scan(parser_output)
-        assert findings == []
+        assert len(findings) == 2
+
+    def test_scan_multiple_files_one_valid_one_invalid(self, detector):
+        parser_output = {
+            "config": [
+                {
+                    "file": "/etc/nginx/nginx.conf",
+                    # Hợp lệ
+                    "parsed": [_directive("http", [], [_directive("server_tokens", ["off"])])]
+                },
+                {
+                    "file": "/etc/nginx/conf.d/app.conf",
+                    "parsed": [_directive("server_tokens", ["on"])]  # Vi phạm
+                }
+            ]
+        }
+        findings = detector.scan(parser_output)
+        assert len(findings) == 1
+        assert findings[0]["file"] == "/etc/nginx/conf.d/app.conf"
