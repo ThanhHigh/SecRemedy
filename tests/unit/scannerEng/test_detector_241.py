@@ -10,38 +10,25 @@ Test Strategy
 • scan() tests — exercise the full AST traversal + grouping pipeline
   that BaseRecom provides, with synthetic parser_output payloads.
 
-Authorized ports: 80, 443
+Authorized ports: 80, 443, 8080, 3000
 """
 
 import pytest
 from core.scannerEng.recommendations.detector_241 import Detector241
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Fixtures
-# ──────────────────────────────────────────────────────────────────────────────
-
 @pytest.fixture
 def detector():
     """Return a fresh Detector241 instance for every test."""
-    return Detector241()
+    d = Detector241()
+    d.authorized_ports = ["80", "443", "8080", "3000"]
+    return d
 
 
 def _listen_directive(args: list) -> dict:
     """Helper: build a minimal 'listen' crossplane directive dict."""
     return {"directive": "listen", "args": args}
-
-
-def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
-    """Helper: wrap directives in a minimal crossplane parser_output structure."""
-    return {
-        "config": [
-            {
-                "file": filepath,
-                "parsed": parsed_directives,
-            }
-        ]
-    }
 
 
 def _server_block(listen_args_list: list) -> dict:
@@ -60,6 +47,18 @@ def _server_block(listen_args_list: list) -> dict:
                 "block": listen_directives,
             }
         ],
+    }
+
+
+def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
+    """Helper: wrap directives in a minimal crossplane parser_output structure."""
+    return {
+        "config": [
+            {
+                "file": filepath,
+                "parsed": parsed_directives,
+            }
+        ]
     }
 
 
@@ -103,8 +102,16 @@ class TestEvaluateCompliant:
     def test_listen_port_80(self, detector):
         assert self._eval(detector, _listen_directive(["80"])) is None
 
-    def test_listen_port_443(self, detector):
-        assert self._eval(detector, _listen_directive(["443"])) is None
+    def test_listen_port_443_default_server(self, detector):
+        assert self._eval(detector, _listen_directive(
+            ["443", "default_server"])) is None
+
+    def test_listen_port_8080(self, detector):
+        assert self._eval(detector, _listen_directive(["8080"])) is None
+
+    def test_listen_port_3000_default_server(self, detector):
+        assert self._eval(detector, _listen_directive(
+            ["3000", "default_server"])) is None
 
     # --- Authorized ports with SSL/QUIC qualifiers (args[0] is still the port) ---
 
@@ -114,10 +121,6 @@ class TestEvaluateCompliant:
     def test_listen_443_quic(self, detector):
         assert self._eval(detector, _listen_directive(["443", "quic"])) is None
 
-    def test_listen_80_default_server(self, detector):
-        assert self._eval(detector, _listen_directive(
-            ["80", "default_server"])) is None
-
     # --- IP:port format ---
 
     def test_listen_ip_port_80(self, detector):
@@ -126,6 +129,14 @@ class TestEvaluateCompliant:
 
     def test_listen_ip_port_443(self, detector):
         assert self._eval(detector, _listen_directive(["0.0.0.0:443"])) is None
+
+    def test_listen_ip_port_8080(self, detector):
+        assert self._eval(detector, _listen_directive(
+            ["127.0.0.1:8080"])) is None
+
+    def test_listen_ip_port_3000_default_server(self, detector):
+        assert self._eval(detector, _listen_directive(
+            ["127.0.0.1:3000", "default_server"])) is None
 
     def test_listen_ip_port_192_443(self, detector):
         assert self._eval(detector, _listen_directive(
@@ -182,7 +193,7 @@ class TestEvaluateCompliant:
     def test_listen_outside_server_context_empty(self, detector):
         """Context is [], not inside any server."""
         result = detector.evaluate(
-            _listen_directive(["8080"]),
+            _listen_directive(["443 default_server"]),
             self.FILEPATH,
             [],        # no server in context
             self.EXACT_PATH,
@@ -201,7 +212,7 @@ class TestEvaluateCompliant:
     def test_listen_in_http_context_only(self, detector):
         """listen inside http but NOT directly in server block."""
         result = detector.evaluate(
-            _listen_directive(["8080"]),
+            _listen_directive(["3000"]),
             self.FILEPATH,
             ["http"],   # no "server" in context
             self.EXACT_PATH,
@@ -210,7 +221,7 @@ class TestEvaluateCompliant:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Section 3 — evaluate(): non-compliant cases (must return a finding)
+# Section 3 — evaluate(): non-compliant cases (must return uncompliances)
 # ──────────────────────────────────────────────────────────────────────────────
 
 class TestEvaluateNonCompliant:
@@ -226,40 +237,42 @@ class TestEvaluateNonCompliant:
 
     # --- Common non-authorized bare ports ---
 
-    def test_listen_port_8080(self, detector):
-        result = self._eval(detector, _listen_directive(["8080"]))
+    def test_listen_port_8089(self, detector):
+        result = self._eval(detector, _listen_directive(["8089"]))
         assert result is not None
 
-    def test_listen_port_8443(self, detector):
-        result = self._eval(detector, _listen_directive(["8443"]))
+    def test_listen_port_8443_default_server(self, detector):
+        result = self._eval(detector, _listen_directive(
+            ["8443", "default_server"]))
         assert result is not None
 
-    def test_listen_port_3000(self, detector):
-        result = self._eval(detector, _listen_directive(["3000"]))
+    def test_listen_port_3099(self, detector):
+        result = self._eval(detector, _listen_directive(["3099"]))
         assert result is not None
 
     def test_listen_port_22(self, detector):
         result = self._eval(detector, _listen_directive(["22"]))
         assert result is not None
 
-    def test_listen_port_9000(self, detector):
-        result = self._eval(detector, _listen_directive(["9000"]))
+    def test_listen_port_9090_default_server(self, detector):
+        result = self._eval(detector, _listen_directive(
+            ["9090", "default_server"]))
         assert result is not None
 
     # --- IP:port format with unauthorized port ---
 
-    def test_listen_ip_port_8080(self, detector):
-        result = self._eval(detector, _listen_directive(["127.0.0.1:8080"]))
+    def test_listen_ip_port_8089(self, detector):
+        result = self._eval(detector, _listen_directive(["127.0.0.1:8089"]))
         assert result is not None
 
-    def test_listen_ip_port_3000(self, detector):
-        result = self._eval(detector, _listen_directive(["192.168.0.1:3000"]))
+    def test_listen_ip_port_3099(self, detector):
+        result = self._eval(detector, _listen_directive(["192.168.0.1:3099"]))
         assert result is not None
 
     # --- IPv6 with unauthorized port ---
 
-    def test_listen_ipv6_port_8080(self, detector):
-        result = self._eval(detector, _listen_directive(["[::]:8080"]))
+    def test_listen_ipv6_port_8089(self, detector):
+        result = self._eval(detector, _listen_directive(["[::]:8089"]))
         assert result is not None
 
     def test_listen_ipv6_port_9090(self, detector):
@@ -269,26 +282,28 @@ class TestEvaluateNonCompliant:
     # ── Remediation payload structure checks ──────────────────────────────────
 
     def test_result_contains_file(self, detector):
-        result = self._eval(detector, _listen_directive(["8080"]))
+        result = self._eval(detector, _listen_directive(["8089"]))
         assert result["file"] == self.FILEPATH
 
     def test_result_has_remediations_list(self, detector):
-        result = self._eval(detector, _listen_directive(["8080"]))
+        result = self._eval(detector, _listen_directive(
+            ["3099", "default_server"]))
         assert isinstance(result["remediations"], list)
         assert len(result["remediations"]) == 1
 
     def test_remediation_action_is_delete(self, detector):
-        result = self._eval(detector, _listen_directive(["8080"]))
+        result = self._eval(detector, _listen_directive(["8089"]))
         remediation = result["remediations"][0]
         assert remediation["action"] == "delete"
 
     def test_remediation_directive_is_listen(self, detector):
-        result = self._eval(detector, _listen_directive(["8080"]))
+        result = self._eval(detector, _listen_directive(
+            ["3099", "default_server"]))
         remediation = result["remediations"][0]
         assert remediation["directive"] == "listen"
 
     def test_remediation_context_matches_exact_path(self, detector):
-        result = self._eval(detector, _listen_directive(["8080"]))
+        result = self._eval(detector, _listen_directive(["8089"]))
         remediation = result["remediations"][0]
         assert remediation["context"] == self.EXACT_PATH
 
@@ -296,7 +311,7 @@ class TestEvaluateNonCompliant:
         """exact_path passed in must be preserved exactly (by reference or value)."""
         custom_path = ["config", 2, "parsed", 7, "block", 3, "block", 1]
         result = detector.evaluate(
-            _listen_directive(["9999"]),
+            _listen_directive(["8089"]),
             self.FILEPATH,
             self.SERVER_CTX,
             custom_path,
@@ -315,7 +330,8 @@ class TestScan:
 
     def test_all_compliant_ports_returns_empty(self, detector):
         parser_output = _make_parser_output([
-            _server_block([["80"], ["443", "ssl"]])
+            _server_block([["80"], ["443", "ssl"], ["8080"],
+                          ["3000", "default_server"]])
         ])
         findings = detector.scan(parser_output)
         assert findings == []
@@ -348,7 +364,7 @@ class TestScan:
 
     def test_single_unauthorized_port_detected(self, detector):
         parser_output = _make_parser_output([
-            _server_block([["8080"]])
+            _server_block([["8089"]])
         ])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
@@ -356,17 +372,19 @@ class TestScan:
     def test_single_violation_file_path_correct(self, detector):
         path = "/etc/nginx/sites-enabled/test.conf"
         parser_output = _make_parser_output(
-            [_server_block([["8080"]])], filepath=path)
+            [_server_block([["3099"]])], filepath=path)
         findings = detector.scan(parser_output)
         assert findings[0]["file"] == path
 
     def test_single_violation_action_is_delete(self, detector):
-        parser_output = _make_parser_output([_server_block([["8080"]])])
+        parser_output = _make_parser_output(
+            [_server_block([["8089", "default_server"]])])
         findings = detector.scan(parser_output)
         assert findings[0]["remediations"][0]["action"] == "delete"
 
     def test_single_violation_directive_is_listen(self, detector):
-        parser_output = _make_parser_output([_server_block([["8080"]])])
+        parser_output = _make_parser_output(
+            [_server_block([["3099", "default_server"]])])
         findings = detector.scan(parser_output)
         assert findings[0]["remediations"][0]["directive"] == "listen"
 
@@ -374,7 +392,7 @@ class TestScan:
 
     def test_two_violations_same_file_grouped(self, detector):
         parser_output = _make_parser_output([
-            _server_block([["8080"], ["9090"]])
+            _server_block([["8089"], ["3099", "default_server"]])
         ])
         findings = detector.scan(parser_output)
         # One file entry only (grouping by file)
@@ -383,7 +401,7 @@ class TestScan:
 
     def test_three_violations_same_file_grouped(self, detector):
         parser_output = _make_parser_output([
-            _server_block([["8080"], ["3000"], ["9999"]])
+            _server_block([["8089"], ["3099", "default_server"], ["8433"]])
         ])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
@@ -392,13 +410,22 @@ class TestScan:
     # --- Mixed compliant + non-compliant in same block ---
 
     def test_mixed_listen_only_unauthorized_flagged(self, detector):
-        """80 is OK, 443 is OK, 8080 should be the only violation."""
+        """80 is OK, 443 is OK, 8089 should be the only violation."""
         parser_output = _make_parser_output([
-            _server_block([["80"], ["443", "ssl"], ["8080"]])
+            _server_block([["80"], ["443", "ssl"], ["8089"]])
         ])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
         assert len(findings[0]["remediations"]) == 1
+
+    def test_mixed_listen_only_authorized_unflagged(self, detector):
+        """8080 is OK, 8089 and 3099 should be flagged."""
+        parser_output = _make_parser_output([
+            _server_block([["8080"], ["8089"], ["3099", "default_server"]])
+        ])
+        findings = detector.scan(parser_output)
+        assert len(findings) == 1
+        assert len(findings[0]["remediations"]) == 2
 
     # --- Multiple files (multiple config entries) ---
 
@@ -407,11 +434,11 @@ class TestScan:
             "config": [
                 {
                     "file": "/etc/nginx/conf.d/app1.conf",
-                    "parsed": [_server_block([["8080"]])],
+                    "parsed": [_server_block([["8089"]])],
                 },
                 {
                     "file": "/etc/nginx/conf.d/app2.conf",
-                    "parsed": [_server_block([["3000"]])],
+                    "parsed": [_server_block([["3099"]])],
                 },
             ]
         }
@@ -420,23 +447,26 @@ class TestScan:
         files = {f["file"] for f in findings}
         assert "/etc/nginx/conf.d/app1.conf" in files
         assert "/etc/nginx/conf.d/app2.conf" in files
+        assert len(findings[0]["remediations"]) == 1
+        assert len(findings[1]["remediations"]) == 1
 
     def test_one_clean_file_one_dirty_file(self, detector):
         parser_output = {
             "config": [
                 {
                     "file": "/etc/nginx/conf.d/clean.conf",
-                    "parsed": [_server_block([["80"], ["443"]])],
+                    "parsed": [_server_block([["80"], ["443", "ssl"]])],
                 },
                 {
                     "file": "/etc/nginx/conf.d/dirty.conf",
-                    "parsed": [_server_block([["8080"]])],
+                    "parsed": [_server_block([["8089", "default_server"]])],
                 },
             ]
         }
         findings = detector.scan(parser_output)
         assert len(findings) == 1
         assert findings[0]["file"] == "/etc/nginx/conf.d/dirty.conf"
+        assert len(findings[0]["remediations"]) == 1
 
     # --- listen directive in non-server context must not produce false positives ---
 
@@ -448,9 +478,31 @@ class TestScan:
                 "args": [],
                 "block": [
                     # listen at http level (no server wrapping)
-                    {"directive": "listen", "args": ["8080"]},
+                    {"directive": "listen", "args": ["8089"]},
                 ],
             }
+        ])
+        findings = detector.scan(parser_output)
+        assert findings == []
+
+    def test_listen_in_events_context_not_flagged(self, detector):
+        """A 'listen' directive sitting inside 'events' (not server) must be skipped."""
+        parser_output = _make_parser_output([
+            {
+                "directive": "events",
+                "args": [],
+                "block": [
+                    {"directive": "listen", "args": ["8089"]},
+                ],
+            }
+        ])
+        findings = detector.scan(parser_output)
+        assert findings == []
+
+    def test_listen_at_top_level_not_flagged(self, detector):
+        """A 'listen' directive sitting at the top level (not inside any block) must be skipped."""
+        parser_output = _make_parser_output([
+            {"directive": "listen", "args": ["8089"]},
         ])
         findings = detector.scan(parser_output)
         assert findings == []
@@ -459,7 +511,7 @@ class TestScan:
 
     def test_ipv6_unauthorized_port_via_scan(self, detector):
         parser_output = _make_parser_output([
-            _server_block([["[::]:8080"]])
+            _server_block([["[::]:3099"]])
         ])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
@@ -467,14 +519,14 @@ class TestScan:
     # --- Result schema completeness ---
 
     def test_scan_result_keys(self, detector):
-        parser_output = _make_parser_output([_server_block([["8080"]])])
+        parser_output = _make_parser_output([_server_block([["8089"]])])
         findings = detector.scan(parser_output)
         result = findings[0]
         assert "file" in result
         assert "remediations" in result
 
     def test_scan_remediation_keys(self, detector):
-        parser_output = _make_parser_output([_server_block([["8080"]])])
+        parser_output = _make_parser_output([_server_block([["3099"]])])
         findings = detector.scan(parser_output)
         remediation = findings[0]["remediations"][0]
         assert "action" in remediation
