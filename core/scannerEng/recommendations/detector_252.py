@@ -5,6 +5,7 @@ from core.scannerEng.base_recom import BaseRecom
 class Detector252(BaseRecom):
     def __init__(self):
         super().__init__()
+        # Thông tin metadata theo chuẩn CIS Benchmark 2.5.2
         self.id = "2.5.2"
         self.title = "Ensure default error and index.html pages do not reference NGINX (Manual)"
         self.description = "Default error pages (e.g., 404, 500) and the default welcome page often contain NGINX branding or signatures. These pages should be removed or replaced with generic or custom-branded pages that do not disclose the underlying server technology."
@@ -12,196 +13,163 @@ class Detector252(BaseRecom):
         self.impact = "Creating and maintaining custom error pages requires additional administrative effort. Ensure that custom error pages are simple and do not themselves introduce vulnerabilities."
         self.remediation = "Instead of editing the default files, configure NGINX to use custom error pages. Create a directory and place generic HTML files there without NGINX branding, and add the error_page directive to your http or server blocks."
         self.level = "Level 1 - Webserver, Proxy, Loadbalancer"
-
-    def _parse_error_page(self, args: List[str]):
-        """
-        Phân tích tham số của chỉ thị error_page để tìm ra các mã lỗi (4xx, 5xx) đã được cấu hình.
-        Ví dụ: error_page 500 502 503 504 /50x.html;
-        """
-        if len(args) < 2:
-            return set(), set()
-
-        # Phần tử cuối cùng thường là URI hoặc =response (ví dụ =200)
-        url = args[-1]
-        if url == "=":
-            return set(), set()
-
-        c4 = set()
-        c5 = set()
-
-        # Duyệt qua các mã lỗi, bỏ qua phần tử cuối cùng (URI đích)
-        for arg in args[:-1]:
-            if arg.startswith('4') and len(arg) == 3 and arg.isdigit():
-                c4.add(arg)
-            elif arg.startswith('5') and len(arg) == 3 and arg.isdigit():
-                c5.add(arg)
-            elif arg == "50x":  # Cú pháp tóm tắt thường dùng trong nginx
-                c5.update({"500", "502", "503", "504"})
-        return c4, c5
-
-    def _check_block_coverage(self, directives: List[Dict]):
-        """
-        Đệ quy kiểm tra các chỉ thị trong một khối (ví dụ: khối server) để gom 
-        tất cả các mã lỗi (4xx, 5xx) đã được định nghĩa thông qua error_page.
-        Có hỗ trợ tìm kiếm sâu vào các khối location con.
-        """
-        c4 = set()
-        c5 = set()
-        for d in directives:
-            if d.get("directive") == "error_page":
-                l4, l5 = self._parse_error_page(d.get("args", []))
-                c4.update(l4)
-                c5.update(l5)
-            # Nếu gặp khối con (như location) nhưng không phải khối server (vì server độc lập với nhau)
-            if "block" in d and d.get("directive") != "server":
-                # recurse into locations (Đệ quy tìm trong các location)
-                r4, r5 = self._check_block_coverage(d.get("block", []))
-                c4.update(r4)
-                c5.update(r5)
-        return c4, c5
-
-    def _is_ignored_server(self, directives: List[Dict]):
-        """
-        Kiểm tra xem khối server này có nên bị bỏ qua không.
-        Các server trống, hoặc chỉ dùng để redirect (sử dụng lệnh 'return') 
-        thì thường không cần quan tâm đến lỗi error_page, vì yêu cầu đã bị đẩy đi nơi khác.
-        """
-        if not directives:
-            return True
-        for d in directives:
-            if d.get("directive") == "return":
-                return True
-        return False
-
-    def _evaluate_server(self, server_directive: Dict, http_4xx: set, http_5xx: set, context_path: Any) -> List[Dict]:
-        """
-        Kiểm tra một khối server và trả về các remediations nếu thiếu cấu hình error_page.
-        """
-        if self._is_ignored_server(server_directive.get("block", [])):
-            return []
-
-        srv_4xx, srv_5xx = self._check_block_coverage(server_directive.get("block", []))
-        
-        combined_4xx = http_4xx.union(srv_4xx)
-        combined_5xx = http_5xx.union(srv_5xx)
-
-        has_4xx = len(combined_4xx) > 0
-        has_5xx = {"500", "502", "503", "504"}.issubset(combined_5xx)
-
-        remediations = []
-        if not has_4xx:
-            remediations.append({
-                "action": "add",
-                "directive": "error_page",
-                "args": ["404", "/404.html"],
-                "context": context_path
-            })
-        if not has_5xx:
-            remediations.append({
-                "action": "add",
-                "directive": "error_page",
-                "args": ["500", "502", "503", "504", "/50x.html"],
-                "context": context_path
-            })
-        return remediations
+        self.profile = "Level 1"
 
     def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
         """
-        Hàm `evaluate` được sử dụng để kiểm tra ĐỘC LẬP một block cấu hình (thường là `http` hoặc `server`).
-        - Trong môi trường CHẠY THỰC TẾ: Hàm này KHÔNG được gọi (vì `scan()` đã bị override để xử lý toàn cục).
-        - Trong UNIT TESTS: Hàm này cực kỳ quan trọng! Nó được gọi trực tiếp bởi 44 test cases (Phần 2 & 3
-          trong test_detector_252.py) để kiểm tra logic của một block cấu hình bị cô lập mà không cần phải 
-          giả lập (mock) toàn bộ cây AST với nhiều file.
+        Kiểm tra trực tiếp một khối (http, server, location) để xem nó có trực tiếp định nghĩa
+        các chỉ thị `error_page` an toàn cho các mã lỗi quan trọng (404, 500, 502, 503, 504) hay không.
+        Hàm này trả về lỗi nếu khối đó không có error_page hoặc có error_page nhưng bị thiếu mã lỗi / trỏ sai địa chỉ chứa 'nginx'.
         """
-        if directive.get("directive") not in ["http", "server"]:
+        d_name = directive.get("directive")
+        # Chỉ đánh giá trên các khối có khả năng chứa error_page
+        if d_name not in ["http", "server", "location"]:
             return None
 
-        http_4xx = set()
-        http_5xx = set()
-        servers_to_check = []
+        # Thu thập thông tin từ tất cả các chỉ thị error_page nằm trực tiếp bên trong khối này
+        block = directive.get("block", [])
+        codes_covered = set()
+        is_valid = True
+        
+        for d in block:
+            if d.get("directive") == "error_page":
+                args = d.get("args", [])
+                # error_page cần ít nhất 1 mã lỗi và 1 URI (ví dụ: error_page 404 /404.html)
+                if len(args) < 2:
+                    is_valid = False
+                    continue
+                uri = args[-1]
+                
+                # Cảnh báo rò rỉ: nếu URI trỏ về trang có chứa chữ "nginx" (ví dụ trang mặc định của CentOS/Debian)
+                if "nginx" in uri.lower():
+                    is_valid = False
+                    
+                # Thu thập các mã lỗi (status codes) mà khai báo này đang xử lý
+                for arg in args[:-1]:
+                    if arg.isdigit():
+                        codes_covered.add(int(arg))
 
-        if directive.get("directive") == "http":
-            for d in directive.get("block", []):
-                if d.get("directive") == "error_page":
-                    h4, h5 = self._parse_error_page(d.get("args", []))
-                    http_4xx.update(h4)
-                    http_5xx.update(h5)
-                elif d.get("directive") == "server":
-                    servers_to_check.append(d)
-        elif directive.get("directive") == "server":
-            servers_to_check.append(directive)
+        # Yêu cầu bắt buộc phải xử lý tất cả các mã lỗi này để ngăn rò rỉ NGINX version
+        required_codes = {404, 500, 502, 503, 504}
+        
+        # Nếu block có khai báo hợp lệ và phủ đầy đủ các mã lỗi yêu cầu
+        if is_valid and required_codes.issubset(codes_covered):
+            return None
 
-        remediations = []
-        context_val = "server" if directive.get("directive") == "server" else "http"
-        for srv in servers_to_check:
-            remediations.extend(self._evaluate_server(srv, http_4xx, http_5xx, context_val))
-
-        if remediations:
-            return {"file": filepath, "remediations": remediations}
-        return None
+        # Trả về đối tượng JSON Contract mô tả cách Remediation (chèn/sửa)
+        return {
+            "file": filepath,
+            "remediations": [{
+                "action": "add", # Remediation: Bổ sung chỉ thị error_page an toàn
+                "directive": "error_page",
+                "value": "404 500 502 503 504 /custom_50x.html",
+                "context": d_name
+            }]
+        }
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Hàm `scan` là entrypoint chính trong môi trường CHẠY THỰC TẾ.
-        Khác với các rule thông thường chỉ cần kiểm tra từng node độc lập, rule 2.5.2 yêu cầu
-        phải biết được các `error_page` định nghĩa ở cấp `http` (global) nằm rải rác ở nhiều file
-        để kế thừa xuống các khối `server`.
-        
-        Vì vậy, hàm này thực hiện một thuật toán 2-bước (2-pass):
-        - Bước 1: Quét toàn bộ các file để gom tất cả `error_page` ở cấp độ `http`.
-        - Bước 2: Quét lại toàn bộ các file để vào sâu bên trong từng `server` block và
-                  đối chiếu với dữ liệu global đã thu thập ở Bước 1 thông qua `_evaluate_server()`.
-                  
-        Trong Unit test, hàm này được test ở Phần 4 (15 test cases) để đảm bảo tích hợp toàn diện.
+        Hàm quét toàn cục trên cây AST.
+        Xử lý tính kế thừa: nếu http đã có error_page an toàn, thì server con không cần định nghĩa lại
+        trừ phi nó ghi đè một error_page không an toàn.
         """
-        findings = []
-        configs = parser_output.get("config", [])
-
-        # 1. Thu thập phạm vi cấu hình error_page ở cấp HTTP (global)
-        http_4xx = set()
-        http_5xx = set()
-
-        for config_file in configs:
+        uncompliances = []
+        http_exists = False
+        
+        # Bước 1: Kiểm tra xem cấu hình có khối `http` gốc nào không
+        for config_file in parser_output.get("config", []):
             for d in config_file.get("parsed", []):
                 if d.get("directive") == "http":
-                    for sub_d in d.get("block", []):
-                        if sub_d.get("directive") == "error_page":
-                            h4, h5 = self._parse_error_page(sub_d.get("args", []))
-                            http_4xx.update(h4)
-                            http_5xx.update(h5)
-                elif d.get("directive") == "error_page":
-                    h4, h5 = self._parse_error_page(d.get("args", []))
-                    http_4xx.update(h4)
-                    http_5xx.update(h5)
+                    http_exists = True
+                    break
 
-        # 2. Duyệt qua tất cả các server blocks ở mọi nơi và đánh giá
-        file_remediations = {}
+        def get_explicit_coverage(block_directives):
+            """Hàm helper: Trích xuất các mã lỗi đã được xử lý bằng error_page trực tiếp trong khối này"""
+            codes = set()
+            valid = True
+            has_explicit = False
+            for child in block_directives:
+                if child.get("directive") == "error_page":
+                    has_explicit = True
+                    args = child.get("args", [])
+                    if len(args) < 2:
+                        valid = False
+                        continue
+                    uri = args[-1]
+                    if "nginx" in uri.lower():
+                        valid = False
+                    for arg in args[:-1]:
+                        if arg.isdigit():
+                            codes.add(int(arg))
+            return has_explicit, codes, valid
 
-        def add_rem(fp, rems):
-            if fp not in file_remediations:
-                file_remediations[fp] = []
-            file_remediations[fp].extend(rems)
+        def is_coverage_full(codes, valid):
+            """Hàm helper: Đánh giá xem tập hợp các mã lỗi đã đủ các mã nguy hiểm tiềm tàng chưa"""
+            return valid and {404, 500, 502, 503, 504}.issubset(codes)
 
-        for config_idx, config_file in enumerate(configs):
-            filepath = config_file.get("file", "")
-            parsed = config_file.get("parsed", [])
-
-            def traverse_for_servers(directives, current_path):
-                for i, d in enumerate(directives):
-                    if d.get("directive") == "server":
-                        server_block_path = current_path + [i, "block"]
-                        rems = self._evaluate_server(d, http_4xx, http_5xx, server_block_path)
-                        if rems:
-                            add_rem(filepath, rems)
+        def traverse(directives, filepath, exact_path):
+            """Duyệt đệ quy cây AST để kiểm tra tính kế thừa và ghi đè của error_page"""
+            for idx, d in enumerate(directives):
+                d_name = d.get("directive")
+                ep = exact_path + [idx]
+                
+                # Bỏ qua các khối chuyên sâu về kết nối mạng/luồng, không liên quan đến cấu hình HTTP
+                if d_name in ["stream", "events"]:
+                    continue
+                
+                # Xử lý các khối chịu trách nhiệm phục vụ web
+                if d_name in ["http", "server", "location"]:
+                    block = d.get("block", [])
+                    has_explicit, codes, valid = get_explicit_coverage(block)
+                    
+                    if has_explicit:
+                        # TH1: Khối này CÓ định nghĩa error_page nhưng định nghĩa thiếu sót (ghi đè nguy hiểm)
+                        if not is_coverage_full(codes, valid):
+                            uncompliances.append({
+                                "file": filepath,
+                                "remediations": [{
+                                    "action": "modify", # Bắt buộc sửa đổi trực tiếp vào dòng ghi đè bị sai
+                                    "directive": "error_page",
+                                    "value": "404 500 502 503 504 /custom_50x.html",
+                                    "context": d_name
+                                }]
+                            })
+                    else:
+                        # TH2: Khối này KHÔNG định nghĩa error_page
+                        # Đối với khối http (gốc), luôn báo lỗi nếu thiếu
+                        if d_name == "http":
+                            uncompliances.append({
+                                "file": filepath,
+                                "remediations": [{
+                                    "action": "add",
+                                    "directive": "error_page",
+                                    "value": "404 500 502 503 504 /custom_50x.html",
+                                    "context": d_name
+                                }]
+                            })
+                        # Đối với khối server, nếu không có khối http nào trên toàn hệ thống để kế thừa, thì bản thân server phải gánh trách nhiệm
+                        elif d_name == "server" and not http_exists:
+                            uncompliances.append({
+                                "file": filepath,
+                                "remediations": [{
+                                    "action": "add",
+                                    "directive": "error_page",
+                                    "value": "404 500 502 503 504 /custom_50x.html",
+                                    "context": d_name
+                                }]
+                            })
+                            
+                    # Tiếp tục duyệt sâu vào các khối con (ví dụ từ http -> server, hoặc server -> location)
+                    traverse(block, filepath, ep + ["block"])
+                else:
+                    # Nếu là các khối khác (ví dụ: if, limit_except), vẫn cần duyệt xuống nếu nó có chứa khối con
                     if "block" in d:
-                        traverse_for_servers(d["block"], current_path + [i, "block"])
+                        traverse(d.get("block", []), filepath, ep + ["block"])
 
-            traverse_for_servers(parsed, ["config", config_idx, "parsed"])
-
-        for fp, rems in file_remediations.items():
-            findings.append({
-                "file": fp,
-                "remediations": rems
-            })
-
-        return findings
+        # Bắt đầu duyệt quét từ mức ngoài cùng của từng file cấu hình
+        for config_idx, config_file in enumerate(parser_output.get("config", [])):
+            filepath = config_file.get("file", "")
+            traverse(config_file.get("parsed", []), filepath, ["config", config_idx, "parsed"])
+            
+        # Nén/nhóm các lỗi liên quan trên cùng 1 file thành 1 mảng JSON gọn gàng gửi cho bước Remediation
+        return self._group_by_file(uncompliances)
