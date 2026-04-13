@@ -315,3 +315,5 @@ Edit your web server or proxy configuration file to redirect all unencrypted lis
 ## Default Value
 
 NGINX is not configured to use HTTPS or redirect to it by default.
+
+---
