@@ -13,44 +13,4 @@ class Detector251(BaseRecom):
         self.remediation = "Disable version disclosure globally by adding the directive `server_tokens off;` to the http block in `/etc/nginx/nginx.conf`."
 
     def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
-        """
-        Evaluate recommendation 2.5.1.
-        Checks if 'server_tokens' restrictively disabled explicitly, or adds it to 'http' block if missing.
-        """
-        # 1. Inspect explicit server_tokens configuration
-        if directive.get("directive") == "server_tokens":
-            args = directive.get("args", [])
-            if args and args[0] != "off":
-                return {
-                    "file": filepath,
-                    "remediations": [
-                        {
-                            "action": "replace",
-                            "context": exact_path,
-                            "directive": "server_tokens",
-                            "args": ["off"]
-                        }
-                    ]
-                }
-
-        # 2. Check if server_tokens is missing globally within the HTTP block
-        # (Default is 'on', which violates the recommendation)
-        if directive.get("directive") == "http":
-            block = directive.get("block", [])
-            has_server_tokens = any(
-                d.get("directive") == "server_tokens" for d in block)
-
-            if not has_server_tokens:
-                return {
-                    "file": filepath,
-                    "remediations": [
-                        {
-                            "action": "add",
-                            "context": exact_path + ["block"],
-                            "directive": "server_tokens",
-                            "args": ["off"]
-                        }
-                    ]
-                }
-
         return None

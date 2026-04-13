@@ -7,208 +7,193 @@ class Detector242(BaseRecom):
         super().__init__()
         self.id = "2.4.2"
         self.title = "Ensure requests for unknown host names are rejected"
-        self.description = (
-            "NGINX should have a catch-all default server block that rejects "
-            "requests for unknown hostnames, preventing Host Header attacks "
-            "and unintended application exposure."
-        )
-        self.audit_procedure = (
-            "Check for a default server block using "
-            "`nginx -T 2>/dev/null | grep -Ei \"listen.*default_server|ssl_reject_handshake\"`. "
-            "Verify it contains `return 444;` or a 4xx error code. "
-            "For HTTPS/TLS, verify `ssl_reject_handshake on;` is used."
-        )
-        self.impact = (
-            "Clients accessing the server directly via IP address or an "
-            "unconfigured CNAME will be rejected. All valid domains must be "
-            "explicitly defined in their own server blocks."
-        )
-        self.remediation = (
-            "Configure a catch-all default server block as the first block in "
-            "your http configuration (or explicitly marked with default_server). "
-            "It should return 444 for HTTP and use ssl_reject_handshake on for HTTPS."
-        )
+        self.level = "Level 1"
+        self.description = "NGINX should have a catch-all default server block that rejects requests for unknown hostnames, preventing Host Header attacks and unintended application exposure."
+        self.audit_procedure = "Check for a default server block using `nginx -T 2>/dev/null | grep -Ei \"listen.*default_server|ssl_reject_handshake\"`. Verify it contains `return 444;` or a 4xx error code. For HTTPS/TLS, verify `ssl_reject_handshake on;` is used."
+        self.impact = "Clients accessing the server directly via IP address or an unconfigured CNAME will be rejected. All valid domains must be explicitly defined in their own server blocks."
+        self.remediation = "Configure a catch-all default server block as the first block in your http configuration (or explicitly marked with default_server). It should return 444 for HTTP and use ssl_reject_handshake on for HTTPS."
 
-    # ------------------------------------------------------------------
-    # Helper: kiểm tra một server block có phải catch-all hợp lệ không
-    # ------------------------------------------------------------------
-    def _is_valid_catchall(self, server_block: List[Dict]) -> Dict[str, bool]:
+    def _is_http_catchall(self, server_block: Dict) -> bool:
+        has_default_listen = False
+        has_reject = False
+
+        for d in server_block.get("block", []):
+            if d.get("directive") == "listen":
+                args = d.get("args", [])
+                if "ssl" not in args and "quic" not in args:
+                    if "default_server" in args:
+                        has_default_listen = True
+            elif d.get("directive") == "return":
+                args = d.get("args", [])
+                if args and args[0] in ("444", "400", "401", "403", "404"):
+                    has_reject = True
+
+        return has_default_listen and has_reject
+
+    def _is_https_catchall(self, server_block: Dict) -> bool:
+        has_default_listen = False
+        has_reject = False
+
+        for d in server_block.get("block", []):
+            if d.get("directive") == "listen":
+                args = d.get("args", [])
+                if "ssl" in args or "quic" in args:
+                    if "default_server" in args:
+                        has_default_listen = True
+            elif d.get("directive") == "ssl_reject_handshake":
+                args = d.get("args", [])
+                if args and args[0] == "on":
+                    has_reject = True
+
+        return has_default_listen and has_reject
+
+    def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
         """
-        Phân tích một server block (danh sách directives bên trong)
-        và trả về dict mô tả trạng thái tuân thủ:
-          - has_default_server:      Có listen ... default_server không?
-          - has_wildcard_name:       Có server_name _ không?
-          - has_reject_return:       Có return 444 hoặc 4xx không?
-          - has_ssl_reject:          Có ssl_reject_handshake on không?
+        Evaluate a single directive.
+        For unit test compatibility, if the directive is 'http', we check its contents.
         """
-        result = {
-            "has_default_server": False,
-            "has_wildcard_name": False,
-            "has_reject_return": False,
-            "has_ssl_reject": False,
-        }
-
-        for d in server_block:
-            directive = d.get("directive", "")
-            args = d.get("args", [])
-
-            # 1. Kiểm tra listen ... default_server
-            if directive == "listen" and "default_server" in args:
-                result["has_default_server"] = True
-
-            # 2. Kiểm tra server_name _
-            if directive == "server_name" and "_" in args:
-                result["has_wildcard_name"] = True
-
-            # 3. Kiểm tra return 444 hoặc 4xx
-            if directive == "return" and args:
-                try:
-                    status_code = int(args[0])
-                    if 400 <= status_code <= 499 or status_code == 444:
-                        result["has_reject_return"] = True
-                except (ValueError, IndexError):
-                    pass
-
-            # 4. Kiểm tra ssl_reject_handshake on
-            if directive == "ssl_reject_handshake" and args and args[0] == "on":
-                result["has_ssl_reject"] = True
-
-        return result
-
-    # ------------------------------------------------------------------
-    # Override evaluate() — Ghi đè phương thức đánh giá từ BaseRecom
-    # ------------------------------------------------------------------
-    def evaluate(
-        self,
-        directive: Dict,
-        filepath: str,
-        logical_context: List[str],
-        exact_path: List[Any],
-    ) -> Optional[Dict]:
-        """
-        Đánh giá luật 2.4.2 tại cấp http block.
-
-        Chiến lược:
-        - Khi gặp directive "http", duyệt tất cả server block con.
-        - Tìm server block nào có listen ... default_server.
-        - Nếu KHÔNG tìm thấy => uncompliance (cần thêm block mới).
-        - Nếu tìm thấy nhưng thiếu return 444/4xx hoặc ssl_reject_handshake
-          => uncompliance (cần sửa block hiện tại).
-        """
-        # Chỉ xử lý khi gặp block 'http'
         if directive.get("directive") != "http":
             return None
 
-        http_block = directive.get("block", [])
+        global_http_catchall = False
+        global_https_catchall = False
+        has_http_listen = False
+        has_https_listen = False
 
-        # Thu thập tất cả server block có default_server
-        default_servers = []
-        for idx, d in enumerate(http_block):
-            if d.get("directive") == "server" and "block" in d:
-                server_block = d["block"]
-                # Kiểm tra xem server này có listen ... default_server
-                has_ds = any(
-                    sub.get("directive") == "listen"
-                    and "default_server" in sub.get("args", [])
-                    for sub in server_block
-                )
-                if has_ds:
-                    default_servers.append((idx, server_block))
+        for d in directive.get("block", []):
+            if d.get("directive") == "server":
+                if self._is_http_catchall(d):
+                    global_http_catchall = True
+                if self._is_https_catchall(d):
+                    global_https_catchall = True
 
-        # ============================================================
-        # CASE 1: Không có server block nào có default_server
-        #         => Cần thêm một catch-all block mới vào http block
-        # ============================================================
-        if not default_servers:
-            return {
-                "file": filepath,
-                "remediations": [
-                    {
-                        "action": "add_block",
-                        "context": exact_path + ["block"],
-                        "position": 0,
-                        "directive": "server",
-                        "block": [
-                            {
-                                "directive": "listen",
-                                "args": ["80", "default_server"],
-                            },
-                            {
-                                "directive": "listen",
-                                "args": ["443", "ssl", "default_server"],
-                            },
-                            {
-                                "directive": "server_name",
-                                "args": ["_"],
-                            },
-                            {
-                                "directive": "ssl_reject_handshake",
-                                "args": ["on"],
-                            },
-                            {
-                                "directive": "return",
-                                "args": ["444"],
-                            },
-                        ],
-                        "note": (
-                            "Add a catch-all default_server block to the http context. "
-                            "You must also provide valid ssl_certificate and "
-                            "ssl_certificate_key paths for the TLS listener."
-                        ),
-                    }
-                ],
-            }
+                has_any_listen = False
+                for sub in d.get("block", []):
+                    if sub.get("directive") == "listen":
+                        has_any_listen = True
+                        args = sub.get("args", [])
+                        if "ssl" in args or "quic" in args:
+                            has_https_listen = True
+                        else:
+                            has_http_listen = True
+                if not has_any_listen:
+                    has_http_listen = True
 
-        # ============================================================
-        # CASE 2: Có default_server, kiểm tra cấu hình bên trong
-        # ============================================================
         remediations = []
+        if has_http_listen and not global_http_catchall:
+            remediations.append({
+                "action": "add",
+                "directive": "server",
+                "context": exact_path + ["block"],
+                "block": [
+                    {"directive": "listen", "args": ["80", "default_server"]},
+                    {"directive": "return", "args": ["444"]}
+                ]
+            })
 
-        for ds_idx, server_block in default_servers:
-            check = self._is_valid_catchall(server_block)
-
-            # Đường dẫn chính xác đến server block này trong AST
-            server_exact_path = exact_path + ["block", ds_idx, "block"]
-
-            # 2a. Thiếu server_name _
-            if not check["has_wildcard_name"]:
-                remediations.append({
-                    "action": "add",
-                    "context": server_exact_path,
-                    "directive": "server_name",
-                    "args": ["_"],
-                })
-
-            # 2b. Thiếu return 444 / 4xx (block không từ chối request)
-            if not check["has_reject_return"]:
-                remediations.append({
-                    "action": "add",
-                    "context": server_exact_path,
-                    "directive": "return",
-                    "args": ["444"],
-                })
-
-            # 2c. Thiếu ssl_reject_handshake on (cho HTTPS listener)
-            if not check["has_ssl_reject"]:
-                # Chỉ thêm nếu có SSL listener (listen 443 ssl default_server)
-                has_ssl_listener = any(
-                    sub.get("directive") == "listen"
-                    and "ssl" in sub.get("args", [])
-                    for sub in server_block
-                )
-                if has_ssl_listener:
-                    remediations.append({
-                        "action": "add",
-                        "context": server_exact_path,
-                        "directive": "ssl_reject_handshake",
-                        "args": ["on"],
-                    })
+        if has_https_listen and not global_https_catchall:
+            remediations.append({
+                "action": "add",
+                "directive": "server",
+                "context": exact_path + ["block"],
+                "block": [
+                    {"directive": "listen", "args": ["443", "ssl", "default_server"]},
+                    {"directive": "ssl_reject_handshake", "args": ["on"]}
+                ]
+            })
 
         if remediations:
             return {
                 "file": filepath,
-                "remediations": remediations,
+                "remediations": remediations
             }
 
-        # Tất cả đều tuân thủ
         return None
+
+    def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Global scan across all files to detect missing catch-all server blocks.
+        """
+        global_http_catchall = False
+        global_https_catchall = False
+
+        has_http_listen = False
+        has_https_listen = False
+
+        http_block_context = None
+
+        def traverse(directives, exact_path, filepath):
+            nonlocal global_http_catchall, global_https_catchall
+            nonlocal has_http_listen, has_https_listen, http_block_context
+
+            for idx, d in enumerate(directives):
+                curr_path = exact_path + [idx]
+
+                if d.get("directive") == "http":
+                    if http_block_context is None:
+                        http_block_context = {
+                            "filepath": filepath,
+                            "exact_path": curr_path
+                        }
+
+                if d.get("directive") == "server":
+                    if self._is_http_catchall(d):
+                        global_http_catchall = True
+                    if self._is_https_catchall(d):
+                        global_https_catchall = True
+
+                    has_any_listen = False
+                    for sub in d.get("block", []):
+                        if sub.get("directive") == "listen":
+                            has_any_listen = True
+                            args = sub.get("args", [])
+                            if "ssl" in args or "quic" in args:
+                                has_https_listen = True
+                            else:
+                                has_http_listen = True
+                    if not has_any_listen:
+                        has_http_listen = True
+
+                if "block" in d:
+                    traverse(d["block"], curr_path + ["block"], filepath)
+
+        for config_idx, config_file in enumerate(parser_output.get("config", [])):
+            filepath = config_file.get("file", "")
+            if not filepath.endswith(".conf"):
+                continue
+            parsed_ast = config_file.get("parsed", [])
+            traverse(parsed_ast, ["config", config_idx, "parsed"], filepath)
+
+        if not http_block_context:
+            return []
+
+        remediations = []
+        if has_http_listen and not global_http_catchall:
+            remediations.append({
+                "action": "add",
+                "directive": "server",
+                "context": http_block_context["exact_path"] + ["block"],
+                "block": [
+                    {"directive": "listen", "args": ["80", "default_server"]},
+                    {"directive": "return", "args": ["444"]}
+                ]
+            })
+
+        if has_https_listen and not global_https_catchall:
+            remediations.append({
+                "action": "add",
+                "directive": "server",
+                "context": http_block_context["exact_path"] + ["block"],
+                "block": [
+                    {"directive": "listen", "args": ["443", "ssl", "default_server"]},
+                    {"directive": "ssl_reject_handshake", "args": ["on"]}
+                ]
+            })
+
+        if not remediations:
+            return []
+
+        return [{
+            "file": http_block_context["filepath"],
+            "remediations": remediations
+        }]

@@ -13,49 +13,4 @@ class Detector31(BaseRecom):
         self.remediation = "Define a detailed log format in the http block of /etc/nginx/nginx.conf, preferably using JSON format for compatibility with modern SIEM tools, and apply it globally or per server."
 
     def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
-        """
-        Evaluate recommendation 3.1.
-        Checks if the 'http' block has a 'log_format' directive defined.
-        If missing, suggests adding a JSON log_format and an access_log directive using it.
-        """
-        if directive.get("directive") == "http":
-            http_block = directive.get("block", [])
-            has_log_format = False
-
-            for d in http_block:
-                if d.get("directive") == "log_format":
-                    has_log_format = True
-                    break
-
-            if not has_log_format:
-                return {
-                    "file": filepath,
-                    "remediations": [
-                        {
-                            "action": "add_directive",
-                            "context": exact_path + ["block"],
-                            "directive": "log_format",
-                            "args": [
-                                "main_json",
-                                "escape=json",
-                                "'{\"timestamp\":\"$time_iso8601\", "
-                                "\"client_ip\":\"$remote_addr\", "
-                                "\"status\":\"$status\", "
-                                "\"request\":\"$request\", "
-                                "\"bytes_sent\":\"$body_bytes_sent\", "
-                                "\"user_agent\":\"$http_user_agent\"}'"
-                            ]
-                        },
-                        {
-                            "action": "add_directive",
-                            "context": exact_path + ["block"],
-                            "directive": "access_log",
-                            "args": [
-                                "/var/log/nginx/access.log",
-                                "main_json"
-                            ]
-                        }
-                    ]
-                }
-
         return None

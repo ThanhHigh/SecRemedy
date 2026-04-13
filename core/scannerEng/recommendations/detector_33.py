@@ -14,67 +14,7 @@ class Detector33(BaseRecom):
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         uncompliances = []
-
-        # Find if error_log is defined globally across any loaded file
-        global_error_log_found = False
-        nginx_conf_file = None
-        nginx_conf_exact_path = None
-
-        for config_idx, config_file in enumerate(parser_output.get("config", [])):
-            filepath = config_file.get("file", "")
-            if not filepath.endswith(".conf"):
-                continue
-
-            parsed_ast = config_file.get("parsed", [])
-            base_exact_path = ["config", config_idx, "parsed"]
-
-            if filepath.endswith("nginx.conf"):
-                nginx_conf_file = filepath
-                nginx_conf_exact_path = base_exact_path
-
-            for idx, directive in enumerate(parsed_ast):
-                if directive.get("directive") == "error_log":
-                    global_error_log_found = True
-                    args = directive.get("args", [])
-                    level = args[1] if len(args) > 1 else "error"
-
-                    if level not in ["info", "notice"]:
-                        new_args = [args[0]] if args else [
-                            "/var/log/nginx/error.log"]
-                        new_args.append("info")
-                        uncompliances.append({
-                            "file": filepath,
-                            "remediations": [
-                                {
-                                    "action": "modify_directive",
-                                    "context": base_exact_path + [idx],
-                                    "directive": "error_log",
-                                    "args": new_args
-                                }
-                            ]
-                        })
-
-            # We also call traverse ast to process any nested error_log if needed
-            # But the requirement says "globally in the main context".
-            # If there are error_logs inside http/server blocks, we might not flag them here,
-            # or maybe we should? The cis benchmark specifies main context.
-
-        # If no global error_log is found, add one to main nginx.conf
-        if not global_error_log_found and nginx_conf_file and nginx_conf_exact_path:
-            uncompliances.append({
-                "file": nginx_conf_file,
-                "remediations": [
-                    {
-                        "action": "add_directive",
-                        "context": nginx_conf_exact_path,
-                        "directive": "error_log",
-                        "args": ["/var/log/nginx/error.log", "info"]
-                    }
-                ]
-            })
-
         return self._group_by_file(uncompliances)
 
     def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
-        # Not used since scan is overridden, but implemented to avoid NotImplementedError
         return None
