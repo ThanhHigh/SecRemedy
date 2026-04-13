@@ -14,6 +14,10 @@ class Detector242(BaseRecom):
         self.remediation = "Configure a catch-all default server block as the first block in your http configuration (or explicitly marked with default_server). It should return 444 for HTTP and use ssl_reject_handshake on for HTTPS."
 
     def _is_http_catchall(self, server_block: Dict) -> bool:
+        """
+        Kiểm tra xem khối server có phải là khối catch-all cho HTTP hay không.
+        Khối này phải lắng nghe với tham số 'default_server' và từ chối các yêu cầu (ví dụ: return 444).
+        """
         has_default_listen = False
         has_reject = False
 
@@ -31,6 +35,10 @@ class Detector242(BaseRecom):
         return has_default_listen and has_reject
 
     def _is_https_catchall(self, server_block: Dict) -> bool:
+        """
+        Kiểm tra xem khối server có phải là khối catch-all cho HTTPS hay không.
+        Khối này phải lắng nghe bằng TLS (ssl/quic) với 'default_server' và từ chối bắt tay SSL ('ssl_reject_handshake on').
+        """
         has_default_listen = False
         has_reject = False
 
@@ -49,19 +57,23 @@ class Detector242(BaseRecom):
 
     def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
         """
-        Evaluate a single directive.
-        For unit test compatibility, if the directive is 'http', we check its contents.
+        Đánh giá một chỉ thị cấu hình.
+        Để tương thích với các bài kiểm thử unit (unit tests), nếu chỉ thị là 'http', hàm sẽ kiểm tra nội dung bên trong.
         """
         if directive.get("directive") != "http":
             return None
 
+        # Trạng thái theo dõi xem cấu hình có chứa khối catch-all hay không
         global_http_catchall = False
         global_https_catchall = False
+        
+        # Theo dõi xem cấu hình có phục vụ HTTP hay HTTPS không
         has_http_listen = False
         has_https_listen = False
 
         for d in directive.get("block", []):
             if d.get("directive") == "server":
+                # Kiểm tra các khối server để phát hiện khối catch-all hợp lệ
                 if self._is_http_catchall(d):
                     global_http_catchall = True
                 if self._is_https_catchall(d):
@@ -76,10 +88,14 @@ class Detector242(BaseRecom):
                             has_https_listen = True
                         else:
                             has_http_listen = True
+                
+                # NGINX mặc định lắng nghe ở cổng 80 (HTTP) nếu không có chỉ thị listen
                 if not has_any_listen:
                     has_http_listen = True
 
         remediations = []
+        
+        # Nếu có phục vụ HTTP nhưng thiếu khối catch-all, tạo đối tượng khắc phục (thêm khối return 444)
         if has_http_listen and not global_http_catchall:
             remediations.append({
                 "action": "add",
@@ -91,6 +107,7 @@ class Detector242(BaseRecom):
                 ]
             })
 
+        # Nếu có phục vụ HTTPS nhưng thiếu khối catch-all, tạo đối tượng khắc phục (thêm khối ssl_reject_handshake)
         if has_https_listen and not global_https_catchall:
             remediations.append({
                 "action": "add",
@@ -112,7 +129,8 @@ class Detector242(BaseRecom):
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Global scan across all files to detect missing catch-all server blocks.
+        Duyệt toàn cục (Global scan) qua tất cả các tệp cấu hình để phát hiện sự thiếu sót của các khối server catch-all.
+        Giải pháp này cho phép phát hiện nếu khối catch-all được định nghĩa trong một tệp riêng biệt (ví dụ thông qua include).
         """
         global_http_catchall = False
         global_https_catchall = False
@@ -120,6 +138,7 @@ class Detector242(BaseRecom):
         has_http_listen = False
         has_https_listen = False
 
+        # Lưu trữ vị trí (context) của khối http để thêm khối catch-all vào nếu cần
         http_block_context = None
 
         def traverse(directives, exact_path, filepath):
@@ -137,6 +156,7 @@ class Detector242(BaseRecom):
                         }
 
                 if d.get("directive") == "server":
+                    # Ghi nhận nếu tìm thấy khối catch-all bất kỳ đâu trong cấu hình
                     if self._is_http_catchall(d):
                         global_http_catchall = True
                     if self._is_https_catchall(d):
@@ -151,12 +171,14 @@ class Detector242(BaseRecom):
                                 has_https_listen = True
                             else:
                                 has_http_listen = True
+                    
                     if not has_any_listen:
                         has_http_listen = True
 
                 if "block" in d:
                     traverse(d["block"], curr_path + ["block"], filepath)
 
+        # Lặp qua tất cả các file cấu hình được phân tích (parsed AST)
         for config_idx, config_file in enumerate(parser_output.get("config", [])):
             filepath = config_file.get("file", "")
             if not filepath.endswith(".conf"):
@@ -164,10 +186,12 @@ class Detector242(BaseRecom):
             parsed_ast = config_file.get("parsed", [])
             traverse(parsed_ast, ["config", config_idx, "parsed"], filepath)
 
+        # Nếu không tìm thấy khối http, không thực hiện gì thêm
         if not http_block_context:
             return []
 
         remediations = []
+        
         if has_http_listen and not global_http_catchall:
             remediations.append({
                 "action": "add",
