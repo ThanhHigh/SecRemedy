@@ -1,56 +1,55 @@
 # Tài liệu Kiểm thử: CIS Benchmark 4.1.1 (Detector 411)
 
-**Mục tiêu:** Đảm bảo tất cả lưu lượng HTTP (không mã hóa) được chuyển hướng sang HTTPS (mã hóa). Hệ thống phân tích cấu hình NGINX để kiểm tra xem các server block lắng nghe trên cổng 80 (HTTP) có cấu hình chuyển hướng an toàn (thường thông qua chỉ thị `return 301 https://$host$request_uri;`) hay không, nhằm đảm bảo mọi giao tiếp giữa người dùng và máy chủ đều được bảo mật.
+**Mục tiêu:** Đảm bảo mọi lưu lượng truy cập HTTP (không mã hóa, thường ở port 80) đều được tự động chuyển hướng (redirect) sang HTTPS (mã hóa, port 443) nhằm bảo vệ an toàn dữ liệu người dùng (chuẩn CIS Benchmark 4.1.1). Việc NGINX cho phép kết nối HTTP trực tiếp mà không chuyển hướng sẽ làm giảm mức độ tin cậy của website và tạo điều kiện cho các cuộc tấn công nghe lén (Man-in-the-Middle). Hệ thống sử dụng thư viện `crossplane` để phân tích đệ quy cấu hình NGINX, kiểm tra các khối `server` có chỉ thị `listen 80` (hoặc tương đương) để đảm bảo tồn tại chỉ thị `return 301 https://$host$request_uri;` (hoặc tương tự) thực hiện việc chuyển hướng.
 
 ---
 
 ## 1. Kiểm tra Siêu dữ liệu (Metadata Sanity Checks) - 4 Test Cases
 Kiểm tra các thông tin siêu dữ liệu (metadata) của class `Detector411` để đảm bảo định danh và mô tả chính xác theo chuẩn CIS.
 - **ID (1 test case):** Kiểm tra ID của detector phải là `"4.1.1"`.
-- **Tiêu đề (1 test case):** Đảm bảo tiêu đề chứa nội dung liên quan đến việc chuyển hướng HTTP sang HTTPS (`"Ensure HTTP is redirected to HTTPS"`).
+- **Tiêu đề (1 test case):** Đảm bảo tiêu đề phản ánh đúng yêu cầu (`"Ensure HTTP is redirected to HTTPS"`).
 - **Mức độ (1 test case):** Phải được gán cho Level 1 (Webserver, Proxy, Loadbalancer).
-- **Thuộc tính bắt buộc (1 test case):** Đảm bảo class có đầy đủ các thuộc tính thông tin như `description` (mô tả), `audit_procedure` (quy trình kiểm tra), `impact` (tác động), và `remediation` (biện pháp khắc phục).
+- **Thuộc tính bắt buộc (1 test case):** Đảm bảo class có đầy đủ các thuộc tính thông tin như `description` (mô tả), `audit_procedure` (quy trình kiểm tra), `impact` (tác động), và `remediation` (biện pháp khắc phục) để hiển thị trên Frontend Dashboard.
 
 ---
 
 ## 2. Kiểm thử hàm `evaluate()`: Các trường hợp tuân thủ (Compliant Cases) - 24 Test Cases
-Kiểm tra các cấu hình hợp lệ có chứa các chỉ thị chuyển hướng hoặc chỉ phục vụ HTTPS. Hàm kiểm tra không phát hiện vi phạm (trả về `None`).
-- **Chuyển hướng tiêu chuẩn bằng return (5 test cases):** Khối `server` lắng nghe cổng 80 có chứa `return 301 https://$host$request_uri;` để chuyển hướng vĩnh viễn toàn bộ truy cập.
-- **Chuyển hướng bằng các mã trạng thái khác hoặc biến khác (5 test cases):** Sử dụng `return 302` (chuyển hướng tạm thời) sang HTTPS, hoặc dùng `https://$server_name$request_uri;`.
-- **Chuyển hướng bằng rewrite (4 test cases):** Khối `server` cổng 80 sử dụng chỉ thị `rewrite` thay vì `return`, ví dụ `rewrite ^ https://$host$request_uri? permanent;`.
-- **Server chỉ phục vụ HTTPS (5 test cases):** Khối `server` chỉ có chỉ thị `listen 443 ssl;` và không mở cổng 80. Các cấu hình này mặc định tuân thủ vì không tiếp nhận HTTP.
-- **Chuyển hướng có điều kiện (5 test cases):** Khối `server` lắng nghe cả cổng 80 và 443, nhưng có khối `if` kiểm tra scheme: `if ($scheme != "https") { return 301 https://$host$request_uri; }`. Mặc dù `if` trong NGINX đôi khi không được khuyến khích, nhưng về mặt logic chuyển hướng thì vẫn hợp lệ.
+Kiểm tra các khối cấu hình tuân thủ việc thiết lập chuyển hướng HTTP sang HTTPS một cách an toàn. Hàm kiểm tra không phát hiện vi phạm (trả về `None`).
+- **Thiết lập chuyển hướng chuẩn 301 (6 test cases):** Khối `server` lắng nghe port 80 (`listen 80;`) và chứa chỉ thị chuyển hướng vĩnh viễn `return 301 https://$host$request_uri;` chuẩn xác.
+- **Thiết lập chuyển hướng dùng biến máy chủ khác (6 test cases):** Các cấu hình sử dụng `return 301 https://$server_name$request_uri;` hoặc các biến hợp lệ khác của NGINX để redirect, hệ thống nhận diện đây là hành vi an toàn.
+- **Cấu hình khối server riêng biệt cho HTTP và HTTPS (6 test cases):** Trình phân tích xác nhận kiến trúc phân tách rõ ràng: một khối `server` chỉ dành cho port 80 có nhiệm vụ duy nhất là chuyển hướng (`return 301...`), và khối `server` khác lắng nghe port 443 (`listen 443 ssl;`) để xử lý logic thực tế.
+- **Kết hợp với các chỉ thị cấu hình khác (6 test cases):** Chỉ thị chuyển hướng nằm xen kẽ với `server_name`, `access_log`, `error_log` trong khối HTTP mà không làm ảnh hưởng đến quá trình phân tích logic chuyển hướng.
 
 ---
 
-## 3. Kiểm thử hàm `evaluate()`: Các trường hợp vi phạm (Non-Compliant Cases) - 20 Test Cases
-Kiểm tra các cấu hình mở cổng HTTP nhưng không ép buộc chuyển hướng sang HTTPS, tiềm ẩn nguy cơ truyền tải dữ liệu không mã hóa.
-- **Thiếu chỉ thị chuyển hướng (5 test cases):** Khối `server` có `listen 80;` phục vụ nội dung trực tiếp (như cấu hình `root`, `index`) mà không có bất kỳ lệnh `return` hoặc `rewrite` nào sang HTTPS.
-- **Chuyển hướng sai đích (5 test cases):** Khối `server` cổng 80 có lệnh `return` nhưng lại chuyển hướng đến một địa chỉ `http://` khác thay vì `https://`.
-- **Lắng nghe đồng thời không ép buộc (4 test cases):** Khối `server` có cả `listen 80;` và `listen 443 ssl;` nhưng phục vụ nội dung chung, không có cơ chế tách biệt hay ép buộc HTTP phải chuyển sang HTTPS.
-- **Kiểm tra cấu trúc dữ liệu phản hồi (6 test cases):**
-  - **`file`:** Phải trả về đúng đường dẫn file cấu hình chứa khối server vi phạm.
+## 3. Kiểm thử hàm `evaluate()`: Các trường hợp vi phạm (Non-Compliant Cases) - 22 Test Cases
+Kiểm tra các cấu hình thiếu sót khiến lưu lượng HTTP không bị chuyển hướng, kích hoạt cảnh báo vi phạm để chuyển dữ liệu JSON Contract cho module Auto-Remediation (Thành viên 2).
+- **Không có chỉ thị `return` hoặc `rewrite` (Implicitly insecure) (6 test cases):** Khối `server` lắng nghe port 80 nhưng xử lý trực tiếp request (có `root`, `index`, `location / { ... }`) mà hoàn toàn vắng mặt cấu hình chuyển hướng. Đây là lỗi phổ biến nhất.
+- **Khai báo `return` nhưng không chuyển hướng sang HTTPS (5 test cases):** Quản trị viên sử dụng `return 200 "OK";` hoặc chuyển hướng sang một HTTP URL khác (`return 301 http://www.example.com;`), không đạt yêu cầu mã hóa.
+- **Cấu hình chuyển hướng nhưng đặt sai vị trí hoặc cú pháp (4 test cases):** Chỉ thị `return` đặt trong một `location` cụ thể thay vì toàn khối `server` (có thể gây lọt request ở các path khác), hoặc cú pháp redirect không trọn vẹn.
+- **Kiểm tra cấu trúc dữ liệu phản hồi JSON Contract (7 test cases):**
+  - **`file`:** Phải trả về đúng đường dẫn file cấu hình NGINX chứa khối `server` HTTP vi phạm.
   - **`remediations`:** Phải là một list chứa đối tượng khắc phục.
-  - **`action`:** Hành động khắc phục là `"add"` hoặc `"modify"` (để thêm lệnh `return 301 https://$host$request_uri;`).
-  - **`directive`:** Mục tiêu là `"return"`.
-  - **`context`:** Phải xác định đúng block `server` đang lắng nghe cổng 80 để tiến hành khắc phục.
+  - **`action`:** Thường là `"replace_block"` hoặc `"add"` để thay thế nội dung khối server 80 hiện tại bằng lệnh redirect, hoặc chèn mới.
+  - **`directive`:** Mục tiêu là chỉ thị `"return"`.
+  - **`value`:** Giá trị mong muốn (ví dụ: `"301 https://$host$request_uri"`).
+  - **`context`:** Phải chứa đối tượng định vị chính xác vị trí AST của khối `server` HTTP để module Auto-Remediation có thể chỉnh sửa/thay thế mã nguồn cấu hình chính xác và tạo Code Diff cho Dry-Run.
 
 ---
 
-## 4. Kiểm thử hàm `scan()`: Toàn bộ đường ống (Full Pipeline Integration) - 15 Test Cases
-Các bài test kiểm tra tích hợp toàn diện thông qua việc mô phỏng dữ liệu phân tích AST từ `crossplane`, đảm bảo hệ thống quét và nhận diện trên toàn bộ ngữ cảnh cấu hình NGINX.
-- **Cấu hình an toàn đầy đủ (3 test cases):**
-  - Mọi cấu hình HTTP (`listen 80`) trong `nginx.conf` và các file `conf.d/*.conf` đều đóng vai trò là khối chuyển hướng sang HTTPS, và các khối phục vụ thực tế đều dùng `listen 443 ssl`.
-  - *(Hệ thống trả về mảng rỗng `[]`)*
-- **Nhiều file cấu hình vi phạm (3 test cases):** Quét thấy một số ứng dụng (như `admin.conf`) đã cấu hình chuyển hướng tốt, nhưng một số khác (như `legacy.conf`) lại mở cổng 80 không bảo mật. Báo cáo cần chỉ đích danh file và khối bị lỗi.
-- **Gom nhóm lỗi (Grouping) (3 test cases):** Nếu trong cùng một file có nhiều server block vi phạm (ví dụ nhiều domain đều không cấu hình HTTPS redirect), hệ thống gom các lỗi này theo file một cách logic.
-- **Xử lý các ngoại lệ (3 test cases):** Bỏ qua các khối `server` không có `listen 80` (chỉ dùng cho tác vụ nội bộ hoặc cổng khác không liên quan đến HTTP/HTTPS web traffic).
-- **Tính toàn vẹn của kết quả Schema (3 test cases):** Xác nhận đối tượng kết quả `scan()` chứa đủ thông tin để Auto-Remediation có thể tự động tạo ra một khối `server` cấu hình chuyển hướng chuẩn (hoặc chèn lệnh `return` vào khối hiện tại) mà không làm gián đoạn dịch vụ.
+## 4. Kiểm thử hàm `scan()`: Toàn bộ đường ống (Full Pipeline Integration) - 20 Test Cases
+Các bài test kiểm tra tích hợp toàn diện thông qua việc mô phỏng dữ liệu phân tích AST đệ quy từ `crossplane` trên toàn bộ thư mục NGINX.
+- **Cấu hình an toàn đồng bộ trên toàn bộ hệ thống (3 test cases):** Hệ thống có nhiều file `conf.d/*.conf` (như `admin.emarket.me.conf`, `vendor.emarket.me.conf`), tất cả các khối server HTTP đều thực hiện redirect chuẩn chỉ. *(Hệ thống trả về mảng rỗng `[]`)*
+- **Nhận diện sót lọt cấu hình ở hệ thống đa tệp (3 test cases):** Phân tích toàn bộ cây thư mục và phát hiện một số virtual host quên không cấu hình redirect HTTPS trong khi các host khác thì có.
+- **Phân loại chính xác khối Server (HTTP vs HTTPS) (3 test cases):** Đảm bảo Scanner chỉ kiểm tra và báo cáo vi phạm trên các khối `server` lắng nghe port 80, không báo lỗi nhầm trên các khối `server` lắng nghe 443 (đã mã hóa).
+- **Xử lý các cấu hình port phức tạp (3 test cases):** Kiểm tra khi server lắng nghe trên nhiều port hoặc các port non-standard (vd: `listen 8080;`), xác định đúng mục tiêu cần mã hóa.
+- **Tương tác với Include Directive (5 test cases):** Đánh giá cấu trúc đệ quy (ví dụ: `nginx.conf` include `conf.d/*.conf`). Nếu một file con định nghĩa server HTTP không có redirect, JSON Contract phải trỏ chính xác về file con đó.
+- **Tính toàn vẹn của kết quả Schema cho Auto-Remediation (3 test cases):** Đảm bảo JSON Contract do Thành viên 1 tạo ra cung cấp tọa độ block/dòng cực kỳ chính xác. Vì việc biến đổi một khối server HTTP xử lý nội dung thành một khối redirect thường đòi hỏi xóa các chỉ thị cũ (như `location`, `root`) và chèn `return 301 ...;`, tọa độ AST chuẩn là bắt buộc để Thành viên 2 thực hiện thao tác an toàn và vượt qua được bài test `nginx -t`.
 
 ---
 
 ## 5. Độ bao phủ của bộ test (Test Coverage)
-Bộ test cases cho `Detector411` được thiết kế chặt chẽ nhằm đảm bảo mọi luồng truy cập web đều được mã hóa:
-- **Tổng số lượng test cases:** **63 test cases** (4 + 24 + 20 + 15)
+Bộ test cases cho `Detector411` được thiết kế chặt chẽ nhằm bảo đảm việc thực thi mã hóa đường truyền cho mọi request, bám sát các yêu cầu khắt khe của đồ án DevSecOps:
+- **Tổng số lượng test cases:** **70 test cases** (4 + 24 + 22 + 20)
 - **Độ bao phủ code dự kiến (Line Coverage):** **> 94%**
-- **Phân tích:** Việc mã hóa lưu lượng truy cập bằng HTTPS là tiêu chuẩn bắt buộc cho các ứng dụng web hiện đại nhằm chống lại các cuộc tấn công nghe lén (Man-in-the-Middle). Dù CIS Benchmark 4.1.1 đánh giá ở mức thủ công (Manual), nhưng việc tự động nhận diện các cổng 80 chưa được chuyển hướng giúp rút ngắn thời gian rà soát. Các test cases bao phủ toàn diện từ các cú pháp NGINX truyền thống đến các cách viết `rewrite` hay `if`, đảm bảo công cụ DevSecOps đánh giá chính xác độ an toàn và cung cấp đúng dữ liệu cho module Auto-Remediation (Member 2) sinh ra bản vá (Code Diff) thêm khối chuyển hướng một cách an toàn nhất.
+- **Phân tích (Context Đồ án):** Không giống như các chỉ thị đơn lẻ (chỉ cần thêm 1 dòng), việc khắc phục lỗi 4.1.1 có tính cấu trúc cao. Scanner (Thành viên 1) phải xác định được toàn bộ khối `server` HTTP đang vi phạm để JSON Contract báo cáo. Module Auto-Remediation (Thành viên 2) sẽ phải cực kỳ cẩn thận khi cấu trúc lại khối này thành dạng redirect 301 thuần túy. Code Diff sinh ra (Dry-Run) phải cực kỳ rõ ràng để người dùng phê duyệt qua UI. Quá trình kiểm tra cú pháp `nginx -t` tự động sau đó đóng vai trò chốt chặn an toàn (Zero-Downtime) nhằm tránh rủi ro sập hệ thống do sửa sai ngoặc `{ }` hoặc mất cấu hình quan trọng.

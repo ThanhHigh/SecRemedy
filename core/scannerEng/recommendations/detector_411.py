@@ -13,93 +13,84 @@ class Detector411(BaseRecom):
         self.remediation = "Edit your web server or proxy configuration file to redirect all unencrypted listening ports using a redirection through the return directive."
         self.level = "Level 1"
 
-    def _is_server_compliant(self, server_directive: Dict) -> bool:
-        block = server_directive.get("block", [])
-        
-        # Kiểm tra xem khối server này có lắng nghe trên cổng HTTP public (80) hay không.
-        # Lưu ý (Architecture / MVP): Các cổng khác (như 8080, 3000, 9000...) thường là 
-        # các cổng nội bộ (internal ports) dùng để Nginx giao tiếp với backend app 
-        # (Reverse Proxy) và chúng chỉ chạy HTTP thuần. 
-        # Do đó, thuật toán sẽ bỏ qua và coi chúng là hợp lệ để tránh làm gãy (break)
-        # các luồng kết nối nội bộ khi ép buộc chuyển sang HTTPS.
-        listens_on_80 = False
-        for d in block:
-            if d.get("directive") == "listen":
-                args = d.get("args", [])
-                for a in args:
-                    if a == "80" or a.endswith(":80"):
-                        listens_on_80 = True
-                        break
-        
-        if not listens_on_80:
-            return True
-            
-        # Nếu đã lắng nghe trên cổng 80, BẮT BUỘC phải có lệnh chuyển hướng (redirect) sang HTTPS
-        return self._has_https_redirect(block)
-
-    def _has_https_redirect(self, block: List[Dict]) -> bool:
-        for d in block:
-            if d.get("directive") == "return":
-                args = d.get("args", [])
-                if any(a.startswith("https://") for a in args):
-                    return True
-            elif d.get("directive") == "rewrite":
-                args = d.get("args", [])
-                if any(a.startswith("https://") for a in args):
-                    return True
-            elif d.get("directive") == "if":
-                if self._has_https_redirect(d.get("block", [])):
-                    return True
-        return False
-
     def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
-        if directive.get("directive") not in ["http", "server"]:
+        # Chỉ kiểm tra trong ngữ cảnh của khối 'server'
+        if directive.get("directive") != "server":
             return None
+        
+        block = directive.get("block", [])
+        
+        has_http_listen = False
+        has_https_listen = False
+        has_ssl_on = False
+        has_valid_redirect = False
+        has_listen = False
+        
+        # Duyệt qua các chỉ thị con bên trong khối 'server'
+        for child in block:
+            name = child.get("directive")
+            args = child.get("args", [])
+            
+            if name == "listen":
+                has_listen = True
+                # Kiểm tra xem cổng đang lắng nghe có phải là HTTPS không
+                # HTTPS thường được cấu hình bằng từ khóa 'ssl' hoặc trực tiếp với port '443'
+                if "ssl" in args:
+                    has_https_listen = True
+                elif any("443" in a for a in args):
+                    has_https_listen = True
+                else:
+                    # Nếu không có dấu hiệu của HTTPS, đây là cổng HTTP
+                    has_http_listen = True
+            
+            elif name == "ssl" and args == ["on"]:
+                # Nếu có chỉ thị 'ssl on;', toàn bộ khối server này dùng HTTPS
+                has_ssl_on = True
+                
+            elif name == "return":
+                # Kiểm tra chỉ thị return xem có chuyển hướng sang HTTPS hợp lệ không
+                # Cú pháp hợp lệ ví dụ: return 301 https://$host$request_uri;
+                if len(args) >= 2:
+                    status = args[0]
+                    url = args[1]
+                    if status in ["301", "302", "307", "308"] and url.startswith("https://"):
+                        has_valid_redirect = True
+            
+            elif name == "rewrite":
+                # Nginx cũng có thể sử dụng rewrite để chuyển hướng sang HTTPS một cách an toàn
+                if len(args) >= 2:
+                    url = args[1]
+                    if url.startswith("https://"):
+                        has_valid_redirect = True
 
-        servers_to_check = []
-        if directive.get("directive") == "http":
-            for d in directive.get("block", []):
-                if d.get("directive") == "server":
-                    servers_to_check.append(d)
-        elif directive.get("directive") == "server":
-            servers_to_check.append(directive)
+        if not has_listen:
+            # Theo mặc định của Nginx, nếu không có chỉ thị 'listen',
+            # server sẽ tự động lắng nghe trên cổng 80 (HTTP)
+            has_http_listen = True
 
-        remediations = []
-        for srv in servers_to_check:
-            if not self._is_server_compliant(srv):
-                remediations.append({
-                    "action": "add",
-                    "directive": "return",
-                    "context": "server"
-                })
+        if has_ssl_on:
+            # Khẳng định lại đây là cấu hình HTTPS nếu tìm thấy 'ssl on;'
+            has_https_listen = True
+            
+        # Nếu khối server lắng nghe trên cổng HTTP nhưng KHÔNG CÓ chỉ thị chuyển hướng hợp lệ (return/rewrite)
+        # sang HTTPS, cấu hình này được xem là không tuân thủ (non-compliant) theo CIS Benchmark 4.1.1.
+        #
+        # Lưu ý: Ngay cả khi khối server cấu hình đồng thời cả HTTP và HTTPS (listen 80; listen 443 ssl;),
+        # thì lưu lượng HTTP vẫn sẽ lọt qua và không bị tự động mã hoá, trừ khi có một cấu hình redirect 
+        # cụ thể bắt lấy request từ HTTP. Vì thế, yêu cầu bắt buộc là nếu có HTTP thì phải có redirect.
+        if has_http_listen and not has_valid_redirect:
+            return {
+                "file": filepath,
+                "remediations": [
+                    {
+                        "action": "add",
+                        "directive": "return",
+                        "value": "301 https://$host$request_uri",
+                        # Dữ liệu JSON Contract cho Thành viên 2 (Auto-remediation module)
+                        # 'exact_path' giúp module remediation biết chính xác nhánh AST để chèn chỉ thị mới.
+                        "context": {"exact_path": exact_path}
+                    }
+                ]
+            }
 
-        if remediations:
-            return {"file": filepath, "remediations": remediations}
         return None
-
-    def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
-        findings = []
-        for config_idx, config in enumerate(parser_output.get("config", [])):
-            filepath = config.get("file", "")
-            parsed = config.get("parsed", [])
-            
-            remediations = []
-            def traverse(directives, in_stream=False):
-                for d in directives:
-                    if d.get("directive") == "server":
-                        if not in_stream and not self._is_server_compliant(d):
-                            remediations.append({
-                                "action": "add",
-                                "directive": "return",
-                                "context": "server"
-                            })
-                    elif "block" in d:
-                        traverse(d.get("block", []), in_stream=in_stream or d.get("directive") == "stream")
-            
-            traverse(parsed)
-            if remediations:
-                findings.append({
-                    "file": filepath,
-                    "remediations": remediations
-                })
-        return findings
