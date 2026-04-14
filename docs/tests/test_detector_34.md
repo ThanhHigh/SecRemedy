@@ -1,56 +1,55 @@
 # Tài liệu Kiểm thử: CIS Benchmark 3.4 (Detector 34)
 
-**Mục tiêu:** Đảm bảo khi NGINX hoạt động như một reverse proxy hoặc load balancer (có sử dụng chỉ thị `proxy_pass`), cấu hình phải chuyển tiếp thông tin địa chỉ IP thực của client. Hệ thống phân tích cấu hình để đảm bảo các HTTP header như `X-Forwarded-For` và `X-Real-IP` được thiết lập rõ ràng thông qua chỉ thị `proxy_set_header`, nhằm hỗ trợ kiểm toán bảo mật, phản hồi sự cố và kiểm soát truy cập tại các ứng dụng backend.
+**Mục tiêu:** Đảm bảo khi NGINX hoạt động ở vai trò reverse proxy hoặc load balancer, nó phải truyền thông tin IP thực của client thông qua các header chuẩn như `X-Forwarded-For` và `X-Real-IP` (chuẩn CIS Benchmark 3.4). Việc thiếu cấu hình này khiến ứng dụng backend chỉ thấy IP của NGINX proxy, gây khó khăn cho việc kiểm toán bảo mật, phản ứng sự cố và kiểm soát truy cập. Hệ thống sử dụng thư viện `crossplane` để phân tích đệ quy cấu hình NGINX, kiểm tra các khối `server` hoặc `location` có sử dụng chỉ thị `proxy_pass` để đảm bảo có cấu hình `proxy_set_header X-Forwarded-For` và `proxy_set_header X-Real-IP` đi kèm.
 
 ---
 
 ## 1. Kiểm tra Siêu dữ liệu (Metadata Sanity Checks) - 4 Test Cases
 Kiểm tra các thông tin siêu dữ liệu (metadata) của class `Detector34` để đảm bảo định danh và mô tả chính xác theo chuẩn CIS.
 - **ID (1 test case):** Kiểm tra ID của detector phải là `"3.4"`.
-- **Tiêu đề (1 test case):** Đảm bảo tiêu đề chứa nội dung liên quan đến việc chuyển tiếp thông tin IP nguồn (`"Ensure proxies pass source IP information"`).
-- **Mức độ (1 test case):** Phải được gán cho Level 1 (Proxy, Loadbalancer).
-- **Thuộc tính bắt buộc (1 test case):** Đảm bảo class có đầy đủ các thuộc tính thông tin như `description` (mô tả), `audit_procedure` (quy trình kiểm tra), `impact` (tác động), và `remediation` (biện pháp khắc phục).
+- **Tiêu đề (1 test case):** Đảm bảo tiêu đề phản ánh đúng yêu cầu (`"Ensure proxies pass source IP information"`).
+- **Mức độ (1 test case):** Phải được gán cho Level 1 - Proxy, Level 1 - Loadbalancer.
+- **Thuộc tính bắt buộc (1 test case):** Đảm bảo class có đầy đủ các thuộc tính thông tin như `description` (mô tả), `audit_procedure` (quy trình kiểm tra), `impact` (tác động), và `remediation` (biện pháp khắc phục) để hiển thị trên Frontend Dashboard.
 
 ---
 
 ## 2. Kiểm thử hàm `evaluate()`: Các trường hợp tuân thủ (Compliant Cases) - 24 Test Cases
-Kiểm tra các cấu hình hợp lệ khi có sử dụng `proxy_pass` kèm theo việc cấu hình đầy đủ các header chuyển tiếp IP. Hệ thống không phát hiện vi phạm (trả về `None`).
-- **Khai báo tiêu chuẩn trong location (5 test cases):** Khối `location` có chứa `proxy_pass` và đồng thời có khai báo cả `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` và `proxy_set_header X-Real-IP $remote_addr;`.
-- **Khai báo kế thừa từ khối server (5 test cases):** Các chỉ thị `proxy_set_header` được cấu hình ở cấp độ `server`, các khối `location` bên trong có sử dụng `proxy_pass` kế thừa cấu hình này một cách hợp lệ.
-- **Khai báo kế thừa từ khối http (5 test cases):** Các chỉ thị `proxy_set_header` được cấu hình ở cấp độ `http`, áp dụng toàn cục cho mọi reverse proxy bên trong.
-- **Vị trí file cấu hình include (4 test cases):** Các chỉ thị header được bao gồm (include) từ một file snippet chung, ví dụ `include proxy_params;` và hệ thống AST parser phân tích, xác nhận được nội dung file này chứa đầy đủ các header yêu cầu.
-- **Sử dụng biến tùy chỉnh hợp lệ (5 test cases):** Cấu hình sử dụng các biến IP khác một cách an toàn và tương đương (ví dụ, truyền `$http_x_forwarded_for` nếu cấu hình phức tạp đằng sau một proxy khác) miễn là ý định chuyển tiếp IP được đảm bảo.
+Kiểm tra các khối cấu hình chứa `proxy_pass` có tuân thủ việc thiết lập truyền IP thật qua `proxy_set_header`. Hàm kiểm tra không phát hiện vi phạm (trả về `None`).
+- **Thiết lập an toàn tại khối `location` (6 test cases):** Các cấu hình khai báo rõ ràng các chỉ thị `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` và `proxy_set_header X-Real-IP $remote_addr;` ngay trong khối `location` chứa `proxy_pass`.
+- **Thiết lập an toàn tại khối `server` hoặc `http` (6 test cases):** Các trường hợp cấu hình định nghĩa các header proxy ở cấp độ `server` hoặc `http` để các khối `location` con có chứa `proxy_pass` được kế thừa tự động.
+- **Kiểm tra lồng ghép đệ quy và cấu hình location tương ứng (Nested Contexts) (6 test cases):** Trình phân tích xác nhận rằng khi có `location` lồng nhau chứa `proxy_pass`, các thiết lập `proxy_set_header` ở cấp cha hoặc trực tiếp trong cấp con vẫn được áp dụng hợp lệ.
+- **Kết hợp với các chỉ thị bảo mật khác (6 test cases):** Chỉ thị nằm xen kẽ giữa các cấu hình phức tạp (ví dụ: đứng cùng `proxy_set_header Host $host`, `proxy_hide_header`, v.v.) mà không làm ảnh hưởng đến logic phân tích của thư viện `crossplane`.
 
 ---
 
-## 3. Kiểm thử hàm `evaluate()`: Các trường hợp vi phạm (Non-Compliant Cases) - 20 Test Cases
-Kiểm tra các cấu hình có sử dụng reverse proxy (`proxy_pass`) nhưng không cấu hình đầy đủ việc chuyển tiếp IP, dẫn đến backend chỉ nhìn thấy IP của NGINX.
-- **Thiếu hoàn toàn header chuyển tiếp IP (5 test cases):** Khối `location` có sử dụng `proxy_pass` nhưng không có bất kỳ chỉ thị `proxy_set_header` nào liên quan đến `X-Forwarded-For` hay `X-Real-IP` (cả trong khối đó lẫn các khối cha).
-- **Thiếu một trong các header quan trọng (5 test cases):** Cấu hình có thiết lập `X-Forwarded-For` nhưng lại thiếu `X-Real-IP`, hoặc ngược lại, không đạt đủ yêu cầu của benchmark.
-- **Ghi đè bằng giá trị rỗng hoặc không hợp lệ (4 test cases):** Có định nghĩa `proxy_set_header X-Forwarded-For ""` hoặc thiết lập header bằng một giá trị tĩnh/cứng (hardcoded) làm mất đi IP thực của client.
-- **Kiểm tra cấu trúc dữ liệu phản hồi (6 test cases):**
-  - **`file`:** Phải trả về đúng đường dẫn file cấu hình chứa khối vi phạm.
-  - **`remediations`:** Phải là một list chứa đối tượng mô tả cách khắc phục.
-  - **`action`:** Hành động khắc phục bắt buộc là `"add"` (để thêm chỉ thị header).
-  - **`directive`:** Mục tiêu là `"proxy_set_header"`.
-  - **`context`:** Phải xác định đúng block (thường là khối `location` chứa `proxy_pass` bị lỗi) cần chèn cấu hình khắc phục.
+## 3. Kiểm thử hàm `evaluate()`: Các trường hợp vi phạm (Non-Compliant Cases) - 22 Test Cases
+Kiểm tra các cấu hình có `proxy_pass` nhưng thiếu hoặc sai cấu hình truyền IP thật, kích hoạt cảnh báo vi phạm để chuyển dữ liệu JSON Contract cho module Auto-Remediation (Thành viên 2).
+- **Không khai báo `proxy_set_header` cần thiết (Implicitly default) (6 test cases):** Khối `location` có sử dụng `proxy_pass` nhưng hoàn toàn thiếu việc thiết lập header `X-Forwarded-For` và `X-Real-IP`. Đây là vi phạm phổ biến nhất.
+- **Khai báo thiếu một trong các header quan trọng (5 test cases):** Quản trị viên cấu hình truyền `X-Real-IP` nhưng quên cấu hình `X-Forwarded-For`, hoặc ngược lại, khiến hệ thống backend vẫn bị thiếu thông tin truy vết đầy đủ.
+- **Cấu hình `proxy_set_header` sai giá trị (4 test cases):** Kiểm tra các dạng cấu hình có khai báo header nhưng truyền sai biến số (ví dụ truyền chuỗi tĩnh thay vì `$remote_addr` hoặc `$proxy_add_x_forwarded_for`).
+- **Kiểm tra cấu trúc dữ liệu phản hồi JSON Contract (7 test cases):**
+  - **`file`:** Phải trả về đúng đường dẫn file cấu hình NGINX chứa khối `location` hoặc `server` cần bổ sung.
+  - **`remediations`:** Phải là một list chứa đối tượng khắc phục.
+  - **`action`:** Do thiếu cấu hình, action chủ yếu là `"add"` hoặc `"insert"` (thêm các dòng `proxy_set_header` mới).
+  - **`directive`:** Mục tiêu là chỉ thị `"proxy_set_header"`.
+  - **`value`:** Giá trị mong muốn (ví dụ: `"X-Forwarded-For $proxy_add_x_forwarded_for"` hoặc `"X-Real-IP $remote_addr"`).
+  - **`context`:** Phải chứa đối tượng định vị chính xác vị trí AST (ví dụ: node của khối `location` chứa `proxy_pass`) để công cụ diff/Dry-Run của Thành viên 2 có thể chèn đúng chỗ một cách tự động.
 
 ---
 
-## 4. Kiểm thử hàm `scan()`: Toàn bộ đường ống (Full Pipeline Integration) - 15 Test Cases
-Các bài test kiểm tra tích hợp toàn diện thông qua việc mô phỏng dữ liệu phân tích AST từ `crossplane`, đảm bảo hệ thống quét chính xác trên toàn bộ ngữ cảnh cấu hình NGINX.
-- **Cấu hình an toàn đầy đủ (3 test cases):**
-  - Tất cả các khối `location` sử dụng `proxy_pass` trong các file `vhost` đều được bảo vệ bởi cấu hình `proxy_set_header` đầy đủ.
-  - *(Hệ thống trả về mảng rỗng `[]`)*
-- **Nhiều file cấu hình vi phạm (3 test cases):** Quét thấy một số `location` có cấu hình header đầy đủ nhưng một số `location` khác trong cùng file hoặc file khác thì quên không cấu hình. Báo cáo cần chỉ đích danh các vị trí vi phạm.
-- **Gom nhóm lỗi (Grouping) (3 test cases):** Nếu trong cùng một file cấu hình có nhiều khối `location` vi phạm thiếu header IP, hệ thống sẽ gom nhóm các lỗi này theo file và block một cách logic.
-- **Bỏ qua các khối không sử dụng proxy (3 test cases):** Nếu khối `server` hoặc `location` chỉ phục vụ file tĩnh (`root`, `alias`) hoặc redirect (`return`), việc không có `proxy_set_header` là hoàn toàn bình thường và hệ thống không được báo lỗi sai (false positive).
-- **Tính toàn vẹn của kết quả Schema (3 test cases):** Xác nhận đối tượng kết quả `scan()` chứa đầy đủ thông tin để module Auto-Remediation có thể bơm chính xác các dòng `proxy_set_header X-Real-IP $remote_addr;` và `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` vào các khối thiếu sót.
+## 4. Kiểm thử hàm `scan()`: Toàn bộ đường ống (Full Pipeline Integration) - 20 Test Cases
+Các bài test kiểm tra tích hợp toàn diện thông qua việc mô phỏng dữ liệu phân tích AST đệ quy từ `crossplane` trên toàn bộ thư mục NGINX.
+- **Cấu hình an toàn trên toàn bộ hệ thống (3 test cases):** Hệ thống bao gồm nhiều file `conf.d/*.conf`, các khối `location` có `proxy_pass` đều được đi kèm đầy đủ các header `X-Forwarded-For` và `X-Real-IP`. *(Hệ thống trả về mảng rỗng `[]`)*
+- **Nhận diện sự vắng mặt của chỉ thị ở hệ thống đa tệp (3 test cases):** Phân tích toàn bộ cây thư mục và phát hiện một số `location` block trong các file cấu hình API phân tán thiếu việc truyền header IP.
+- **Gom nhóm lỗi (Grouping) và cảnh báo ghi đè (3 test cases):** Nếu cấp `server` đã thiết lập proxy header, nhưng một `location` cụ thể vô tình định nghĩa lại `proxy_set_header` khác (ví dụ `Host`) mà không định nghĩa lại các header IP (do NGINX sẽ xóa kế thừa nếu cấp dưới có định nghĩa cùng chỉ thị), Scanner phải phát hiện và khoanh vùng chính xác lỗi do mất kế thừa này.
+- **Xử lý các ngoại lệ cấu hình (3 test cases):** Xử lý an toàn khi phân tích các file không sử dụng tính năng proxy (không có `proxy_pass`), Scanner phải bỏ qua mà không báo lỗi sai (false positive).
+- **Tương tác với Include Directive phức tạp (5 test cases):** Khả năng đệ quy `crossplane` qua nhiều tầng `include` (ví dụ: `include proxy_params;`). Nếu file `proxy_params` được include trong `location` mà thiếu các header chuẩn, hệ thống phải truy vết và chỉ ra đúng nơi cần sửa.
+- **Tính toàn vẹn của kết quả Schema cho Auto-Remediation (3 test cases):** Đảm bảo JSON Contract do Thành viên 1 tạo ra cung cấp tọa độ dòng chính xác để Thành viên 2 chèn các dòng `proxy_set_header` vào cấu hình NGINX. Việc này đòi hỏi AST định vị đúng khối lồng nhau để sửa chữa, cho phép lệnh `nginx -t` xác nhận cú pháp an toàn sau khi Dry-Run.
 
 ---
 
 ## 5. Độ bao phủ của bộ test (Test Coverage)
-Bộ test cases cho `Detector34` được thiết kế chặt chẽ nhằm triệt tiêu rủi ro che giấu IP thực của client khi đi qua NGINX proxy:
-- **Tổng số lượng test cases:** **63 test cases** (4 + 24 + 20 + 15)
+Bộ test cases cho `Detector34` được thiết kế chặt chẽ nhằm bảo vệ máy chủ proxy khỏi nguy cơ mất dấu IP thực của client, bám sát các tiêu chí của đồ án tốt nghiệp DevSecOps:
+- **Tổng số lượng test cases:** **70 test cases** (4 + 24 + 22 + 20)
 - **Độ bao phủ code dự kiến (Line Coverage):** **> 94%**
-- **Phân tích:** Việc chuyển tiếp chính xác IP của người dùng (client) là cực kỳ quan trọng trong kiến trúc microservices và phân tích log an ninh mạng. CIS Benchmark 3.4 yêu cầu mức độ Proxy/Loadbalancer phải tường minh về nguồn gốc truy cập. Bộ test này bao phủ cả những trường hợp kế thừa chỉ thị phức tạp của NGINX (từ `http` -> `server` -> `location`) cũng như rủi ro "bỏ quên" trong các `location` riêng rẽ, tạo tiền đề vững chắc cho việc Remediator chèn luật an toàn (thêm header) mà không làm hỏng cú pháp điều hướng hiện có.
+- **Phân tích (Context Đồ án):** CIS 3.4 tập trung vào việc bổ sung các chỉ thị còn thiếu trong ngữ cảnh proxy. Vì vậy, Scanner (Thành viên 1) phải tìm kiếm sự xuất hiện của `proxy_pass` trước tiên và kiểm tra sự vắng mặt của các header bắt buộc đi kèm. JSON Contract sinh ra phải hướng dẫn rõ ràng cho module Auto-Remediation (Thành viên 2) chèn thêm chỉ thị `"add"` một cách an toàn mà không phá vỡ cú pháp. Đặc biệt, việc xử lý logic ghi đè (override) kế thừa của NGINX đối với chỉ thị `proxy_set_header` cũng được chú trọng để đảm bảo tính chính xác, giúp hệ thống tự động hoàn thiện cấu hình proxy an toàn (Zero-Downtime) sau khi chạy `nginx -t`.
