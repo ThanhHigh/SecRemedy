@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import copy
 import json
+import re
+import shlex
 from typing import Any, Dict, List, Union
 
 import crossplane
@@ -11,6 +13,166 @@ import crossplane
 
 class ASTEditor:
     """Navigate and modify Nginx AST structures using context paths."""
+
+    @staticmethod
+    def _normalize_action(action: Any) -> str:
+        """Normalize scanner action keywords to remediation engine vocabulary."""
+        if not isinstance(action, str):
+            return ""
+
+        normalized = action.strip().lower()
+        if normalized == "modify":
+            return "replace"
+        return normalized
+
+    @staticmethod
+    def _extract_context_path(remediation: Dict[str, Any]) -> List[Union[str, int]]:
+        """Extract exact context path from supported remediation context variants."""
+        context = remediation.get("context")
+        if isinstance(context, list):
+            return context
+
+        if isinstance(context, dict):
+            exact_path = context.get("exact_path")
+            if isinstance(exact_path, list):
+                return exact_path
+
+        top_level_exact = remediation.get("exact_path")
+        if isinstance(top_level_exact, list):
+            return top_level_exact
+
+        return []
+
+    @staticmethod
+    def _extract_logical_context(remediation: Dict[str, Any]) -> str:
+        """Extract logical context hint (e.g. http/server) if available."""
+        context = remediation.get("context")
+        if isinstance(context, str):
+            return context.strip().lower()
+
+        if isinstance(context, dict):
+            logical = context.get("logical_context")
+            if isinstance(logical, list) and logical:
+                first = logical[0]
+                if isinstance(first, str):
+                    return first.strip().lower()
+
+        return ""
+
+    @staticmethod
+    def _split_value_as_args(value: Any) -> List[str]:
+        """Split scanner value field into nginx directive args safely."""
+        if not isinstance(value, str):
+            return []
+
+        stripped = value.strip()
+        if not stripped:
+            return []
+
+        try:
+            return shlex.split(stripped)
+        except ValueError:
+            return stripped.split()
+
+    @staticmethod
+    def _parse_location_block_from_value(value: Any) -> Dict[str, Any]:
+        """Parse simple location block string into args/block payload."""
+        if not isinstance(value, str):
+            return {}
+
+        text = value.strip()
+        if not text:
+            return {}
+
+        match = re.match(r"^location\s+(.+?)\s*\{(.*)\}\s*$", text, flags=re.DOTALL)
+        if not match:
+            return {}
+
+        args_part = match.group(1).strip()
+        block_part = match.group(2).strip()
+
+        # Keep nginx regex escapes (e.g. /\\.) intact for location patterns.
+        args = args_part.split()
+
+        if not args:
+            return {}
+
+        block: List[Dict[str, Any]] = []
+        for raw_line in block_part.splitlines():
+            line = raw_line.strip().rstrip(";")
+            if not line:
+                continue
+
+            try:
+                tokens = shlex.split(line)
+            except ValueError:
+                tokens = line.split()
+
+            if not tokens:
+                continue
+
+            block.append({"directive": tokens[0], "args": tokens[1:]})
+
+        return {"args": args, "block": block}
+
+    @staticmethod
+    def _build_normalized_remediation(remediation: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize scanner remediation payload to engine-internal shape."""
+        action = ASTEditor._normalize_action(remediation.get("action", ""))
+        directive = remediation.get("directive", "")
+        if not isinstance(directive, str):
+            directive = ""
+
+        context_path = ASTEditor._extract_context_path(remediation)
+        logical_context = ASTEditor._extract_logical_context(remediation)
+
+        normalized: Dict[str, Any] = {
+            "action": action,
+            "context": context_path,
+            "directive": directive,
+        }
+
+        if logical_context:
+            normalized["logical_context"] = logical_context
+
+        if "args" in remediation:
+            normalized["args"] = remediation.get("args")
+
+        if "block" in remediation:
+            normalized["block"] = remediation.get("block")
+
+        if "value" in remediation:
+            normalized["value"] = remediation.get("value")
+
+        if "config" in remediation:
+            normalized["config"] = remediation.get("config")
+
+        if directive == "error_page" and "args" not in normalized:
+            parsed_args = ASTEditor._split_value_as_args(remediation.get("value"))
+            if parsed_args:
+                normalized["args"] = parsed_args
+
+        if directive == "return" and "args" not in normalized:
+            parsed_args = ASTEditor._split_value_as_args(remediation.get("value"))
+            if parsed_args:
+                normalized["args"] = parsed_args
+
+        if directive == "server_tokens" and "args" not in normalized:
+            parsed_args = ASTEditor._split_value_as_args(remediation.get("value"))
+            if parsed_args:
+                normalized["args"] = parsed_args
+
+        if directive == "server" and action == "add":
+            # Scanner 2221 encodes full server block creation as action=add + config string.
+            # Map it to add_block so existing handler path can consume it.
+            normalized["action"] = "add_block"
+
+        if directive == "location" and action == "add_block" and "args" not in normalized:
+            parsed_location = ASTEditor._parse_location_block_from_value(remediation.get("value"))
+            if parsed_location:
+                normalized.update(parsed_location)
+
+        return normalized
     
     @staticmethod
     def _normalize_file_path(file_path: str) -> str:
@@ -107,22 +269,9 @@ class ASTEditor:
                     if not isinstance(remediation, dict):
                         continue
 
-                    context = remediation.get("context")
-                    if not isinstance(context, list):
+                    remediation_dict = ASTEditor._build_normalized_remediation(remediation)
+                    if not remediation_dict.get("directive"):
                         continue
-
-                    # Build remediation dict with all relevant fields
-                    remediation_dict = {
-                        "action": remediation.get("action", ""),
-                        "context": context,
-                        "directive": remediation.get("directive", "")
-                    }
-                    
-                    # Include optional fields
-                    if "args" in remediation:
-                        remediation_dict["args"] = remediation.get("args")
-                    if "block" in remediation:
-                        remediation_dict["block"] = remediation.get("block")
 
                     file_remediations.append(remediation_dict)
 

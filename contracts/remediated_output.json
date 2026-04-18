@@ -190,6 +190,55 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    },
+                    {
+                      "directive": "access_log",
+                      "args": [
+                        "on"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    },
+                    {
+                      "directive": "root",
+                      "args": [
+                        "/var/www/html"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "args": [
+                    "301",
+                    "https://example.com"
+                  ]
                 }
               ]
             },
@@ -205,6 +254,144 @@
                 4,
                 5
               ]
+            },
+            {
+              "directive": "server",
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "args": [
+                    "test.name"
+                  ]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": [
+                    "on"
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "args": [
+                    "444"
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    },
+                    {
+                      "directive": "access_log",
+                      "args": [
+                        "on"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    },
+                    {
+                      "directive": "root",
+                      "args": [
+                        "/var/www/html"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "error_page",
+          "args": [
+            "404",
+            "./404.html"
+          ]
+        },
+        {
+          "directive": "location",
+          "args": [
+            "=",
+            "./502.html"
+          ],
+          "block": [
+            {
+              "directive": "root",
+              "args": [
+                "/var/www/html"
+              ]
+            },
+            {
+              "directive": "internal",
+              "args": []
             }
           ]
         }
@@ -805,6 +992,48 @@
                 "301",
                 "https://$host$request_uri"
               ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html"
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -820,22 +1049,6 @@
                 "443",
                 "ssl",
                 "http2"
-              ]
-            },
-            {
-              "directive": "listen",
-              "line": 11,
-              "args": [
-                "8443",
-                "ssl",
-                "http2"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 12,
-              "args": [
-                "admin.emarket.me"
               ]
             },
             {
@@ -943,6 +1156,48 @@
                   ]
                 }
               ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html"
+                  ]
+                }
+              ]
             }
           ]
         }
@@ -978,6 +1233,48 @@
               "args": [
                 "301",
                 "https://$host$request_uri"
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html"
+                  ]
+                }
               ]
             }
           ]
@@ -1056,6 +1353,48 @@
                   ]
                 }
               ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html"
+                  ]
+                }
+              ]
             }
           ]
         }
@@ -1092,6 +1431,48 @@
               "args": [
                 "301",
                 "https://$host$request_uri"
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html"
+                  ]
+                }
               ]
             }
           ]
@@ -1179,6 +1560,48 @@
                   ]
                 }
               ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html"
+                  ]
+                }
+              ]
             }
           ]
         }
@@ -1214,6 +1637,48 @@
               "args": [
                 "301",
                 "https://$host$request_uri"
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html"
+                  ]
+                }
               ]
             }
           ]
@@ -1297,6 +1762,48 @@
                   "args": [
                     "X-Forwarded-For",
                     "$proxy_add_x_forwarded_for"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html"
                   ]
                 }
               ]

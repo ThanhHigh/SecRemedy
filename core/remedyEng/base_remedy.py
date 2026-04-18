@@ -168,12 +168,50 @@ class BaseRemedy:
         """
         if not isinstance(full_context, list):
             return []
+
+        if not full_context:
+            return []
         
         try:
             parsed_index = full_context.index("parsed")
             return full_context[parsed_index + 1:]
         except (ValueError, IndexError):
+            # Some scanner payloads may already provide relative paths.
+            if all(isinstance(item, (str, int)) for item in full_context):
+                return full_context
             return []
+
+    @staticmethod
+    def _find_directive_contexts(parsed_nodes: Any, directive_name: str) -> List[List[Any]]:
+        """Find relative contexts for all matching directives in a parsed AST list."""
+        results: List[List[Any]] = []
+        if not isinstance(parsed_nodes, list) or not isinstance(directive_name, str) or not directive_name:
+            return results
+
+        def _walk(nodes: Any, path: List[Any]) -> None:
+            if not isinstance(nodes, list):
+                return
+
+            for idx, item in enumerate(nodes):
+                current_path = path + [idx]
+                if not isinstance(item, dict):
+                    continue
+
+                if item.get("directive") == directive_name:
+                    results.append(current_path)
+
+                block = item.get("block")
+                if isinstance(block, list):
+                    _walk(block, current_path + ["block"])
+
+        _walk(parsed_nodes, [])
+        return results
+
+    @staticmethod
+    def _find_block_contexts(parsed_nodes: Any, directive_name: str) -> List[List[Any]]:
+        """Find relative contexts to block lists of a given directive."""
+        directive_contexts = BaseRemedy._find_directive_contexts(parsed_nodes, directive_name)
+        return [ctx + ["block"] for ctx in directive_contexts]
 
     @staticmethod
     def _validate_log_level(level: str) -> bool:

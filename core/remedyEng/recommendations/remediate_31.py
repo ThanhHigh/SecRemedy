@@ -166,7 +166,7 @@ class Remediate31(BaseRemedy):
                     continue
                 
                 # Add log_format directive with JSON escape parameter
-                if action == "add_block" and directive == "log_format":
+                if action in {"add_block", "add_directive"} and directive == "log_format":
                     # FIXED: Build args as exactly 2 elements:
                     # [format_name, "escape=json '<JSON_STRING>'"]
                     log_format_directive = {
@@ -181,7 +181,7 @@ class Remediate31(BaseRemedy):
                     ASTEditor.append_to_context(parsed_copy, relative_context, log_format_directive)
                 
                 # Add access_log directive that uses the defined format
-                elif action == "add" and directive == "access_log":
+                elif action in {"add", "add_directive"} and directive == "access_log":
                     access_log_directive = {
                         "directive": "access_log",
                         "args": [log_file_path, log_format_name]

@@ -2,7 +2,7 @@
   "scan_id": 1,
   "server_ip": "0.0.0.0",
   "compliance_score": 40,
-  "created_at": "2026-04-03T09:38:14Z",
+  "created_at": "2026-04-17T09:28:55Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -17,32 +17,37 @@
           "remediations": [
             {
               "action": "delete",
-              "context": [
-                "config",
-                2,
-                "parsed",
-                1,
-                "block",
-                1
-              ],
-              "directive": "listen"
-            }
-          ]
-        },
-        {
-          "file": "./tmp/nginx_raw_2221/conf.d/vendor.emarket.me.conf",
-          "remediations": [
+              "directive": "listen",
+              "context": {
+                "exact_path": [
+                  "config",
+                  2,
+                  "parsed",
+                  1,
+                  "block",
+                  1
+                ],
+                "logical_context": [
+                  "server"
+                ]
+              }
+            },
             {
               "action": "delete",
-              "context": [
-                "config",
-                5,
-                "parsed",
-                1,
-                "block",
-                1
-              ],
-              "directive": "listen"
+              "directive": "listen",
+              "context": {
+                "exact_path": [
+                  "config",
+                  2,
+                  "parsed",
+                  1,
+                  "block",
+                  1
+                ],
+                "logical_context": [
+                  "server"
+                ]
+              }
             }
           ]
         }
@@ -61,35 +66,15 @@
           "remediations": [
             {
               "action": "add",
-              "context": [
+              "directive": "server",
+              "context": "http",
+              "exact_path": [
                 "config",
                 0,
                 "parsed",
-                5,
-                "block",
-                10,
-                "block"
+                5
               ],
-              "directive": "return",
-              "args": [
-                "444"
-              ]
-            },
-            {
-              "action": "add",
-              "context": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ],
-              "directive": "ssl_reject_handshake",
-              "args": [
-                "on"
-              ]
+              "config": "server {\n    listen 80 default_server;\n    return 444;\n}"
             }
           ]
         }
@@ -107,19 +92,16 @@
           "file": "./tmp/nginx_raw_2221/nginx.conf",
           "remediations": [
             {
-              "action": "replace",
-              "context": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                2
-              ],
+              "action": "modify",
               "directive": "server_tokens",
-              "args": [
-                "off"
-              ]
+              "value": "off",
+              "context": {
+                "directive": "server_tokens",
+                "line": 17,
+                "args": [
+                  "on"
+                ]
+              }
             }
           ]
         }
@@ -138,36 +120,9 @@
           "remediations": [
             {
               "action": "add",
-              "context": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block"
-              ],
               "directive": "error_page",
-              "args": [
-                "404",
-                "/custom_404.html"
-              ]
-            },
-            {
-              "action": "add",
-              "context": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block"
-              ],
-              "directive": "error_page",
-              "args": [
-                "500",
-                "502",
-                "503",
-                "504",
-                "/custom_50x.html"
-              ]
+              "value": "404 500 502 503 504 /custom_50x.html",
+              "context": "http"
             }
           ]
         }
@@ -186,40 +141,9 @@
           "remediations": [
             {
               "action": "add_block",
-              "context": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             }
           ]
         },
@@ -228,73 +152,15 @@
           "remediations": [
             {
               "action": "add_block",
-              "context": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             },
             {
               "action": "add_block",
-              "context": [
-                "config",
-                2,
-                "parsed",
-                1,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             }
           ]
         },
@@ -303,73 +169,15 @@
           "remediations": [
             {
               "action": "add_block",
-              "context": [
-                "config",
-                3,
-                "parsed",
-                0,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             },
             {
               "action": "add_block",
-              "context": [
-                "config",
-                3,
-                "parsed",
-                1,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             }
           ]
         },
@@ -378,73 +186,15 @@
           "remediations": [
             {
               "action": "add_block",
-              "context": [
-                "config",
-                4,
-                "parsed",
-                0,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             },
             {
               "action": "add_block",
-              "context": [
-                "config",
-                4,
-                "parsed",
-                1,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             }
           ]
         },
@@ -453,73 +203,15 @@
           "remediations": [
             {
               "action": "add_block",
-              "context": [
-                "config",
-                5,
-                "parsed",
-                0,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             },
             {
               "action": "add_block",
-              "context": [
-                "config",
-                5,
-                "parsed",
-                1,
-                "block"
-              ],
               "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "access_log",
-                  "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "args": [
-                    "off"
-                  ]
-                }
-              ]
+              "value": "location ~ /\\. {\n    deny all;\n}",
+              "context": "server"
             }
           ]
         }
@@ -574,20 +266,18 @@
           "remediations": [
             {
               "action": "add",
-              "context": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ],
               "directive": "return",
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ]
+              "value": "301 https://$host$request_uri",
+              "context": {
+                "exact_path": [
+                  "config",
+                  0,
+                  "parsed",
+                  5,
+                  "block",
+                  10
+                ]
+              }
             }
           ]
         }

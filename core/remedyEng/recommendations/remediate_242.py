@@ -107,11 +107,25 @@ class Remediate242(BaseRemedy):
                 action = remediation.get("action", "")
                 context = remediation.get("context", [])
                 directive = remediation.get("directive", "")
+                logical_context = remediation.get("logical_context", "")
                 
                 rel_ctx = self._relative_context(context)
                 target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+                if not isinstance(target_list, list) and logical_context == "http":
+                    http_blocks = self._find_block_contexts(parsed_copy, "http")
+                    if http_blocks:
+                        rel_ctx = http_blocks[0]
+                        target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
                 if not isinstance(target_list, list):
-                    continue
+                    if action == "add_block" and directive == "server" and isinstance(rel_ctx, list):
+                        # Scanner may point to the http directive itself; append inside its block.
+                        block_ctx = rel_ctx + ["block"]
+                        block_target = ASTEditor.get_child_ast_config(parsed_copy, block_ctx)
+                        if isinstance(block_target, list):
+                            rel_ctx = block_ctx
+                            target_list = block_target
+                    if not isinstance(target_list, list):
+                        continue
 
                 # CASE 1: add_directive - Add directives to existing server block
                 if action in {"add", "add_directive"} and directive in {"return", "ssl_reject_handshake"}:

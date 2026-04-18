@@ -118,8 +118,13 @@ class Remediate253(BaseRemedy):
                     continue
 
                 rel_ctx = self._relative_context(remediation.get("context", []))
-                target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
-                if not isinstance(target_list, list):
+                target_contexts = []
+                if rel_ctx:
+                    target_contexts = [rel_ctx]
+                elif remediation.get("logical_context") == "server":
+                    target_contexts = self._find_block_contexts(parsed_copy, "server")
+
+                if not target_contexts:
                     continue
 
                 location_args = remediation.get("args", ["~", "/\\."])
@@ -127,23 +132,28 @@ class Remediate253(BaseRemedy):
                 if not isinstance(location_args, list) or not isinstance(location_block, list):
                     continue
 
-                # Make a copy of the base block from scanner
-                block_copy = copy.deepcopy(location_block)
-                
-                # USER-DRIVEN EXTENSION: Add root directive if provided
-                if root_path:
-                    self._upsert_in_block(block_copy, "root", [root_path])
+                for target_ctx in target_contexts:
+                    target_list = ASTEditor.get_child_ast_config(parsed_copy, target_ctx)
+                    if not isinstance(target_list, list):
+                        continue
 
-                # Add the main deny-hidden-files location block
-                self._upsert_location_block(target_list, location_args, block_copy)
+                    # Make a copy of the base block from scanner
+                    block_copy = copy.deepcopy(location_block)
 
-                # CRITICAL FIX: Also add ACME allow location block BEFORE the deny block
-                # This ensures Let's Encrypt certbot can validate domain ownership
-                self._add_acme_exception_location(target_list)
+                    # USER-DRIVEN EXTENSION: Add root directive if provided
+                    if root_path:
+                        self._upsert_in_block(block_copy, "root", [root_path])
 
-                # Optional server_name override at parent level if requested
-                if server_name:
-                    self._upsert_in_block(target_list, "server_name", [server_name])
+                    # Add the main deny-hidden-files location block
+                    self._upsert_location_block(target_list, location_args, block_copy)
+
+                    # CRITICAL FIX: Also add ACME allow location block BEFORE the deny block
+                    # This ensures Let's Encrypt certbot can validate domain ownership
+                    self._add_acme_exception_location(target_list)
+
+                    # Optional server_name override at parent level if requested
+                    if server_name:
+                        self._upsert_in_block(target_list, "server_name", [server_name])
 
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 

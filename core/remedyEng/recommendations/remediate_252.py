@@ -54,6 +54,11 @@ class Remediate252(BaseRemedy):
 
                 rel_ctx = self._relative_context(remediation.get("context", []))
                 target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+                if not isinstance(target_list, list) and remediation.get("logical_context") == "http":
+                    http_blocks = self._find_block_contexts(parsed_copy, "http")
+                    if http_blocks:
+                        rel_ctx = http_blocks[0]
+                        target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
                 if not isinstance(target_list, list):
                     continue
 

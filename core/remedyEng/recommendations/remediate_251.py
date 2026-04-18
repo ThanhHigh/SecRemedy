@@ -65,20 +65,22 @@ class Remediate251(BaseRemedy):
                 directive = violation.get("directive", "")
                 args = violation.get("args", [])
                 
-                # For rule 2.5.1, we expect action="replace" with args=["off"]
-                if action != "replace" or directive != "server_tokens":
+                # For rule 2.5.1, accept action aliases normalized from scanner payloads.
+                if action not in {"replace", "modify", "modify_directive"} or directive != "server_tokens":
                     continue
                 
                 # Convert context to relative path within this file
                 relative_context = self._relative_context(context)
-                if not relative_context:
-                    continue
-                
-                # Navigate to the target and modify
-                target = ASTEditor.get_child_ast_config(parsed_copy, relative_context)
-                if target and isinstance(target, dict) and target.get("directive") == "server_tokens":
-                    # Ensure it's exactly ["off"]
-                    target["args"] = ["off"]
+                target_contexts = [relative_context] if relative_context else self._find_directive_contexts(parsed_copy, "server_tokens")
+
+                for target_context in target_contexts:
+                    if not target_context:
+                        continue
+
+                    target = ASTEditor.get_child_ast_config(parsed_copy, target_context)
+                    if target and isinstance(target, dict) and target.get("directive") == "server_tokens":
+                        # Ensure it is exactly ["off"] unless scanner provided another explicit value.
+                        target["args"] = args if isinstance(args, list) and args else ["off"]
             
             # Store modified config
             self.child_ast_modified[file_path] = {

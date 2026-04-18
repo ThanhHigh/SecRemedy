@@ -144,6 +144,8 @@ class Remediate411(BaseRemedy):
                 elif isinstance(target, dict):
                     if target.get("directive") == "return":
                         target["args"] = copy.deepcopy(return_args)
+                    elif isinstance(target.get("block"), list):
+                        self._upsert_in_block(target["block"], "return", return_args)
 
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
