@@ -76,13 +76,17 @@ class Remediate411(BaseRemedy):
         if not redirect_target:
             return (False, "Redirect target cannot be empty")
         
-        # Must start with https:// or contain nginx variables (like $host, $scheme)
-        if not ("https://" in redirect_target or "$" in redirect_target):
-            return (False, f"Redirect target must start with 'https://' or use nginx variables (like $host). Got: {redirect_target}")
+        # Must be an HTTPS redirect target.
+        if not redirect_target.startswith("https://"):
+            return (False, f"Redirect target must start with 'https://'. Got: {redirect_target}")
         
         # Warn if using http:// instead of https://
         if redirect_target.startswith("http://"):
             return (False, f"Redirect target should use https://, not http://. Got: {redirect_target}")
+
+        # Require preserving original request path/query to avoid collapsing traffic.
+        if "$request_uri" not in redirect_target:
+            return (False, "Redirect target must include '$request_uri' to preserve original request path/query")
         
         return (True, "")
 
@@ -134,6 +138,15 @@ class Remediate411(BaseRemedy):
 
                 rel_ctx = self._relative_context(remediation.get("context", []))
                 target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+
+                # Empty relative context resolves to parsed root; never add return there.
+                if isinstance(target, list) and rel_ctx == []:
+                    target = None
+
+                if target is None:
+                    server_blocks = self._find_block_contexts(parsed_copy, "server")
+                    if server_blocks:
+                        target = ASTEditor.get_child_ast_config(parsed_copy, server_blocks[0])
 
                 # Build return directive args
                 return_args = [redirect_code, redirect_target]

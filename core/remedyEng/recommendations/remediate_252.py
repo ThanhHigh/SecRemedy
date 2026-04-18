@@ -2,6 +2,7 @@ from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
 from core.remedyEng.base_remedy import BaseRemedy
 from core.remedyEng.ast_editor import ASTEditor
 import copy
+import re
 
 REMEDY_FIX_EXAMPLE = "error_page 404 /404.html;\nerror_page 500 502 503 504 /50x.html;\n\nlocation = /50x.html {\n    root /var/www/html/errors;\n    internal;\n}"
 REMEDY_INPUT_REQUIRE = [
@@ -54,10 +55,29 @@ class Remediate252(BaseRemedy):
 
                 rel_ctx = self._relative_context(remediation.get("context", []))
                 target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
-                if not isinstance(target_list, list) and remediation.get("logical_context") == "http":
+
+                # Empty relative context maps to parsed root list; do not insert there.
+                if isinstance(target_list, list) and rel_ctx == []:
+                    target_list = None
+
+                # Context can point to a directive object; if so, try mutating its block list.
+                if not isinstance(target_list, list) and isinstance(rel_ctx, list):
+                    block_ctx = rel_ctx + ["block"]
+                    block_target = ASTEditor.get_child_ast_config(parsed_copy, block_ctx)
+                    if isinstance(block_target, list):
+                        rel_ctx = block_ctx
+                        target_list = block_target
+
+                # Fallback to logical nginx scopes. Never inject error_page at AST root.
+                if not isinstance(target_list, list):
                     http_blocks = self._find_block_contexts(parsed_copy, "http")
                     if http_blocks:
                         rel_ctx = http_blocks[0]
+                        target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+                if not isinstance(target_list, list):
+                    server_blocks = self._find_block_contexts(parsed_copy, "server")
+                    if server_blocks:
+                        rel_ctx = server_blocks[0]
                         target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
                 if not isinstance(target_list, list):
                     continue
@@ -75,9 +95,14 @@ class Remediate252(BaseRemedy):
                 self._upsert_error_page(target_list, args)
 
                 # Optional location block for custom 50x page root.
+                # Place location in a server block only; location is not valid in http/root.
                 if root_50x:
                     target_50x = err_50x if err_50x else "/custom_50x.html"
-                    self._upsert_location_50x(target_list, target_50x, root_50x)
+                    server_blocks = self._find_block_contexts(parsed_copy, "server")
+                    if server_blocks:
+                        server_target = ASTEditor.get_child_ast_config(parsed_copy, server_blocks[0])
+                        if isinstance(server_target, list):
+                            self._upsert_location_50x(server_target, target_50x, root_50x)
 
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
@@ -125,6 +150,38 @@ class Remediate252(BaseRemedy):
                 item["args"] = copy.deepcopy(args)
                 return
         block_list.append({"directive": directive, "args": copy.deepcopy(args)})
+
+    @staticmethod
+    def _is_valid_error_page_uri(path: str) -> bool:
+        """Validate nginx error_page URI (must be an absolute URI path)."""
+        if not isinstance(path, str):
+            return False
+        value = path.strip()
+        if not value:
+            return False
+        if value.startswith("./"):
+            return False
+        if not value.startswith("/"):
+            return False
+        if "://" in value:
+            return False
+        return True
+
+    @staticmethod
+    def _is_valid_root_path(path: str) -> bool:
+        """Validate filesystem root path for location root directive."""
+        if not isinstance(path, str):
+            return False
+        value = path.strip()
+        if not value:
+            return False
+        if not value.startswith("/"):
+            return False
+        if "://" in value:
+            return False
+        if re.search(r"\s", value):
+            return False
+        return True
     
     def _validate_user_inputs(self) -> tuple[bool, str]:
         """
@@ -140,6 +197,14 @@ class Remediate252(BaseRemedy):
         if not err_40x and not err_50x:
             return (False, "At least one error page path required (40x or 50x)")
         
+        # Validate URI formats.
+        if err_40x and not self._is_valid_error_page_uri(err_40x):
+            return (False, f"Invalid 40x error_page URI '{err_40x}'. Use absolute URI path like '/404.html'")
+        if err_50x and not self._is_valid_error_page_uri(err_50x):
+            return (False, f"Invalid 50x error_page URI '{err_50x}'. Use absolute URI path like '/50x.html'")
+        if root_50x and not self._is_valid_root_path(root_50x):
+            return (False, f"Invalid 50x root path '{root_50x}'. Use absolute filesystem path like '/var/www/html'")
+
         # Check for nginx branding in error pages
         if err_40x and "nginx" in err_40x.lower():
             print(f"  Warning: Error page may contain nginx branding. Consider: {err_40x}")

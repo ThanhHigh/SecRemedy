@@ -58,9 +58,9 @@ class Remediate242(BaseRemedy):
             self.user_inputs[0] = "_"
             return (True, "")
         
-        # Validate server_name format
-        if not (server_name == "_" or server_name.replace(".", "").replace("-", "").isalnum()):
-            return (False, f"server_name '{server_name}' is invalid (use '_' for wildcard or domain names)")
+        # Rule 2.4.2 requires a true catch-all server block. Reject specific hostnames.
+        if server_name != "_":
+            return (False, f"server_name '{server_name}' is not catch-all. Use '_' for Rule 2.4.2")
         
         return (True, "")
 
@@ -111,7 +111,12 @@ class Remediate242(BaseRemedy):
                 
                 rel_ctx = self._relative_context(context)
                 target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
-                if not isinstance(target_list, list) and logical_context == "http":
+
+                # Empty relative context resolves to parsed root; avoid inserting at root.
+                if isinstance(target_list, list) and rel_ctx == []:
+                    target_list = None
+
+                if not isinstance(target_list, list):
                     http_blocks = self._find_block_contexts(parsed_copy, "http")
                     if http_blocks:
                         rel_ctx = http_blocks[0]

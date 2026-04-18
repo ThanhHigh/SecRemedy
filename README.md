@@ -483,8 +483,8 @@ python -m core.remedyEng.run_remedy
 
 Khi chạy, hệ thống sẽ yêu cầu nhập lần lượt:
 
-1. **Đường dẫn parser output JSON** (ví dụ: `contracts/parser_output_2222.json`)
-2. **Đường dẫn scan result JSON** (ví dụ: `contracts/scan_result_2222.json`)
+1. **Đường dẫn parser output JSON** (ví dụ: `contracts/parser_output_2221.json`)
+2. **Đường dẫn scan result JSON** (ví dụ: `contracts/scan_result_2221.json`)
 3. Với mỗi quy tắc CIS:
    - Xem thông tin chi tiết (description, impact, remediation procedure)
    - **Quyết định trước diff** (`y/n`)

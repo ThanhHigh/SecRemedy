@@ -194,6 +194,25 @@
                 {
                   "directive": "location",
                   "args": [
+                    "=",
+                    "/50x.html"
+                  ],
+                  "block": [
+                    {
+                      "directive": "root",
+                      "args": [
+                        "/var/www/html"
+                      ]
+                    },
+                    {
+                      "directive": "internal",
+                      "args": []
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
                     "~",
                     "/\\.well-known/acme-challenge/"
                   ],
@@ -237,7 +256,7 @@
                   "directive": "return",
                   "args": [
                     "301",
-                    "https://example.com"
+                    "https://example.com$request_uri"
                   ]
                 }
               ]
@@ -308,7 +327,7 @@
                 {
                   "directive": "server_name",
                   "args": [
-                    "test.name"
+                    "_"
                   ]
                 },
                 {
@@ -366,32 +385,13 @@
                   ]
                 }
               ]
-            }
-          ]
-        },
-        {
-          "directive": "error_page",
-          "args": [
-            "404",
-            "./404.html"
-          ]
-        },
-        {
-          "directive": "location",
-          "args": [
-            "=",
-            "./502.html"
-          ],
-          "block": [
-            {
-              "directive": "root",
-              "args": [
-                "/var/www/html"
-              ]
             },
             {
-              "directive": "internal",
-              "args": []
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/404.html"
+              ]
             }
           ]
         }
