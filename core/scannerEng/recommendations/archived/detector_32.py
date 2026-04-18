@@ -12,7 +12,5 @@ class Detector32(BaseRecom):
         self.impact = "Enabling detailed access logging increases disk space usage significantly. Without proper log rotation and monitoring, log files can rapidly consume available disk space, potentially causing the server to crash."
         self.remediation = "Enable access logging in the http block to set a secure global default, or configure it explicitly within specific server blocks."
 
-    def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
-        uncompliances = []
-        # TODO: Implement your logic here
-        return self._group_by_file(uncompliances)
+    def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
+        return None

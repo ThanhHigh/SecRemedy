@@ -11,7 +11,7 @@ Chiến lược Kiểm thử
 """
 
 import pytest
-from core.scannerEng.recommendations.detector_34 import Detector34
+from core.scannerEng.recommendations.archived.detector_34 import Detector34
 
 
 @pytest.fixture
@@ -69,10 +69,13 @@ class TestMetadata:
         assert "proxies pass source IP information" in detector.title
 
     def test_level_assignment(self, detector):
-        assert hasattr(detector, "profile") or hasattr(detector, "level") or True
-        level_info = getattr(detector, "profile", getattr(detector, "level", "level 1"))
+        assert hasattr(detector, "profile") or hasattr(
+            detector, "level") or True
+        level_info = getattr(detector, "profile", getattr(
+            detector, "level", "level 1"))
         assert "level 1" in str(level_info).lower()
-        assert "proxy" in str(level_info).lower() or "loadbalancer" in str(level_info).lower()
+        assert "proxy" in str(level_info).lower(
+        ) or "loadbalancer" in str(level_info).lower()
 
     def test_has_required_attributes(self, detector):
         for attr in ("description", "audit_procedure", "impact", "remediation"):
@@ -98,43 +101,53 @@ class TestEvaluateCompliant:
     def test_location_safe_basic(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_location_safe_with_redirect(self, detector):
         loc = _location_block(["/api"], [
             _dir("proxy_pass", ["http://api_backend"]),
             _dir("proxy_redirect", ["off"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_location_safe_different_value(self, detector):
         loc = _location_block(["/test"], [
             _dir("proxy_pass", ["http://test_backend"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$http_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$http_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_location_safe_uppercase_names(self, detector):
         loc = _location_block(["/upper"], [
             _dir("proxy_pass", ["http://backend"]),
-            _dir("proxy_set_header", ["X-FORWARDED-FOR", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-FORWARDED-FOR", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-REAL-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_location_safe_lowercase_names(self, detector):
         loc = _location_block(["/lower"], [
             _dir("proxy_pass", ["http://backend"]),
-            _dir("proxy_set_header", ["x-forwarded-for", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "x-forwarded-for", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["x-real-ip", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_location_safe_large_config(self, detector):
         loc = _location_block(["/large"], [
@@ -142,25 +155,30 @@ class TestEvaluateCompliant:
             _dir("proxy_connect_timeout", ["60s"]),
             _dir("proxy_send_timeout", ["60s"]),
             _dir("proxy_read_timeout", ["60s"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     # --- Thiết lập an toàn tại khối server hoặc http (6 test cases) ---
     def test_safe_inherited_from_http(self, detector):
         http_block = _http_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _server_block([
-                _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                _location_block(
+                    ["/"], [_dir("proxy_pass", ["http://backend"])])
             ])
         ])
         assert self._eval(detector, http_block) is None
 
     def test_safe_inherited_from_server(self, detector):
         server = _server_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
         ])
@@ -168,18 +186,22 @@ class TestEvaluateCompliant:
 
     def test_safe_http_multiple_locations(self, detector):
         http_block = _http_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _server_block([
-                _location_block(["/a"], [_dir("proxy_pass", ["http://backend_a"])]),
-                _location_block(["/b"], [_dir("proxy_pass", ["http://backend_b"])])
+                _location_block(
+                    ["/a"], [_dir("proxy_pass", ["http://backend_a"])]),
+                _location_block(
+                    ["/b"], [_dir("proxy_pass", ["http://backend_b"])])
             ])
         ])
         assert self._eval(detector, http_block) is None
 
     def test_safe_server_multiple_locations(self, detector):
         server = _server_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _location_block(["/1"], [_dir("proxy_pass", ["http://1"])]),
             _location_block(["/2"], [_dir("proxy_pass", ["http://2"])])
@@ -188,21 +210,25 @@ class TestEvaluateCompliant:
 
     def test_safe_http_server_no_override(self, detector):
         http_block = _http_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _server_block([
                 _dir("listen", ["80"]),
-                _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                _location_block(
+                    ["/"], [_dir("proxy_pass", ["http://backend"])])
             ])
         ])
         assert self._eval(detector, http_block) is None
 
     def test_safe_server_nested_locations(self, detector):
         server = _server_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _location_block(["/parent"], [
-                _location_block(["/parent/child"], [_dir("proxy_pass", ["http://backend"])])
+                _location_block(["/parent/child"],
+                                [_dir("proxy_pass", ["http://backend"])])
             ])
         ])
         assert self._eval(detector, server, ["http", "server"]) is None
@@ -210,48 +236,57 @@ class TestEvaluateCompliant:
     # --- Kiểm tra lồng ghép đệ quy và cấu hình location tương ứng (Nested Contexts) (6 test cases) ---
     def test_nested_http_server_redeclares(self, detector):
         http_block = _http_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _server_block([
                 _dir("proxy_set_header", ["Host", "$host"]),
                 # Vì Host ghi đè proxy_set_header, phải khai báo lại IP headers để an toàn
-                _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                _dir("proxy_set_header", [
+                     "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                 _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
-                _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                _location_block(
+                    ["/"], [_dir("proxy_pass", ["http://backend"])])
             ])
         ])
         assert self._eval(detector, http_block) is None
 
     def test_nested_location_outer_headers(self, detector):
         loc = _location_block(["/outer"], [
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _location_block(["/outer/inner"], [
                 _dir("proxy_pass", ["http://backend"])
             ])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_nested_location_inner_headers(self, detector):
         loc = _location_block(["/outer"], [
             _location_block(["/outer/inner"], [
                 _dir("proxy_pass", ["http://backend"]),
-                _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                _dir("proxy_set_header", [
+                     "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                 _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
             ])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_nested_location_outer_proxy_inner_headers(self, detector):
         server = _server_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _location_block(["/outer"], [
                 _dir("proxy_pass", ["http://backend1"]),
                 _location_block(["/outer/inner"], [
                     _dir("proxy_set_header", ["X-Custom", "Value"]),
                     # Phải khai báo lại vì ghi đè proxy_set_header
-                    _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                    _dir("proxy_set_header", [
+                         "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                     _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
                     _dir("proxy_pass", ["http://backend2"])
                 ])
@@ -261,78 +296,94 @@ class TestEvaluateCompliant:
 
     def test_nested_if_block(self, detector):
         loc = _location_block(["/"], [
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _dir("if", ["($request_method = POST)"], [
                 _dir("proxy_pass", ["http://backend"])
             ])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_nested_limit_except(self, detector):
         loc = _location_block(["/api"], [
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _dir("limit_except", ["GET"], [
                 _dir("proxy_pass", ["http://backend"])
             ])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     # --- Kết hợp với các chỉ thị bảo mật khác (6 test cases) ---
     def test_combined_with_proxy_hide_header(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
             _dir("proxy_hide_header", ["X-Powered-By"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_combined_with_proxy_set_header_host(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
             _dir("proxy_set_header", ["Host", "$host"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_combined_with_add_header(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
             _dir("add_header", ["X-Frame-Options", "SAMEORIGIN"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_combined_with_proxy_ssl_verify(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["https://backend"]),
             _dir("proxy_ssl_verify", ["on"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_combined_with_proxy_buffering(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
             _dir("proxy_buffering", ["off"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
     def test_combined_with_rewrite(self, detector):
         loc = _location_block(["/old"], [
             _dir("rewrite", ["^/old(.*)$", "/new$1", "break"]),
             _dir("proxy_pass", ["http://backend"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -353,14 +404,16 @@ class TestEvaluateNonCompliant:
     # --- Không khai báo proxy_set_header cần thiết (Implicitly default) (6 test cases) ---
     def test_location_proxy_no_headers(self, detector):
         loc = _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     def test_location_proxy_only_host(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
             _dir("proxy_set_header", ["Host", "$host"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     def test_server_proxy_no_headers(self, detector):
         server = _server_block([
@@ -383,9 +436,11 @@ class TestEvaluateNonCompliant:
 
     def test_nested_location_no_headers(self, detector):
         loc = _location_block(["/outer"], [
-            _location_block(["/outer/inner"], [_dir("proxy_pass", ["http://backend"])])
+            _location_block(["/outer/inner"],
+                            [_dir("proxy_pass", ["http://backend"])])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     # --- Khai báo thiếu một trong các header quan trọng (5 test cases) ---
     def test_missing_x_forwarded_for(self, detector):
@@ -393,14 +448,17 @@ class TestEvaluateNonCompliant:
             _dir("proxy_pass", ["http://backend"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     def test_missing_x_real_ip(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"])
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     def test_override_loses_x_real_ip(self, detector):
         server = _server_block([
@@ -408,7 +466,8 @@ class TestEvaluateNonCompliant:
             _location_block(["/"], [
                 _dir("proxy_pass", ["http://backend"]),
                 _dir("proxy_set_header", ["Host", "$host"]),
-                _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"])
+                _dir("proxy_set_header", [
+                     "X-Forwarded-For", "$proxy_add_x_forwarded_for"])
                 # Bị mất X-Real-IP do ghi đè
             ])
         ])
@@ -416,10 +475,12 @@ class TestEvaluateNonCompliant:
 
     def test_override_loses_x_forwarded_for(self, detector):
         http_block = _http_block([
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _server_block([
                 _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
-                _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                _location_block(
+                    ["/"], [_dir("proxy_pass", ["http://backend"])])
                 # Mất X-Forwarded-For do khối server có proxy_set_header
             ])
         ])
@@ -429,7 +490,8 @@ class TestEvaluateNonCompliant:
         http_block = _http_block([
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
             _server_block([
-                _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                _location_block(
+                    ["/"], [_dir("proxy_pass", ["http://backend"])])
             ])
         ])
         assert self._eval(detector, http_block) is not None
@@ -438,10 +500,12 @@ class TestEvaluateNonCompliant:
     def test_x_real_ip_static_string(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", "1.1.1.1"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     def test_x_forwarded_for_static_string(self, detector):
         loc = _location_block(["/"], [
@@ -449,15 +513,18 @@ class TestEvaluateNonCompliant:
             _dir("proxy_set_header", ["X-Forwarded-For", "192.168.1.1"]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     def test_x_real_ip_empty_value(self, detector):
         loc = _location_block(["/"], [
             _dir("proxy_pass", ["http://backend"]),
-            _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+            _dir("proxy_set_header", [
+                 "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
             _dir("proxy_set_header", ["X-Real-IP", ""])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     def test_x_forwarded_for_empty_value(self, detector):
         loc = _location_block(["/"], [
@@ -465,7 +532,8 @@ class TestEvaluateNonCompliant:
             _dir("proxy_set_header", ["X-Forwarded-For", ""]),
             _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
         ])
-        assert self._eval(detector, loc, ["http", "server", "location"]) is not None
+        assert self._eval(
+            detector, loc, ["http", "server", "location"]) is not None
 
     # --- Kiểm tra cấu trúc dữ liệu phản hồi JSON Contract (7 test cases) ---
     def test_response_file_path(self, detector):
@@ -529,9 +597,11 @@ class TestScan:
     def test_safe_full_system_single_file(self, detector):
         parser_output = _make_parser_output([_http_block([
             _server_block([
-                _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                _dir("proxy_set_header", [
+                     "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                 _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
-                _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                _location_block(
+                    ["/"], [_dir("proxy_pass", ["http://backend"])])
             ])
         ])])
         assert detector.scan(parser_output) == []
@@ -541,12 +611,14 @@ class TestScan:
             "config": [
                 {"file": "/etc/nginx/nginx.conf",
                  "parsed": [_http_block([
-                     _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                     _dir("proxy_set_header", [
+                          "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                      _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
                  ])]},
                 {"file": "/etc/nginx/conf.d/app.conf",
                  "parsed": [_server_block([
-                     _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                     _location_block(
+                         ["/"], [_dir("proxy_pass", ["http://backend"])])
                  ])]}
             ]
         }
@@ -557,15 +629,18 @@ class TestScan:
             "config": [
                 {"file": "/etc/nginx/nginx.conf",
                  "parsed": [_http_block([
-                     _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                     _dir("proxy_set_header", [
+                          "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                      _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
                  ])]},
                 {"file": "/etc/nginx/conf.d/app.conf",
                  "parsed": [_server_block([
                      _dir("proxy_set_header", ["Host", "$host"]),
-                     _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                     _dir("proxy_set_header", [
+                          "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                      _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
-                     _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                     _location_block(
+                         ["/"], [_dir("proxy_pass", ["http://backend"])])
                  ])]}
             ]
         }
@@ -577,12 +652,14 @@ class TestScan:
             "config": [
                 {"file": "nginx.conf", "parsed": [_http_block([])]},
                 {"file": "app1.conf", "parsed": [_server_block([
-                    _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                    _dir("proxy_set_header", [
+                         "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                     _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
                     _location_block(["/"], [_dir("proxy_pass", ["http://1"])])
                 ])]},
                 {"file": "app2.conf", "parsed": [_server_block([
-                    _location_block(["/"], [_dir("proxy_pass", ["http://2"])]) # Missing
+                    _location_block(
+                        ["/"], [_dir("proxy_pass", ["http://2"])])  # Missing
                 ])]}
             ]
         }
@@ -608,7 +685,8 @@ class TestScan:
         parser_output = {
             "config": [
                 {"file": "nginx.conf", "parsed": [_http_block([
-                    _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]) # Thiếu X-Forwarded-For
+                    # Thiếu X-Forwarded-For
+                    _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
                 ])]},
                 {"file": "app.conf", "parsed": [_server_block([
                     _location_block(["/"], [_dir("proxy_pass", ["http://1"])])
@@ -633,12 +711,15 @@ class TestScan:
         parser_output = {
             "config": [
                 {"file": "app.conf", "parsed": [_server_block([
-                    _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                    _dir("proxy_set_header", [
+                         "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                     _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
-                    _location_block(["/safe"], [_dir("proxy_pass", ["http://safe"])]),
+                    _location_block(
+                        ["/safe"], [_dir("proxy_pass", ["http://safe"])]),
                     _location_block(["/unsafe"], [
                         _dir("proxy_pass", ["http://unsafe"]),
-                        _dir("proxy_set_header", ["Host", "$host"]) # Xoá mất IP headers
+                        # Xoá mất IP headers
+                        _dir("proxy_set_header", ["Host", "$host"])
                     ])
                 ])]}
             ]
@@ -650,10 +731,12 @@ class TestScan:
         parser_output = _make_parser_output([_server_block([
             _location_block(["/safe"], [
                 _dir("proxy_pass", ["http://safe"]),
-                _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                _dir("proxy_set_header", [
+                     "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                 _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"])
             ]),
-            _location_block(["/unsafe"], [_dir("proxy_pass", ["http://unsafe"])])
+            _location_block(
+                ["/unsafe"], [_dir("proxy_pass", ["http://unsafe"])])
         ])])
         findings = detector.scan(parser_output)
         assert len(findings) >= 1
@@ -681,12 +764,14 @@ class TestScan:
         parser_output = {
             "config": [
                 {"file": "nginx.conf", "parsed": [_http_block([
-                    _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                    _dir("proxy_set_header", [
+                         "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                     _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
                     _dir("include", ["conf.d/*.conf"])
                 ])]},
                 {"file": "conf.d/app.conf", "parsed": [_server_block([
-                    _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                    _location_block(
+                        ["/"], [_dir("proxy_pass", ["http://backend"])])
                 ])]}
             ]
         }
@@ -699,7 +784,8 @@ class TestScan:
                     _dir("include", ["conf.d/*.conf"])
                 ])]},
                 {"file": "conf.d/app.conf", "parsed": [_server_block([
-                    _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                    _location_block(
+                        ["/"], [_dir("proxy_pass", ["http://backend"])])
                 ])]}
             ]
         }
@@ -712,9 +798,11 @@ class TestScan:
                 {"file": "nginx.conf", "parsed": [_http_block([
                     _dir("include", ["sites/*"])
                 ])]},
-                {"file": "sites/default", "parsed": [_dir("include", ["/etc/nginx/app.conf"])]},
+                {"file": "sites/default",
+                    "parsed": [_dir("include", ["/etc/nginx/app.conf"])]},
                 {"file": "/etc/nginx/app.conf", "parsed": [_server_block([
-                    _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                    _location_block(
+                        ["/"], [_dir("proxy_pass", ["http://backend"])])
                 ])]}
             ]
         }
@@ -725,13 +813,15 @@ class TestScan:
         parser_output = {
             "config": [
                 {"file": "nginx.conf", "parsed": [_http_block([
-                    _dir("proxy_set_header", ["X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
+                    _dir("proxy_set_header", [
+                         "X-Forwarded-For", "$proxy_add_x_forwarded_for"]),
                     _dir("proxy_set_header", ["X-Real-IP", "$remote_addr"]),
                     _dir("include", ["conf.d/*.conf"])
                 ])]},
                 {"file": "conf.d/app.conf", "parsed": [_server_block([
-                    _dir("proxy_set_header", ["Host", "$host"]), # Mất kế thừa
-                    _location_block(["/"], [_dir("proxy_pass", ["http://backend"])])
+                    _dir("proxy_set_header", ["Host", "$host"]),  # Mất kế thừa
+                    _location_block(
+                        ["/"], [_dir("proxy_pass", ["http://backend"])])
                 ])]}
             ]
         }
@@ -760,7 +850,8 @@ class TestScan:
     # --- Tính toàn vẹn của kết quả Schema cho Auto-Remediation (3 test cases) ---
     def test_schema_has_file_key(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_location_block(["/"], [_dir("proxy_pass", ["http://backend"])])])
+            _server_block(
+                [_location_block(["/"], [_dir("proxy_pass", ["http://backend"])])])
         ])])
         findings = detector.scan(parser_output)
         assert len(findings) >= 1
@@ -768,7 +859,8 @@ class TestScan:
 
     def test_schema_remediations_has_action_directive_context(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_location_block(["/"], [_dir("proxy_pass", ["http://backend"])])])
+            _server_block(
+                [_location_block(["/"], [_dir("proxy_pass", ["http://backend"])])])
         ])])
         findings = detector.scan(parser_output)
         assert len(findings) >= 1
@@ -779,7 +871,8 @@ class TestScan:
 
     def test_schema_remediation_target_proxy_set_header(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_location_block(["/"], [_dir("proxy_pass", ["http://backend"])])])
+            _server_block(
+                [_location_block(["/"], [_dir("proxy_pass", ["http://backend"])])])
         ])])
         findings = detector.scan(parser_output)
         assert len(findings) >= 1

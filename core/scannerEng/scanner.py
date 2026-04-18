@@ -21,16 +21,16 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Type
 
 from core.scannerEng.base_recom import BaseRecom
-from core.scannerEng.recommendations.detector_241 import Detector241
-from core.scannerEng.recommendations.detector_242 import Detector242
-from core.scannerEng.recommendations.detector_251 import Detector251
-from core.scannerEng.recommendations.detector_252 import Detector252
-from core.scannerEng.recommendations.detector_253 import Detector253
-from core.scannerEng.recommendations.detector_31 import Detector31
-from core.scannerEng.recommendations.detector_32 import Detector32
-from core.scannerEng.recommendations.detector_33 import Detector33
-from core.scannerEng.recommendations.detector_34 import Detector34
-from core.scannerEng.recommendations.detector_411 import Detector411
+from core.scannerEng.recommendations.archived.detector_241 import Detector241
+from core.scannerEng.recommendations.archived.detector_242 import Detector242
+from core.scannerEng.recommendations.archived.detector_251 import Detector251
+from core.scannerEng.recommendations.archived.detector_252 import Detector252
+from core.scannerEng.recommendations.archived.detector_253 import Detector253
+from core.scannerEng.recommendations.archived.detector_31 import Detector31
+from core.scannerEng.recommendations.archived.detector_32 import Detector32
+from core.scannerEng.recommendations.archived.detector_33 import Detector33
+from core.scannerEng.recommendations.archived.detector_34 import Detector34
+from core.scannerEng.recommendations.archived.detector_411 import Detector411
 from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
 
 

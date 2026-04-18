@@ -104,10 +104,12 @@ SecRemedy/
 │   └── unit/                                # Pytest unit tests
 │       └── scannerEng/                      # Tests cho Scanner Engine Detectors
 │           ├── test_detector_241.py          # Unit test: CIS 2.4.1 Detector
+│           ├── test_detector_242.py          # Unit test: CIS 2.4.2 Detector
 │           ├── test_detector_251.py          # Unit test: CIS 2.5.1 Detector
-│           ├── test_detector_31.py           # Unit test: CIS 3.1 Detector
-│           ├── test_detector_32.py           # Unit test: CIS 3.2 Detector
-│           └── test_detector_33.py           # Unit test: CIS 3.3 Detector
+│           ├── test_detector_252.py          # Unit test: CIS 2.5.2 Detector
+│           ├── test_detector_253.py          # Unit test: CIS 2.5.3 Detector
+│           ├── test_detector_34.py           # Unit test: CIS 3.4 Detector
+│           └── test_detector_411.py          # Unit test: CIS 4.1.1 Detector
 |
 ├── conftest.py                              # Pytest root conftest (sys.path setup)
 ├── requirements.txt                         # Python dependencies (crossplane, paramiko, sqlalchemy, ...)
@@ -621,11 +623,13 @@ pytest tests/unit/scannerEng/test_detector_31.py -v
 
 | Test File                  | CIS Rule | Số Test Cases |
 | -------------------------- | -------- | ------------- |
-| `test_detector_241.py`     | 2.4.1    | ~15+          |
-| `test_detector_251.py`     | 2.5.1    | ~10+          |
-| `test_detector_31.py`      | 3.1      | ~12+          |
-| `test_detector_32.py`      | 3.2      | ~10+          |
-| `test_detector_33.py`      | 3.3      | ~10+          |
+| `test_detector_241.py`     | 2.4.1    | ~39           |
+| `test_detector_242.py`     | 2.4.2    | ~39           |
+| `test_detector_251.py`     | 2.5.1    | ~53           |
+| `test_detector_252.py`     | 2.5.2    | ~56           |
+| `test_detector_253.py`     | 2.5.3    | ~70           |
+| `test_detector_34.py`      | 3.4      | ~70           |
+| `test_detector_411.py`     | 4.1.1    | ~56           |
 
 ---
 

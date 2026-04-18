@@ -11,7 +11,7 @@ Chiến lược Kiểm thử
 """
 
 import pytest
-from core.scannerEng.recommendations.detector_411 import Detector411
+from core.scannerEng.recommendations.archived.detector_411 import Detector411
 
 
 @pytest.fixture
@@ -69,8 +69,10 @@ class TestMetadata:
         assert "Ensure HTTP is redirected to HTTPS" in detector.title
 
     def test_level_assignment(self, detector):
-        assert hasattr(detector, "profile") or hasattr(detector, "level") or True
-        level_info = getattr(detector, "profile", getattr(detector, "level", "Level 1"))
+        assert hasattr(detector, "profile") or hasattr(
+            detector, "level") or True
+        level_info = getattr(detector, "profile", getattr(
+            detector, "level", "Level 1"))
         assert "level 1" in str(level_info).lower()
 
     def test_has_required_attributes(self, detector):
@@ -98,7 +100,8 @@ class TestEvaluateCompliant:
         ["301", "https://$host$request_uri"],
         ["301", "https://$host$request_uri/"],
         ["301", "https://$host$uri"],
-        ["302", "https://$host$request_uri"], # Optional redirect types 302, 307
+        # Optional redirect types 302, 307
+        ["302", "https://$host$request_uri"],
         ["307", "https://$host$request_uri"],
         ["308", "https://$host$request_uri"]
     ])
@@ -283,7 +286,7 @@ class TestEvaluateNonCompliant:
     @pytest.mark.parametrize("return_args", [
         ["200", "OK"],
         ["301", "http://example.com$request_uri"],
-        ["301", "$host$request_uri"], # Missing https://
+        ["301", "$host$request_uri"],  # Missing https://
         ["302", "http://m.example.com"],
         ["503", "Maintenance"]
     ])
@@ -298,7 +301,8 @@ class TestEvaluateNonCompliant:
     def test_redirect_inside_location_only(self, detector):
         server = _server_block([
             _dir("listen", ["80"]),
-            _location_block(["/"], [_dir("return", ["301", "https://$host$request_uri"])])
+            _location_block(
+                ["/"], [_dir("return", ["301", "https://$host$request_uri"])])
         ])
         # Return inside location / does not cover all paths unless correctly configured,
         # but purely according to the test docs: "chỉ thị return đặt trong một location... gây lọt request"
@@ -307,14 +311,15 @@ class TestEvaluateNonCompliant:
     def test_redirect_inside_location_api_only(self, detector):
         server = _server_block([
             _dir("listen", ["80"]),
-            _location_block(["/api"], [_dir("return", ["301", "https://$host$request_uri"])])
+            _location_block(
+                ["/api"], [_dir("return", ["301", "https://$host$request_uri"])])
         ])
         assert self._eval(detector, server) is not None
 
     def test_redirect_incomplete_syntax(self, detector):
         server = _server_block([
             _dir("listen", ["80"]),
-            _dir("return", ["301"]) # Missing URL
+            _dir("return", ["301"])  # Missing URL
         ])
         assert self._eval(detector, server) is not None
 
@@ -385,7 +390,8 @@ class TestScan:
     # --- Cấu hình an toàn đồng bộ trên toàn bộ hệ thống (3 test cases) ---
     def test_safe_full_system_single_file(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])]),
+            _server_block([_dir("listen", ["80"]), _dir(
+                "return", ["301", "https://$host$request_uri"])]),
             _server_block([_dir("listen", ["443", "ssl"])])
         ])])
         assert detector.scan(parser_output) == []
@@ -394,11 +400,13 @@ class TestScan:
         parser_output = {
             "config": [
                 {"file": "admin.emarket.me.conf", "parsed": [
-                    _server_block([_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])]),
+                    _server_block([_dir("listen", ["80"]), _dir(
+                        "return", ["301", "https://$host$request_uri"])]),
                     _server_block([_dir("listen", ["443", "ssl"])])
                 ]},
                 {"file": "vendor.emarket.me.conf", "parsed": [
-                    _server_block([_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])]),
+                    _server_block([_dir("listen", ["80"]), _dir(
+                        "return", ["301", "https://$host$request_uri"])]),
                     _server_block([_dir("listen", ["443", "ssl"])])
                 ]}
             ]
@@ -407,7 +415,8 @@ class TestScan:
 
     def test_safe_mixed_ports_handled_correctly(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_dir("listen", ["8080"]), _dir("return", ["301", "https://$host$request_uri"])]),
+            _server_block([_dir("listen", ["8080"]), _dir(
+                "return", ["301", "https://$host$request_uri"])]),
             _server_block([_dir("listen", ["8443", "ssl"])])
         ])])
         # Only port 80 or similar HTTP ports without SSL are normally checked, but let's assume they handled 8080 and redirected it safely.
@@ -418,10 +427,12 @@ class TestScan:
         parser_output = {
             "config": [
                 {"file": "admin.conf", "parsed": [
-                    _server_block([_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])])
+                    _server_block([_dir("listen", ["80"]), _dir(
+                        "return", ["301", "https://$host$request_uri"])])
                 ]},
                 {"file": "vendor.conf", "parsed": [
-                    _server_block([_dir("listen", ["80"]), _dir("root", ["/var/www/vendor"])]) # Lỗi ở đây
+                    _server_block([_dir("listen", ["80"]), _dir(
+                        "root", ["/var/www/vendor"])])  # Lỗi ở đây
                 ]}
             ]
         }
@@ -432,8 +443,10 @@ class TestScan:
     def test_multiple_missing_redirects(self, detector):
         parser_output = {
             "config": [
-                {"file": "app1.conf", "parsed": [_server_block([_dir("listen", ["80"])])]},
-                {"file": "app2.conf", "parsed": [_server_block([_dir("listen", ["80"])])]}
+                {"file": "app1.conf", "parsed": [
+                    _server_block([_dir("listen", ["80"])])]},
+                {"file": "app2.conf", "parsed": [
+                    _server_block([_dir("listen", ["80"])])]}
             ]
         }
         findings = detector.scan(parser_output)
@@ -441,8 +454,10 @@ class TestScan:
 
     def test_mixed_safe_and_unsafe_in_one_file(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])]),
-            _server_block([_dir("listen", ["80"]), _dir("server_name", ["unsafe.com"])])
+            _server_block([_dir("listen", ["80"]), _dir(
+                "return", ["301", "https://$host$request_uri"])]),
+            _server_block([_dir("listen", ["80"]), _dir(
+                "server_name", ["unsafe.com"])])
         ])])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
@@ -462,8 +477,8 @@ class TestScan:
 
     def test_flag_http_but_ignore_https_in_same_file(self, detector):
         parser_output = _make_parser_output([_http_block([
-            _server_block([_dir("listen", ["80"])]), # Flagged
-            _server_block([_dir("listen", ["443", "ssl"])]) # Ignored
+            _server_block([_dir("listen", ["80"])]),  # Flagged
+            _server_block([_dir("listen", ["443", "ssl"])])  # Ignored
         ])])
         findings = detector.scan(parser_output)
         assert len(findings) == 1
@@ -502,8 +517,10 @@ class TestScan:
     def test_include_with_safe_file(self, detector):
         parser_output = {
             "config": [
-                {"file": "nginx.conf", "parsed": [_http_block([_dir("include", ["conf.d/*.conf"])])]},
-                {"file": "conf.d/safe.conf", "parsed": [_server_block([_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])])]}
+                {"file": "nginx.conf", "parsed": [
+                    _http_block([_dir("include", ["conf.d/*.conf"])])]},
+                {"file": "conf.d/safe.conf", "parsed": [_server_block(
+                    [_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])])]}
             ]
         }
         assert detector.scan(parser_output) == []
@@ -511,8 +528,10 @@ class TestScan:
     def test_include_with_unsafe_file(self, detector):
         parser_output = {
             "config": [
-                {"file": "nginx.conf", "parsed": [_http_block([_dir("include", ["conf.d/*.conf"])])]},
-                {"file": "conf.d/unsafe.conf", "parsed": [_server_block([_dir("listen", ["80"])])]}
+                {"file": "nginx.conf", "parsed": [
+                    _http_block([_dir("include", ["conf.d/*.conf"])])]},
+                {"file": "conf.d/unsafe.conf",
+                    "parsed": [_server_block([_dir("listen", ["80"])])]}
             ]
         }
         findings = detector.scan(parser_output)
@@ -522,9 +541,12 @@ class TestScan:
     def test_nested_include_unsafe_file(self, detector):
         parser_output = {
             "config": [
-                {"file": "nginx.conf", "parsed": [_http_block([_dir("include", ["vhosts/*"])])]},
-                {"file": "vhosts/default", "parsed": [_dir("include", ["/etc/nginx/app.conf"])]},
-                {"file": "/etc/nginx/app.conf", "parsed": [_server_block([_dir("listen", ["80"])])]}
+                {"file": "nginx.conf", "parsed": [
+                    _http_block([_dir("include", ["vhosts/*"])])]},
+                {"file": "vhosts/default",
+                    "parsed": [_dir("include", ["/etc/nginx/app.conf"])]},
+                {"file": "/etc/nginx/app.conf",
+                    "parsed": [_server_block([_dir("listen", ["80"])])]}
             ]
         }
         findings = detector.scan(parser_output)
@@ -534,9 +556,12 @@ class TestScan:
     def test_include_wildcard_mixed(self, detector):
         parser_output = {
             "config": [
-                {"file": "nginx.conf", "parsed": [_http_block([_dir("include", ["conf.d/*.conf"])])]},
-                {"file": "conf.d/safe.conf", "parsed": [_server_block([_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])])]},
-                {"file": "conf.d/unsafe.conf", "parsed": [_server_block([_dir("listen", ["80"])])]}
+                {"file": "nginx.conf", "parsed": [
+                    _http_block([_dir("include", ["conf.d/*.conf"])])]},
+                {"file": "conf.d/safe.conf", "parsed": [_server_block(
+                    [_dir("listen", ["80"]), _dir("return", ["301", "https://$host$request_uri"])])]},
+                {"file": "conf.d/unsafe.conf",
+                    "parsed": [_server_block([_dir("listen", ["80"])])]}
             ]
         }
         findings = detector.scan(parser_output)
@@ -546,8 +571,10 @@ class TestScan:
     def test_include_returns_correct_context(self, detector):
         parser_output = {
             "config": [
-                {"file": "nginx.conf", "parsed": [_http_block([_dir("include", ["child.conf"])])]},
-                {"file": "child.conf", "parsed": [_server_block([_dir("listen", ["80"])])]}
+                {"file": "nginx.conf", "parsed": [
+                    _http_block([_dir("include", ["child.conf"])])]},
+                {"file": "child.conf", "parsed": [
+                    _server_block([_dir("listen", ["80"])])]}
             ]
         }
         findings = detector.scan(parser_output)
@@ -564,7 +591,8 @@ class TestScan:
             remedy = findings[0]["remediations"][0]
             context = remedy.get("context", {})
             # Verify context exists and could be used for remediation
-            assert isinstance(context, dict) or isinstance(context, list) or context is None
+            assert isinstance(context, dict) or isinstance(
+                context, list) or context is None
 
     def test_schema_action_is_actionable(self, detector):
         parser_output = _make_parser_output([_http_block([

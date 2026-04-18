@@ -12,8 +12,5 @@ class Detector31(BaseRecom):
         self.impact = "Enabling detailed JSON logging increases the volume of log data. Ensure that log rotation policies and disk space monitoring are adjusted to handle the increased storage requirements."
         self.remediation = "Define a detailed log format in the http block of /etc/nginx/nginx.conf, preferably using JSON format for compatibility with modern SIEM tools, and apply it globally or per server."
 
-    def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
-        uncompliances = []
-        # TODO: Implement your logic here
-
-        return self._group_by_file(uncompliances)
+    def evaluate(self, directive: Dict, filepath: str, logical_context: List[str], exact_path: List[Any]) -> Optional[Dict]:
+        return None
