@@ -21,34 +21,37 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Type
 
 from core.scannerEng.base_recom import BaseRecom
-from core.scannerEng.recommendations.archived.detector_241 import Detector241
-from core.scannerEng.recommendations.archived.detector_242 import Detector242
-from core.scannerEng.recommendations.archived.detector_251 import Detector251
-from core.scannerEng.recommendations.archived.detector_252 import Detector252
-from core.scannerEng.recommendations.archived.detector_253 import Detector253
-from core.scannerEng.recommendations.archived.detector_31 import Detector31
-from core.scannerEng.recommendations.archived.detector_32 import Detector32
-from core.scannerEng.recommendations.archived.detector_33 import Detector33
-from core.scannerEng.recommendations.archived.detector_34 import Detector34
-from core.scannerEng.recommendations.archived.detector_411 import Detector411
-from core.recom_registry import RECOMMENDATION_REGISTRY, RecomID
+from core.scannerEng.recommendations.detector_32 import Detector32
+from core.scannerEng.recommendations.detector_34 import Detector34
+from core.scannerEng.recommendations.detector_241 import Detector241
+from core.scannerEng.recommendations.detector_242 import Detector242
+from core.scannerEng.recommendations.detector_251 import Detector251
+from core.scannerEng.recommendations.detector_252 import Detector252
+from core.scannerEng.recommendations.detector_253 import Detector253
+from core.scannerEng.recommendations.detector_254 import Detector254
+from core.scannerEng.recommendations.detector_411 import Detector411
+from core.scannerEng.recommendations.detector_511 import Detector511
+from core.scannerEng.recommendations.detector_531 import Detector531
+from core.scannerEng.recommendations.detector_532 import Detector532
 
 
 # ---------------------------------------------------------------------------
-# Detector Registry: tất cả Detector class, mapped bằng RecomID (Enum)
+# Detector Registry: tất cả Detector class, mapped bằng string ID
 # ---------------------------------------------------------------------------
 
-DETECTOR_REGISTRY: Dict[RecomID, Type[BaseRecom]] = {
-    RecomID.CIS_2_4_1: Detector241,
-    RecomID.CIS_2_4_2: Detector242,
-    RecomID.CIS_2_5_1: Detector251,
-    RecomID.CIS_2_5_2: Detector252,
-    RecomID.CIS_2_5_3: Detector253,
-    RecomID.CIS_3_1: Detector31,
-    RecomID.CIS_3_2: Detector32,
-    RecomID.CIS_3_3: Detector33,
-    RecomID.CIS_3_4: Detector34,
-    RecomID.CIS_4_1_1: Detector411,
+DETECTOR_REGISTRY: Dict[str, Type[BaseRecom]] = {
+    "2.4.1": Detector241,
+    "2.4.2": Detector242,
+    "2.5.1": Detector251,
+    "2.5.2": Detector252,
+    "2.5.3": Detector253,
+    "2.5.4": Detector254,
+    "3.2": Detector32,
+    "3.4": Detector34,
+    "4.1.1": Detector411,
+    "5.1.1": Detector511,
+    "5.3.1": Detector531,
+    "5.3.2": Detector532,
 }
 
 
@@ -117,17 +120,12 @@ class Scanner:
             detector = detector_cls()
             uncompliances = detector.scan(parser_output)
 
-            # Lấy metadata từ registry chung
-            recom_meta = RECOMMENDATION_REGISTRY.get(recom_id)
-
             entry: Dict[str, Any] = {
-                "id": recom_id.value,
-                "title": recom_meta.title if recom_meta else detector.title,
-                "description": (
-                    recom_meta.description if recom_meta else detector.description
-                ),
-                "rationale": recom_meta.rationale if recom_meta else "",
-                "impact": recom_meta.impact if recom_meta else detector.impact,
+                "id": detector.id,
+                "title": detector.title,
+                "description": detector.description,
+                "rationale": getattr(detector, "rationale", ""),
+                "impact": detector.impact,
             }
 
             if uncompliances:
