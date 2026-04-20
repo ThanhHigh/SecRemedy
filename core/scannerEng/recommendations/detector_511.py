@@ -2,10 +2,10 @@ from typing import Dict, List, Any, Optional
 from core.scannerEng.base_recom import BaseRecom
 
 
-class Detector251(BaseRecom):
+class Detector511(BaseRecom):
     def __init__(self):
         super().__init__()
-        self.id = "2.5.1"
+        self.id = "5.1.1"
         self.title = ""
         self.description = ""
         self.audit_procedure = ""
