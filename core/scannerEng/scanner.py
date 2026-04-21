@@ -124,7 +124,6 @@ class Scanner:
                 "id": detector.id,
                 "title": detector.title,
                 "description": detector.description,
-                "rationale": getattr(detector, "rationale", ""),
                 "impact": detector.impact,
             }
 
