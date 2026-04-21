@@ -2,20 +2,17 @@
 
 ## Tổng quan về Recommendation 2.4.1 trong CIS Nginx Benchmark:
 
-Đảm bảo NGINX chỉ lắng nghe các kết nối mạng trên các cổng được ủy quyền. 
-NGINX nên được cấu hình để chỉ lắng nghe trên các cổng và giao thức được ủy quyền. Trong khi HTTP/1.1 và HTTP/2 truyền thống sử dụng cổng TCP 80 và 443, HTTP/3 (QUIC) hiện đại sử dụng cổng UDP 443. Việc đảm bảo NGINX chỉ liên kết với các giao diện và cổng được phê duyệt giúp giảm thiểu bề mặt tấn công.
+Đảm bảo NGINX chỉ lắng nghe các kết nối mạng trên các cổng được ủy quyền. Việc giới hạn các cổng lắng nghe (như 80, 443 TCP và 443 UDP cho HTTP/3) giúp giảm bề mặt tấn công. Vô hiệu hóa các cổng không sử dụng giảm rủi ro truy cập trái phép.
 
 ## Tổng quan về Detector 241
 
 ### Mục tiêu của Detector 241
 
-Kiểm tra và đảm bảo NGINX chỉ mở các cổng mạng được cho phép (cụ thể danh sách `authorized_ports = [80, 443, 8080, 8443, 9000]`).
-- Đầu vào là AST của cấu hình NGINX (JSON) tổng hợp từ nhiều tệp cấu hình sinh ra bởi thư viện Crossplane.
-- Đầu ra là danh sách các uncompliances (JSON) chứa chỉ định hành động `delete` đối với các directive `listen` vi phạm để chuyển cho module Auto-Remediation (cấu trúc đầu ra hoàn toàn tương thích và giống hệt định dạng trong `scan_result_2221.json`).
+Kiểm tra các chỉ thị `listen` trong các khối `server` để đảm bảo chúng chỉ cấu hình NGINX lắng nghe trên danh sách cổng được ủy quyền: `[80, 443, 8080, 8443, 9000]`. Đầu vào là AST cấu hình NGINX (JSON). Đầu ra là danh sách uncompliances (JSON) chỉ rõ file, dòng và tham số `listen` vi phạm.
 
 ### Cách hoạt động của Detector 241 dựa trên BaseRecom
 
-Detector 241 kế thừa lớp `BaseRecom` và ghi đè hàm `scan()`. Hàm này nhận vào toàn bộ AST (chứa nhiều file cấu hình). Nó duyệt qua cấu trúc JSON, tìm các block `server` và phân tích tham số của các chỉ thị `listen`. Hàm sẽ bóc tách để tìm ra cổng và kiểm tra xem cổng đó có nằm trong danh sách `authorized_ports` hay không. Nếu phát hiện cổng không hợp lệ, một đối tượng `remediation` với hành động `delete` (nhằm xoá dòng lệnh `listen` vi phạm) và có `exact_path` trỏ tới vị trí của node trên AST sẽ được tạo ra. Cuối cùng, hàm gọi `_group_by_file()` được kế thừa từ `BaseRecom` để tự động gom tất cả các `remediations` có chung đường dẫn `file` thành một danh sách các `uncompliances` hoàn chỉnh và chuẩn hóa.
+Detector 241 kế thừa `BaseRecom`. Hàm `scan()` duyệt qua `parser_output` JSON (chỉ các file `.conf`), dùng `traverse_directive("listen", ...)` để tìm tất cả các chỉ thị `listen`. Với mỗi chỉ thị, tách lấy thông tin cổng (port) từ tham số đầu tiên (xử lý IP:port, [IPv6]:port). Đối chiếu cổng với danh sách hợp lệ `[80, 443, 8080, 8443, 9000]`. Nếu cổng không thuộc danh sách, ghi nhận uncompliance kèm đường dẫn, vị trí dòng, exact path và tạo JSON trả về gom nhóm theo file `_group_by_file()`.
 
 ### Hàm hỗ trợ dùng để test Detector (dùng cho test_detector_241.py):
 
@@ -36,17 +33,72 @@ Detector 241 kế thừa lớp `BaseRecom` và ghi đè hàm `scan()`. Hàm này
 
 ### 1. Kiểm tra Siêu dữ liệu (Metadata Sanity Checks) - 3 Test Cases
 
-Kiểm tra các thông tin siêu dữ liệu (metadata) của class `Detector241` để đảm bảo định danh và mô tả chính xác theo chuẩn CIS.
+Kiểm tra thông tin siêu dữ liệu class `Detector241` theo chuẩn CIS.
 
-- **ID (1 test case):** Kiểm tra ID của detector phải là `"2.4.1"`.
-- **Tiêu đề (1 test case):** Đảm bảo tiêu đề phản ánh đúng yêu cầu (`"Ensure NGINX only listens for network connections on authorized ports"`).
-- **Thuộc tính bắt buộc (1 test case):** Đảm bảo class có đầy đủ các thuộc tính thông tin như `description` (mô tả), `audit_procedure` (quy trình kiểm tra), `impact` (tác động), và `remediation` (biện pháp khắc phục) để hiển thị trên Frontend Dashboard.
+- **ID (1 test case):** Đảm bảo ID = `"2.4.1"`.
+- **Tiêu đề (1 test case):** Đảm bảo tiêu đề = `"Đảm bảo NGINX chỉ lắng nghe kết nối mạng trên các cổng được ủy quyền"`.
+- **Thuộc tính bắt buộc (1 test case):** Có đủ `description`, `audit_procedure`, `impact`, `remediation` cho UI.
 
 ### 2. Kiểm thử hàm `scan()`: Toàn bộ đường ống (Full Pipeline Integration) - 42 Test Cases
 
-Đánh giá toàn diện việc bắt lỗi cấu hình (gồm một hoặc nhiều file cấu hình Nginx) dựa vào JSON AST từ `crossplane`. Đảm bảo cấu trúc đầu ra giống hệt `scan_result_2221.json`.
+#### Nhóm 1: Cổng hợp lệ cơ bản (Authorized Ports) - 10 Test Cases
 
-- **Kiểm tra cấu hình hợp lệ (10 Test Cases):** Đảm bảo không trả về lỗi khi NGINX chỉ sử dụng các cổng trong danh sách `[80, 443, 8080, 8443, 9000]`.
-- **Kiểm tra vi phạm cơ bản (10 Test Cases):** Bắt lỗi chính xác khi cấu hình sử dụng các cổng trái phép (ví dụ: 21, 22, 8000). Đảm bảo tạo ra đối tượng remediation với `action: delete` và định tuyến AST bằng `exact_path`.
-- **Kiểm tra tham số listen phức tạp (12 Test Cases):** Đảm bảo logic bóc tách số cổng vẫn chính xác khi gặp cú pháp phức tạp như IP (vd: `127.0.0.1:8080`, `[::]:80`) hoặc chứa flags đi kèm (vd: `443 ssl http2`, `443 quic reuseport`).
-- **Kiểm tra gom nhóm logic `_group_by_file` (10 Test Cases):** Khi đầu vào AST là tổng hợp từ nhiều file cấu hình khác nhau, kiểm tra xem các remediations thuộc cùng một file có được gom nhóm chính xác thông qua hàm trợ giúp `_group_by_file` hay không.
+Kiểm tra cấu hình dùng cổng trong danh sách cho phép `[80, 443, 8080, 8443, 9000]`. Expect: pass (0 uncompliances).
+
+- `listen 80;` hợp lệ.
+- `listen 443;` hợp lệ.
+- `listen 8080;` hợp lệ.
+- `listen 8443;` hợp lệ.
+- `listen 9000;` hợp lệ.
+- `listen 443 ssl;` hợp lệ.
+- `listen 443 quic reuseport;` hợp lệ (UDP).
+- `listen 80;` và `listen 443;` cùng một server block.
+- IPv6 cổng hợp lệ: `listen [::]:80;`.
+- IPv4 cụ thể cổng hợp lệ: `listen 192.168.1.100:443;`.
+
+#### Nhóm 2: Cổng không hợp lệ (Unauthorized Ports) - 10 Test Cases
+
+Kiểm tra cấu hình dùng cổng ngoài danh sách. Expect: phát hiện uncompliances.
+
+- `listen 81;` không hợp lệ.
+- `listen 8081;` không hợp lệ.
+- `listen 22;` không hợp lệ.
+- `listen 21;` không hợp lệ.
+- `listen 4444;` không hợp lệ.
+- `listen 6379;` không hợp lệ.
+- Trộn lẫn: `listen 80;` và `listen 8081;` chung server block -> Báo lỗi dòng chứa 8081.
+- IPv6 không hợp lệ: `listen [::]:81;`.
+- IPv4 cụ thể không hợp lệ: `listen 10.0.0.1:22;`.
+- Port ngầm định (ví dụ `listen localhost:8081;`) không hợp lệ.
+
+#### Nhóm 3: Tham số phức tạp và cú pháp (Complex Arguments) - 10 Test Cases
+
+Kiểm tra xử lý chuỗi tham số listen phức tạp, socket, IPv6.
+
+- Unix domain socket: `listen unix:/var/run/nginx.sock;` -> Bỏ qua hoặc hợp lệ vì không phải port mạng.
+- Nhiều cờ: `listen 80 default_server proxy_protocol;` -> Hợp lệ, trích xuất port 80 chuẩn xác.
+- Nhiều cờ ssl: `listen 443 ssl http2 default_server;` -> Hợp lệ.
+- Bind flag: `listen 8080 bind;` -> Hợp lệ.
+- Cấu hình IP không port: `listen 127.0.0.1;` -> Ngầm định port 80 -> Hợp lệ.
+- Cấu hình IPv6 không port: `listen [::1];` -> Ngầm định port 80 -> Hợp lệ.
+- Biến: `listen $port;` -> Cảnh báo hoặc báo lỗi vì port động không an toàn/không đánh giá tĩnh được.
+- Port vượt quá 65535: `listen 99999;` -> Không hợp lệ.
+- Port số 0: `listen 0;` -> Không hợp lệ.
+- Không có arg: `listen;` -> Dữ liệu JSON lỗi từ parser, handle an toàn (báo lỗi).
+
+#### Nhóm 4: Nhiều file, cấu trúc lồng nhau (Multiple Files/Blocks) - 12 Test Cases
+
+Kiểm tra khả năng duyệt đệ quy `crossplane` AST, gom nhóm lỗi theo file.
+
+- Nhiều `server` block trong một file: 1 block đúng (80), 1 block sai (81) -> Ghi nhận lỗi ở block sai.
+- Main file đúng, included file sai `conf.d/bad.conf` (port 22) -> Báo lỗi trong `bad.conf`.
+- Main file sai, included file sai -> Tạo JSON output gồm 2 file riêng biệt bằng `_group_by_file()`.
+- Nhiều chỉ thị `listen` sai rải rác ở 3 file `conf.d/*.conf`.
+- `server` block đặt ngoài `http` (lỗi cú pháp nhưng test độ cứng parser/detector).
+- Chỉ thị `listen 8081;` bị comment (crossplane thường loại, JSON không chứa `listen`) -> Hợp lệ (0 uncompliances).
+- Bỏ qua file không phải `.conf`: `bad.txt` chứa `listen 22;` -> Không scan, pass.
+- Bỏ qua file backup: `nginx.conf.bak` chứa `listen 22;` -> Không scan, pass.
+- Server block trống, không có `listen` ngầm định port 80 -> Hợp lệ.
+- Cấu hình rỗng toàn bộ AST -> Hợp lệ.
+- Hai lỗi cùng block: `listen 81; listen 82;` -> 2 remediations trong 1 file entry.
+- File có 5 server block, mỗi block một port sai -> 5 remediations, gom vào đúng 1 file path.

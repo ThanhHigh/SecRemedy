@@ -1,18 +1,10 @@
 from typing import Dict, List, Any, Optional
-from core.scannerEng.base_recom import BaseRecom
+from core.scannerEng.base_recom import BaseRecom, RecomID
 
 
 class Detector34(BaseRecom):
     def __init__(self):
-        super().__init__()
-        self.id = "3.4"
-        self.title = ""
-        self.description = ""
-        self.audit_procedure = ""
-        self.impact = ""
-        self.remediation = ""
+        super().__init__(RecomID.CIS_3_4)
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
-        uncompliances = []
-        # TODO: Implement your logic here
-        return self._group_by_file(uncompliances)
+        return []
