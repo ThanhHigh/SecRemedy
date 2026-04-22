@@ -1,4 +1,4 @@
-### 2.4.1 Ensure NGINX only listens for network connections on authorized ports (Manual)
+### 2.4.1 Ensure NGINX only listens for network connections on authorized ports
 
 ## Profile Applicability:
 
@@ -30,7 +30,7 @@ By default, NGINX often listens only on TCP port 80. Modern secure defaults shou
 
 ---
 
-### 2.4.2 Ensure requests for unknown host names are rejected (Manual)
+### 2.4.2 Ensure requests for unknown host names are rejected
 
 ## Profile Applicability:
 
@@ -62,7 +62,7 @@ By default, if no default_server is defined, NGINX uses the first server block c
 
 ---
 
-### 2.5.1 Ensure server_tokens directive is set to `off` (Manual)
+### 2.5.1 Ensure server_tokens directive is set to `off`
 
 ## Profile Applicability:
 
@@ -94,7 +94,7 @@ The default value of server_tokens is on.
 
 ---
 
-### 2.5.2 Ensure default error and index.html pages do not reference NGINX (Manual)
+### 2.5.2 Ensure default error and index.html pages do not reference NGINX
 
 ## Profile Applicability:
 
@@ -126,7 +126,7 @@ Default error pages identify the server as NGINX.
 
 ---
 
-### 2.5.3 Ensure hidden file serving is disabled (Manual)
+### 2.5.3 Ensure hidden file serving is disabled
 
 ## Profile Applicability:
 
@@ -158,7 +158,7 @@ This protection is not set by default. NGINX will serve any hidden file if it ex
 
 ---
 
-### 3.1 Ensure detailed logging is enabled (Manual)
+### 3.1 Ensure detailed logging is enabled
 
 ## Profile Applicability:
 
@@ -190,7 +190,7 @@ By default, NGINX uses the combined log format, which is a standard text format 
 
 ---
 
-### 3.2 Ensure access logging is enabled (Manual)
+### 3.2 Ensure access logging is enabled
 
 ## Profile Applicability:
 
@@ -222,7 +222,7 @@ Access logging is enabled by default, typically logging to logs/access.log or /v
 
 ---
 
-### 3.3 Ensure error logging is enabled and set to the info logging level (Manual)
+### 3.3 Ensure error logging is enabled and set to the info logging level
 
 ## Profile Applicability:
 
@@ -254,7 +254,7 @@ By default, NGINX logs errors to logs/error.log with the severity level error.
 
 ---
 
-### 3.4 Ensure proxies pass source IP information (Manual)
+### 3.4 Ensure proxies pass source IP information
 
 ## Profile Applicability:
 
@@ -286,7 +286,7 @@ By default, NGINX does not add these headers. The upstream server receives reque
 
 ---
 
-### 4.1.1 Ensure HTTP is redirected to HTTPS (Manual)
+### 4.1.1 Ensure HTTP is redirected to HTTPS
 
 ## Profile Applicability:
 

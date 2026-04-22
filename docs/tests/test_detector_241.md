@@ -2,7 +2,8 @@
 
 ## Tổng quan về Recommendation 2.4.1 trong CIS Nginx Benchmark:
 
-Đảm bảo NGINX chỉ lắng nghe kết nối mạng trên các cổng được ủy quyền (Manual). NGINX chỉ nên được cấu hình để lắng nghe trên các cổng và giao thức được phép. Giới hạn cổng lắng nghe giúp giảm thiểu bề mặt tấn công, ngăn chặn các dịch vụ ẩn hoặc không mong muốn bị phơi bày. Các cổng được ủy quyền trong hệ thống này: `80`, `443`, `8080`, `8443`, `9000`.
+Đảm bảo NGINX chỉ lắng nghe kết nối mạng trên các cổng được ủy quyền.
+NGINX chỉ nên được cấu hình để lắng nghe trên các cổng và giao thức được phép. Giới hạn cổng lắng nghe giúp giảm thiểu bề mặt tấn công, ngăn chặn các dịch vụ ẩn hoặc không mong muốn bị phơi bày. Các cổng được ủy quyền trong hệ thống này: `80`, `443`, `8080`, `8443`, `9000`.
 
 ## Tổng quan về Detector 241
 
