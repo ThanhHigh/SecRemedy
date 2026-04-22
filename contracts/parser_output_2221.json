@@ -1246,8 +1246,8 @@
               "directive": "listen",
               "line": 11,
               "args": [
-                "8080",
-                "ssl"
+                "8081",
+                "http2"
               ]
             },
             {
