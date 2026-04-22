@@ -3,7 +3,7 @@ from core.scannerEng.recommendations.detector_32 import Detector32
 
 
 def _dir(directive: str, args: list = None, block: list = None) -> dict:
-    d = {"directive": directive, "line": 1, "args": args or []}
+    d = {"directive": directive, "args": args or []}
     if block is not None:
         d["block"] = block
     return d
@@ -399,8 +399,10 @@ def test_multifile_all_children_off(detector):
     """Test 31: Tất cả file trong conf.d đều tắt log."""
     out = {
         "status": "ok", "errors": [], "config": [
-            {"file": "1.conf", "status": "ok", "errors": [], "parsed": [_server_block([_dir("access_log", ["off"])])]},
-            {"file": "2.conf", "status": "ok", "errors": [], "parsed": [_server_block([_dir("access_log", ["off"])])]}
+            {"file": "1.conf", "status": "ok", "errors": [], "parsed": [
+                _server_block([_dir("access_log", ["off"])])]},
+            {"file": "2.conf", "status": "ok", "errors": [], "parsed": [
+                _server_block([_dir("access_log", ["off"])])]}
         ]
     }
     res = detector.scan(out)
@@ -457,8 +459,10 @@ def test_multifile_multiple_locations_off(detector):
     """Test 35: Hai file conf khác nhau đều tắt log ở location /."""
     out = {
         "status": "ok", "errors": [], "config": [
-            {"file": "1.conf", "status": "ok", "errors": [], "parsed": [_location_block(["/"], [_dir("access_log", ["off"])])]},
-            {"file": "2.conf", "status": "ok", "errors": [], "parsed": [_location_block(["/"], [_dir("access_log", ["off"])])]}
+            {"file": "1.conf", "status": "ok", "errors": [], "parsed": [
+                _location_block(["/"], [_dir("access_log", ["off"])])]},
+            {"file": "2.conf", "status": "ok", "errors": [], "parsed": [
+                _location_block(["/"], [_dir("access_log", ["off"])])]}
         ]
     }
     res = detector.scan(out)

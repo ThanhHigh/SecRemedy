@@ -3,7 +3,7 @@ from core.scannerEng.recommendations.detector_531 import Detector531
 
 
 def _dir(directive: str, args: list = None, block: list = None) -> dict:
-    d = {"directive": directive, "line": 1, "args": args or []}
+    d = {"directive": directive, "args": args or []}
     if block is not None:
         d["block"] = block
     return d
@@ -485,7 +485,7 @@ def test_multi_main_valid_child_server_override_other(detector):
 def test_ast_malformed(detector):
     """Test 39: Lệnh `add_header` có cấu trúc AST sai hoặc chứa quá nhiều tham số -> Xử lý báo lỗi/tính là thiếu"""
     out = _make_parser_output([_http_block([_server_block([
-        {"directive": "add_header", "line": 1}
+        {"directive": "add_header"}
     ])])])
     res = detector.scan(out)
     assert len(res) == 1

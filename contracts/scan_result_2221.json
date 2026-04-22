@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 92,
-  "created_at": "2026-04-22T03:33:57Z",
+  "compliance_score": 83,
+  "created_at": "2026-04-22T15:49:22Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -58,8 +58,178 @@
       "title": "Đảm bảo các yêu cầu đến tên máy chủ không xác định bị từ chối",
       "description": "NGINX định tuyến yêu cầu dựa trên Host header. Nếu không có block server mặc định (catch-all) để từ chối các host không xác định, máy chủ sẽ phản hồi cho các tên miền bất kỳ trỏ tới IP của bạn, dẫn đến nguy cơ rò rỉ ứng dụng nội bộ hoặc tấn công Host Header.",
       "impact": "Các client truy cập trực tiếp bằng địa chỉ IP hoặc qua CNAME chưa cấu hình sẽ bị từ chối. Cần đảm bảo tất cả tên miền hợp lệ đều được định nghĩa rõ trong các block server riêng.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "./tmp/nginx_raw_2221/nginx.conf",
+          "remediations": [
+            {
+              "action": "replace",
+              "directive": "server",
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": [
+                    "on"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "args": [
+                    "_"
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "args": [
+                    "444"
+                  ]
+                }
+              ],
+              "logical_context": [
+                "http"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "server",
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": [
+                    "on"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "args": [
+                    "_"
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "args": [
+                    "444"
+                  ]
+                }
+              ],
+              "logical_context": [
+                "http"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                12
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "2.5.1",

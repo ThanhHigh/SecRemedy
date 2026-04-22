@@ -3,7 +3,7 @@ from core.scannerEng.recommendations.detector_254 import Detector254
 
 
 def _dir(directive: str, args: list = None, block: list = None) -> dict:
-    d = {"directive": directive, "line": 1, "args": args or []}
+    d = {"directive": directive, "args": args or []}
     if block is not None:
         d["block"] = block
     return d
@@ -234,7 +234,8 @@ def test_missing_multiple_fastcgi_locations(detector):
     """Test 15: Nhiều location có fastcgi_pass đều thiếu hide_header."""
     out = _make_parser_output([_http_block([
         _server_block([
-            _location_block(["/a"], [_dir("fastcgi_pass", ["127.0.0.1:9000"])]),
+            _location_block(
+                ["/a"], [_dir("fastcgi_pass", ["127.0.0.1:9000"])]),
             _location_block(["/b"], [_dir("fastcgi_pass", ["127.0.0.1:9001"])])
         ])
     ])])
@@ -548,7 +549,7 @@ def test_multifile_inherited_from_main(detector):
             }
         ]
     }
-    # Trong môi trường test AST hiện tại, do crossplane config trả về dạng phẳng list các file, 
+    # Trong môi trường test AST hiện tại, do crossplane config trả về dạng phẳng list các file,
     # liên kết logic giữa http block ở file cha và server block ở file con không được parser dựng thành cây liên kết.
     # Nên Detector thường sẽ phân tích scope của file đó. Nếu logic test chưa mock ghép cây thì có thể nó sẽ báo lỗi.
     # Để detector xử lý đúng kế thừa file, ta mock cây đã ghép.
@@ -569,7 +570,8 @@ def test_multifile_fastcgi_missing_in_child(detector):
             {
                 "file": "app.conf", "status": "ok", "errors": [],
                 "parsed": [_server_block([
-                    _location_block(["/"], [_dir("fastcgi_pass", ["127.0.0.1"])])
+                    _location_block(
+                        ["/"], [_dir("fastcgi_pass", ["127.0.0.1"])])
                 ])]
             }
         ]
@@ -599,9 +601,12 @@ def test_multifile_group_by_file(detector):
     """Test 38: 3 files có proxy_pass đều thiếu -> group by file."""
     out = {
         "status": "ok", "errors": [], "config": [
-            {"file": "1.conf", "status": "ok", "errors": [], "parsed": [_server_block([_location_block(["/"], [_dir("proxy_pass", ["a"])])])]},
-            {"file": "2.conf", "status": "ok", "errors": [], "parsed": [_server_block([_location_block(["/"], [_dir("proxy_pass", ["a"])])])]},
-            {"file": "3.conf", "status": "ok", "errors": [], "parsed": [_server_block([_location_block(["/"], [_dir("proxy_pass", ["a"])])])]},
+            {"file": "1.conf", "status": "ok", "errors": [], "parsed": [
+                _server_block([_location_block(["/"], [_dir("proxy_pass", ["a"])])])]},
+            {"file": "2.conf", "status": "ok", "errors": [], "parsed": [
+                _server_block([_location_block(["/"], [_dir("proxy_pass", ["a"])])])]},
+            {"file": "3.conf", "status": "ok", "errors": [], "parsed": [
+                _server_block([_location_block(["/"], [_dir("proxy_pass", ["a"])])])]},
         ]
     }
     res = detector.scan(out)
@@ -612,7 +617,8 @@ def test_multifile_deep_include(detector):
     """Test 39: proxy_pass ở sub/app.conf."""
     out = {
         "status": "ok", "errors": [], "config": [
-            {"file": "conf.d/sub/app.conf", "status": "ok", "errors": [], "parsed": [_server_block([_location_block(["/"], [_dir("proxy_pass", ["a"])])])]}
+            {"file": "conf.d/sub/app.conf", "status": "ok", "errors": [],
+                "parsed": [_server_block([_location_block(["/"], [_dir("proxy_pass", ["a"])])])]}
         ]
     }
     res = detector.scan(out)
@@ -623,8 +629,10 @@ def test_multifile_fastcgi_multiple_files(detector):
     """Test 40: fastcgi_pass nhiều files -> group by file."""
     out = {
         "status": "ok", "errors": [], "config": [
-            {"file": "1.conf", "status": "ok", "errors": [], "parsed": [_server_block([_location_block(["/"], [_dir("fastcgi_pass", ["a"])])])]},
-            {"file": "2.conf", "status": "ok", "errors": [], "parsed": [_server_block([_location_block(["/"], [_dir("fastcgi_pass", ["a"])])])]}
+            {"file": "1.conf", "status": "ok", "errors": [], "parsed": [
+                _server_block([_location_block(["/"], [_dir("fastcgi_pass", ["a"])])])]},
+            {"file": "2.conf", "status": "ok", "errors": [], "parsed": [
+                _server_block([_location_block(["/"], [_dir("fastcgi_pass", ["a"])])])]}
         ]
     }
     res = detector.scan(out)
@@ -687,7 +695,8 @@ def test_edge_mix_up_directives(detector):
     ])])
     res = detector.scan(out)
     assert len(res) == 1
-    assert len(res[0]["remediations"]) == 2  # Missing X-Powered-By, Server for proxy
+    # Missing X-Powered-By, Server for proxy
+    assert len(res[0]["remediations"]) == 2
 
 
 def test_edge_json_structure_matches(detector):

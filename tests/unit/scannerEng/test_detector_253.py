@@ -3,7 +3,7 @@ from core.scannerEng.recommendations.detector_253 import Detector253
 
 
 def _dir(directive: str, args: list = None, block: list = None) -> dict:
-    d = {"directive": directive, "line": 1, "args": args or []}
+    d = {"directive": directive, "args": args or []}
     if block is not None:
         d["block"] = block
     return d

@@ -6,7 +6,8 @@ class BaseRecom:
     def __init__(self, recom_id: RecomID):
         recom = RECOMMENDATION_REGISTRY.get(recom_id)
         if not recom:
-            raise ValueError(f"Recommendation ID {recom_id} not found in registry.")
+            raise ValueError(
+                f"Recommendation ID {recom_id} not found in registry.")
 
         self.id = recom.id.value
         self.title = recom.title
@@ -60,6 +61,13 @@ class BaseRecom:
                     state=state
                 ))
         return matches
+
+    @staticmethod
+    def _dir(directive: str, args: list = None, block: list = None) -> dict:
+        d = {"directive": directive, "args": args or []}
+        if block is not None:
+            d["block"] = block
+        return d
 
     @staticmethod
     def _group_by_file(uncompliances: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
