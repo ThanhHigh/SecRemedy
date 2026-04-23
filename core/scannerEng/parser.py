@@ -128,9 +128,12 @@ if __name__ == "__main__":
     parser_cli = argparse.ArgumentParser(
         description="Nginx Configuration AST Parser (Crossplane Wrapper)")
 
-    # Thêm tham số -P hoặc --port (Bắt buộc)
-    parser_cli.add_argument("-P", "--port", required=True,
+    # Thêm tham số -P hoặc --port
+    parser_cli.add_argument("-P", "--port", type=int,
                             help="Port của Nginx Server đã được fetch (VD: 2221, 2222)")
+
+    parser_cli.add_argument("-a", "--all-ports", action="store_true",
+                            help="Phân tích trên tất cả các port định nghĩa trong docker-compose.yml")
 
     # Thêm tham số -o hoặc --output (Tùy chọn, nếu không truyền sẽ tự sinh tên theo port)
     parser_cli.add_argument(
@@ -139,30 +142,52 @@ if __name__ == "__main__":
     # Phân tích các tham số người dùng nhập vào
     args = parser_cli.parse_args()
 
-    # 1. Xác định thư mục đầu vào tự động dựa trên Port
-    TARGET_DIR = f"./tmp/nginx_raw_{args.port}"
+    if args.all_ports:
+        target_ports = []
+        try:
+            with open("tests/integration/docker-compose.yml", "r") as f:
+                content = f.read()
+                # Find all mappings to port 22, e.g., "2221:22"
+                matches = re.findall(r'"(\d+):22"', content)
+                target_ports = [int(m) for m in matches]
+        except Exception as e:
+            print(f"[-] Lỗi đọc docker-compose.yml: {e}")
+            exit(1)
+        if not target_ports:
+             print("[-] Không tìm thấy port SSH nào trong docker-compose.yml")
+             exit(1)
+    elif args.port:
+        target_ports = [args.port]
+    else:
+        parser_cli.error("Bạn phải cung cấp -P/--port hoặc dùng cờ -a/--all-ports.")
 
-    # Kiểm tra xem thư mục đã được fetcher.py tải về chưa
-    if not os.path.exists(TARGET_DIR):
-        print(f"[LỖI] Không tìm thấy thư mục cấu hình: {TARGET_DIR}")
-        print(
-            f"[*] Gợi ý: Hãy chạy lệnh 'python core/fetcher.py -P {args.port}' trước để tải cấu hình về máy.")
-        exit(1)
+    for current_port in target_ports:
+        print(f"\n==========================================")
+        print(f"[*] BẮT ĐẦU PARSE PORT {current_port}")
+        print(f"==========================================")
+        # 1. Xác định thư mục đầu vào tự động dựa trên Port
+        TARGET_DIR = f"./tmp/nginx_raw_{current_port}"
 
-    # 2. Xác định tên file JSON đầu ra tự động dựa trên Port
-    # Nếu người dùng không truyền -o, mặc định sẽ là contracts/config_ast_<port>.json
-    output_contract_file = args.output if args.output else f"contracts/parser_output_{args.port}.json"
+        # Kiểm tra xem thư mục đã được fetcher.py tải về chưa
+        if not os.path.exists(TARGET_DIR):
+            print(f"[LỖI] Không tìm thấy thư mục cấu hình: {TARGET_DIR}")
+            print(f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/fetcher.py -P {current_port}' trước để tải cấu hình về máy.")
+            continue
 
-    # 3. Thực thi Parser
-    nginx_parser = NginxParser(base_config_path=TARGET_DIR)
-    try:
-        ast_data = nginx_parser.export_to_contract(
-            output_file=output_contract_file)
+        # 2. Xác định tên file JSON đầu ra tự động dựa trên Port
+        # Nếu người dùng không truyền -o, mặc định sẽ là contracts/config_ast_<port>.json
+        output_contract_file = args.output if (args.output and not args.all_ports) else f"contracts/parser_output_{current_port}.json"
 
-        # In thống kê cơ bản
-        parsed_files = len(ast_data.get("config", []))
-        print(
-            f"[*] Tổng số file cấu hình đã phân tích thành công: {parsed_files}")
+        # 3. Thực thi Parser
+        nginx_parser = NginxParser(base_config_path=TARGET_DIR)
+        try:
+            ast_data = nginx_parser.export_to_contract(
+                output_file=output_contract_file)
 
-    except Exception as e:
-        print(f"[LỖI HỆ THỐNG] {e}")
+            # In thống kê cơ bản
+            parsed_files = len(ast_data.get("config", []))
+            print(
+                f"[*] Tổng số file cấu hình đã phân tích thành công: {parsed_files}")
+
+        except Exception as e:
+            print(f"[LỖI HỆ THỐNG] {e}")

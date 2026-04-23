@@ -90,7 +90,8 @@ if __name__ == "__main__":
     
     # Định nghĩa các tham số (Arguments)
     parser.add_argument("-H", "--host", type=str, default="127.0.0.1", help="IP của Server (Mặc định: 127.0.0.1)")
-    parser.add_argument("-P", "--port", type=int, required=True, help="Port SSH của Server (Bắt buộc. VD: 2221, 2222)")
+    parser.add_argument("-P", "--port", type=int, help="Port SSH của Server (VD: 2221, 2222)")
+    parser.add_argument("-a", "--all-ports", action="store_true", help="Chạy trên tất cả các port (2221, 2222, 2223)")
     parser.add_argument("-u", "--user", type=str, default="root", help="Username SSH (Mặc định: root)")
     parser.add_argument("-p", "--password", type=str, default="root", help="Password SSH (Mặc định: root)")
     parser.add_argument("-o", "--output", type=str, help="Thư mục lưu cấu hình (Mặc định: ./tmp/nginx_raw_<port>)")
@@ -98,15 +99,38 @@ if __name__ == "__main__":
     # Lấy các tham số người dùng nhập vào
     args = parser.parse_args()
 
-    # Nếu người dùng không truyền -o, tự động tạo tên thư mục theo Port
-    output_dir = args.output if args.output else f"./tmp/nginx_raw_{args.port}"
+    if args.all_ports:
+        target_ports = []
+        try:
+            import re
+            with open("tests/integration/docker-compose.yml", "r") as f:
+                content = f.read()
+                matches = re.findall(r'"(\d+):22"', content)
+                target_ports = [int(m) for m in matches]
+        except Exception as e:
+            print(f"[-] Lỗi đọc docker-compose.yml: {e}")
+            exit(1)
+        if not target_ports:
+             print("[-] Không tìm thấy port SSH nào trong docker-compose.yml")
+             exit(1)
+    elif args.port:
+        target_ports = [args.port]
+    else:
+        parser.error("Bạn phải cung cấp -P/--port hoặc dùng cờ -a/--all-ports.")
 
-    # Thực thi logic
-    fetcher = NginxFetcher(args.host, args.port, args.user, args.password)
-    try:
-        fetcher.connect()
-        fetcher.fetch_config(local_extract_dir=output_dir)
-    except Exception as e:
-        print(f"[-] Quá trình thất bại: {e}")
-    finally:
-        fetcher.disconnect()
+    for current_port in target_ports:
+        print(f"\n==========================================")
+        print(f"[*] BẮT ĐẦU FETCH PORT {current_port}")
+        print(f"==========================================")
+        # Nếu người dùng không truyền -o (hoặc đang chạy all_ports), tự động tạo tên thư mục theo Port
+        output_dir = args.output if (args.output and not args.all_ports) else f"./tmp/nginx_raw_{current_port}"
+
+        # Thực thi logic
+        fetcher = NginxFetcher(args.host, current_port, args.user, args.password)
+        try:
+            fetcher.connect()
+            fetcher.fetch_config(local_extract_dir=output_dir)
+        except Exception as e:
+            print(f"[-] Quá trình thất bại ở port {current_port}: {e}")
+        finally:
+            fetcher.disconnect()

@@ -226,8 +226,12 @@ def main():
     parser.add_argument(
         "--ssh-port", "--port",
         type=int,
-        default=22,
         help="SSH port of the target server.",
+    )
+    parser.add_argument(
+        "-a", "--all-ports",
+        action="store_true",
+        help="Quét trên tất cả các port định nghĩa trong docker-compose.yml",
     )
     parser.add_argument(
         "--ssh-user", "--user",
@@ -252,34 +256,64 @@ def main():
 
     args = parser.parse_args()
 
-    input_path = args.input or f"contracts/parser_output_{args.ssh_port}.json"
-    output_path = args.output or f"contracts/scan_result_{args.ssh_port}.json"
+    if args.all_ports:
+        target_ports = []
+        try:
+            import re
+            with open("tests/integration/docker-compose.yml", "r") as f:
+                content = f.read()
+                matches = re.findall(r'"(\d+):22"', content)
+                target_ports = [int(m) for m in matches]
+        except Exception as e:
+            print(f"[-] Lỗi đọc docker-compose.yml: {e}")
+            exit(1)
+        if not target_ports:
+             print("[-] Không tìm thấy port SSH nào trong docker-compose.yml")
+             exit(1)
+    elif args.ssh_port:
+        target_ports = [args.ssh_port]
+    else:
+        parser.error("Bạn phải cung cấp --ssh-port/--port hoặc dùng cờ -a/--all-ports.")
 
-    scanner = Scanner(
-        server_ip=args.server_ip,
-        ssh_port=args.ssh_port,
-        ssh_user=args.ssh_user,
-        ssh_pass=args.ssh_pass,
-        ssh_key=args.ssh_key,
-        strict_private=args.strict_private,
-    )
-    result = scanner.run(
-        input_path=input_path,
-        output_path=output_path,
-    )
+    for current_port in target_ports:
+        print(f"\n==========================================")
+        print(f"[*] BẮT ĐẦU SCAN PORT {current_port}")
+        print(f"==========================================")
+        input_path = args.input if (args.input and not args.all_ports) else f"contracts/parser_output_{current_port}.json"
+        output_path = args.output if (args.output and not args.all_ports) else f"contracts/scan_result_{current_port}.json"
 
-    total = len(result["recommendations"])
-    passed = sum(1 for r in result["recommendations"]
-                 if r.get("status") == "pass")
-    failed = total - passed
+        scanner = Scanner(
+            server_ip=args.server_ip,
+            ssh_port=current_port,
+            ssh_user=args.ssh_user,
+            ssh_pass=args.ssh_pass,
+            ssh_key=args.ssh_key,
+            strict_private=args.strict_private,
+        )
 
-    print("\n[Scanner] 🔍 Chi tiết kết quả kiểm tra (Detailed Findings):")
-    for r in result["recommendations"]:
-        status_icon = "✅" if r["status"] == "pass" else "❌"
-        print(f"  {status_icon} {r['id']} - {r['title']}")
+        try:
+            result = scanner.run(
+                input_path=input_path,
+                output_path=output_path,
+            )
 
-    print(f"\n[Scanner] 📊 Compliance Score: {result['compliance_score']}%")
-    print(f"[Scanner] 📋 Total: {total} | ✅ Pass: {passed} | ❌ Fail: {failed}")
+            total = len(result["recommendations"])
+            passed = sum(1 for r in result["recommendations"]
+                         if r.get("status") == "pass")
+            failed = total - passed
+
+            print("\n[Scanner] 🔍 Chi tiết kết quả kiểm tra (Detailed Findings):")
+            for r in result["recommendations"]:
+                status_icon = "✅" if r["status"] == "pass" else "❌"
+                print(f"  {status_icon} {r['id']} - {r['title']}")
+
+            print(f"\n[Scanner] 📊 Compliance Score: {result['compliance_score']}%")
+            print(f"[Scanner] 📋 Total: {total} | ✅ Pass: {passed} | ❌ Fail: {failed}")
+        except FileNotFoundError as e:
+            print(f"[LỖI] {e}")
+            print(f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/parser.py -P {current_port}' trước.")
+        except Exception as e:
+            print(f"[LỖI HỆ THỐNG] {e}")
 
 
 if __name__ == "__main__":
