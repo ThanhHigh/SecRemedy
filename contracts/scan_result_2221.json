@@ -2,7 +2,7 @@
   "scan_id": 1,
   "server_ip": "0.0.0.0",
   "compliance_score": 83,
-  "created_at": "2026-04-22T15:49:22Z",
+  "created_at": "2026-04-23T01:14:35Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -12,7 +12,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2221/conf.d/admin.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
               "action": "delete",
@@ -32,7 +32,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2221/conf.d/vendor.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
           "remediations": [
             {
               "action": "delete",
@@ -61,7 +61,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2221/nginx.conf",
+          "file": "/etc/nginx/nginx.conf",
           "remediations": [
             {
               "action": "replace",

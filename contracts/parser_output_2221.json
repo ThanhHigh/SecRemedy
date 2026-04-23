@@ -3,7 +3,7 @@
   "errors": [],
   "config": [
     {
-      "file": "./tmp/nginx_raw_2221/nginx.conf",
+      "file": "/etc/nginx/nginx.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -221,7 +221,7 @@
       ]
     },
     {
-      "file": "./tmp/nginx_raw_2221/mime.types",
+      "file": "/etc/nginx/mime.types",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -785,7 +785,7 @@
       ]
     },
     {
-      "file": "./tmp/nginx_raw_2221/conf.d/admin.emarket.me.conf",
+      "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -959,7 +959,7 @@
       ]
     },
     {
-      "file": "./tmp/nginx_raw_2221/conf.d/customer.emarket.me.conf",
+      "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -1072,7 +1072,7 @@
       ]
     },
     {
-      "file": "./tmp/nginx_raw_2221/conf.d/emarket.me.conf",
+      "file": "/etc/nginx/conf.d/emarket.me.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -1195,7 +1195,7 @@
       ]
     },
     {
-      "file": "./tmp/nginx_raw_2221/conf.d/vendor.emarket.me.conf",
+      "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
       "status": "ok",
       "errors": [],
       "parsed": [

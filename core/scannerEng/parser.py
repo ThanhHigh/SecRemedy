@@ -6,12 +6,13 @@ import re
 
 
 class NginxParser:
-    def __init__(self, base_config_path):
+    def __init__(self, base_config_path, remote_dir='/etc/nginx'):
         """
         Khởi tạo Parser với thư mục chứa cấu hình Nginx đã tải về.
         Ví dụ: base_config_path = "./tmp/nginx_raw_2221"
         """
         self.base_config_path = base_config_path
+        self.remote_dir = remote_dir
         # Đường dẫn tới file nginx.conf chính sau khi giải nén
         self.main_conf_path = os.path.join(self.base_config_path, "nginx.conf")
 
@@ -75,6 +76,32 @@ class NginxParser:
                 "[CẢNH BÁO] Crossplane gặp lỗi (Thường do sai đường dẫn include tuyệt đối):")
             for err in payload.get("errors", []):
                 print(f"  -> {err['error']}")
+
+        # Thay thế đường dẫn local thành remote trong kết quả trả về
+        base_path_to_replace = os.path.abspath(self.base_config_path)
+        if not base_path_to_replace.endswith(os.sep):
+            base_path_to_replace += os.sep
+
+        if "config" in payload:
+            for config_item in payload["config"]:
+                local_file = config_item.get("file", "")
+                if local_file:
+                    # Convert to absolute to ensure proper matching
+                    abs_local_file = os.path.abspath(local_file)
+                    if abs_local_file.startswith(base_path_to_replace):
+                        rel_path = abs_local_file[len(base_path_to_replace):]
+                        remote_file = os.path.join(self.remote_dir, rel_path)
+                        # Fix path separators for Windows/Linux
+                        remote_file = remote_file.replace('\\', '/')
+                        config_item["file"] = remote_file
+                    elif local_file.startswith(self.base_config_path):
+                        # Fallback if abspath logic fails
+                        rel_path = local_file[len(self.base_config_path):]
+                        if rel_path.startswith('/') or rel_path.startswith('\\'):
+                            rel_path = rel_path[1:]
+                        remote_file = os.path.join(self.remote_dir, rel_path)
+                        remote_file = remote_file.replace('\\', '/')
+                        config_item["file"] = remote_file
 
         return payload
 
