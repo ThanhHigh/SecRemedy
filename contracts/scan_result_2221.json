@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 83,
-  "created_at": "2026-04-23T01:14:35Z",
+  "compliance_score": 75,
+  "created_at": "2026-04-23T01:28:40Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -236,8 +236,33 @@
       "title": "Đảm bảo chỉ thị server_tokens được đặt thành 'off'",
       "description": "Chỉ thị server_tokens hiển thị số phiên bản NGINX và hệ điều hành trên trang lỗi và HTTP header. Việc hiển thị thông tin này giúp kẻ tấn công dễ dàng dò quét và nhắm mục tiêu vào các lỗ hổng đã biết.",
       "impact": "Không ảnh hưởng chức năng. Ẩn thông tin phiên bản làm chậm kẻ tấn công và hạn chế các rủi ro từ việc quét lỗ hổng tự động.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/nginx.conf",
+          "remediations": [
+            {
+              "action": "replace",
+              "directive": "server_tokens",
+              "args": [
+                "off"
+              ],
+              "logical_context": [
+                "http"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                2
+              ]
+            }
+          ],
+          "filepath": "/etc/nginx/nginx.conf"
+        }
+      ]
     },
     {
       "id": "2.5.2",

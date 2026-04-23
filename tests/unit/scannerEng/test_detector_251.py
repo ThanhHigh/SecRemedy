@@ -321,7 +321,7 @@ def test_missing_multi_files(detector):
     res = detector.scan(out)
     assert len(res) == 1
     # Chỉ cần add vào http block ở file gốc
-    assert res[0]["filepath"] == "/etc/nginx/nginx.conf"
+    assert res[0]["file"] == "/etc/nginx/nginx.conf"
 
 
 def test_missing_commented_out(detector):
@@ -451,7 +451,7 @@ def test_multifile_main_off_child_on(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/api.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/api.conf"
     assert res[0]["remediations"][0]["action"] == "replace"
 
 
@@ -507,7 +507,7 @@ def test_multifile_deep_include(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/sub/app.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/sub/app.conf"
 
 
 def test_multifile_missing_everywhere(detector):
@@ -532,7 +532,7 @@ def test_multifile_missing_everywhere(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/nginx.conf"
+    assert res[0]["file"] == "/etc/nginx/nginx.conf"
     assert res[0]["remediations"][0]["action"] == "add"
 
 # --- Cấu trúc lồng nhau và ngoại lệ (Nested structures & edge cases) ---
