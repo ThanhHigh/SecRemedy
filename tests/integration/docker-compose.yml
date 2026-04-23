@@ -18,3 +18,13 @@ services:
       - "2222:22" # Port SSH của máy No Error là 2222
     volumes:
       - ./vps-six-to-then:/etc/nginx:ro
+
+  nginx_zero_comply:
+    build: .
+    container_name: nginx_zero_comply
+    ports:
+      - "8080:80"
+      - "8440:443"
+      - "2223:22" # Port SSH của máy Zero Comply là 2223
+    volumes:
+      - ./zero-comply:/etc/nginx:ro

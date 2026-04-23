@@ -11,7 +11,7 @@
           "directive": "user",
           "line": 1,
           "args": [
-            "www-data"
+            "nginx"
           ]
         },
         {
@@ -23,27 +23,27 @@
         },
         {
           "directive": "error_log",
-          "line": 5,
+          "line": 3,
           "args": [
             "/var/log/nginx/error.log",
-            "info"
+            "warn"
           ]
         },
         {
           "directive": "pid",
-          "line": 6,
+          "line": 4,
           "args": [
             "/var/run/nginx.pid"
           ]
         },
         {
           "directive": "events",
-          "line": 8,
+          "line": 6,
           "args": [],
           "block": [
             {
               "directive": "worker_connections",
-              "line": 9,
+              "line": 7,
               "args": [
                 "1024"
               ]
@@ -52,12 +52,12 @@
         },
         {
           "directive": "http",
-          "line": 12,
+          "line": 10,
           "args": [],
           "block": [
             {
               "directive": "include",
-              "line": 13,
+              "line": 11,
               "args": [
                 "mime.types"
               ],
@@ -67,145 +67,71 @@
             },
             {
               "directive": "default_type",
-              "line": 14,
+              "line": 12,
               "args": [
                 "application/octet-stream"
               ]
             },
             {
               "directive": "server_tokens",
-              "line": 17,
+              "line": 15,
               "args": [
-                "on"
+                "off"
               ]
             },
             {
               "directive": "log_format",
-              "line": 20,
+              "line": 18,
               "args": [
-                "json_detailed",
-                "escape=json",
-                "{",
-                "\"timestamp\":\"$time_iso8601\",",
-                "\"client_ip\":\"$remote_addr\",",
-                "\"request\":\"$request\",",
-                "\"status\": \"$status\",",
-                "\"body_bytes_sent\":\"$body_bytes_sent\",",
-                "\"request_time\":\"$request_time\",",
-                "\"http_referrer\":\"$http_referer\",",
-                "\"http_user_agent\":\"$http_user_agent\",",
-                "\"upstream_addr\":\"$upstream_addr\"",
-                "}"
+                "main",
+                "$remote_addr - $remote_user [$time_local] \"$request\" ",
+                "$status $body_bytes_sent \"$http_referer\" ",
+                "\"$http_user_agent\" \"$http_x_forwarded_for\""
               ]
             },
             {
               "directive": "access_log",
-              "line": 34,
+              "line": 23,
               "args": [
                 "/var/log/nginx/access.log",
-                "json_detailed"
+                "main"
               ]
             },
             {
-              "directive": "sendfile",
-              "line": 36,
+              "directive": "proxy_hide_header",
+              "line": 26,
               "args": [
-                "on"
+                "X-Powered-By"
               ]
             },
             {
-              "directive": "tcp_nopush",
-              "line": 37,
+              "directive": "proxy_hide_header",
+              "line": 27,
               "args": [
-                "on"
+                "Server"
               ]
             },
             {
-              "directive": "tcp_nodelay",
-              "line": 38,
+              "directive": "add_header",
+              "line": 30,
               "args": [
-                "on"
+                "X-Content-Type-Options",
+                "nosniff",
+                "always"
               ]
             },
             {
-              "directive": "keepalive_timeout",
-              "line": 39,
+              "directive": "add_header",
+              "line": 33,
               "args": [
-                "65"
-              ]
-            },
-            {
-              "directive": "types_hash_max_size",
-              "line": 40,
-              "args": [
-                "2048"
-              ]
-            },
-            {
-              "directive": "server",
-              "line": 43,
-              "args": [],
-              "block": [
-                {
-                  "directive": "listen",
-                  "line": 44,
-                  "args": [
-                    "80",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "line": 45,
-                  "args": [
-                    "443",
-                    "ssl",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "server_name",
-                  "line": 46,
-                  "args": [
-                    "_"
-                  ]
-                },
-                {
-                  "directive": "ssl_certificate",
-                  "line": 48,
-                  "args": [
-                    "/etc/ssl/mock_certs/nginx.crt"
-                  ]
-                },
-                {
-                  "directive": "ssl_certificate_key",
-                  "line": 49,
-                  "args": [
-                    "/etc/ssl/mock_certs/nginx.key"
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "line": 51,
-                  "args": [
-                    "/"
-                  ],
-                  "block": [
-                    {
-                      "directive": "return",
-                      "line": 52,
-                      "args": [
-                        "200",
-                        "Welcome to nowhere"
-                      ]
-                    }
-                  ]
-                }
+                "Content-Security-Policy",
+                "default-src 'self'; frame-ancestors 'self'; form-action 'self';",
+                "always"
               ]
             },
             {
               "directive": "include",
-              "line": 56,
+              "line": 35,
               "args": [
                 "conf.d/*.conf"
               ],
@@ -214,6 +140,43 @@
                 3,
                 4,
                 5
+              ]
+            },
+            {
+              "directive": "server",
+              "line": 38,
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "line": 39,
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "line": 40,
+                  "args": [
+                    "[::]:80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "line": 41,
+                  "args": [
+                    "_"
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "line": 42,
+                  "args": [
+                    "444"
+                  ]
+                }
               ]
             }
           ]
@@ -785,7 +748,7 @@
       ]
     },
     {
-      "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
+      "file": "/etc/nginx/conf.d/fail1.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -796,273 +759,53 @@
           "block": [
             {
               "directive": "listen",
-              "line": 2,
+              "line": 3,
               "args": [
-                "80"
+                "8000"
+              ]
+            },
+            {
+              "directive": "listen",
+              "line": 6,
+              "args": [
+                "81",
+                "default_server"
               ]
             },
             {
               "directive": "server_name",
-              "line": 3,
+              "line": 7,
               "args": [
-                "admin.emarket.me"
+                "_"
               ]
             },
             {
               "directive": "return",
-              "line": 5,
+              "line": 8,
               "args": [
-                "301",
-                "https://$host$request_uri"
-              ]
-            }
-          ]
-        },
-        {
-          "directive": "server",
-          "line": 8,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 10,
-              "args": [
-                "443",
-                "ssl",
-                "http2"
+                "200",
+                "OK"
               ]
             },
             {
-              "directive": "listen",
+              "directive": "server_tokens",
               "line": 11,
               "args": [
-                "8443",
-                "ssl",
-                "http2"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 12,
-              "args": [
-                "admin.emarket.me"
-              ]
-            },
-            {
-              "directive": "ssl_certificate",
-              "line": 14,
-              "args": [
-                "/etc/ssl/mock_certs/admin.crt"
-              ]
-            },
-            {
-              "directive": "ssl_certificate_key",
-              "line": 15,
-              "args": [
-                "/etc/ssl/mock_certs/admin.key"
-              ]
-            },
-            {
-              "directive": "root",
-              "line": 17,
-              "args": [
-                "/var/www/emarket/admin/public"
-              ]
-            },
-            {
-              "directive": "index",
-              "line": 18,
-              "args": [
-                "index.php",
-                "index.html",
-                "index.htm"
-              ]
-            },
-            {
-              "directive": "index",
-              "line": 24,
-              "args": [
-                "index.php",
-                "index.html",
-                "index.htm"
+                "on"
               ]
             },
             {
               "directive": "location",
-              "line": 26,
-              "args": [
-                "/"
-              ],
-              "block": [
-                {
-                  "directive": "try_files",
-                  "line": 27,
-                  "args": [
-                    "$uri",
-                    "$uri/",
-                    "/index.php?$query_string"
-                  ]
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 30,
-              "args": [
-                "~",
-                "\\.php$"
-              ],
-              "block": [
-                {
-                  "directive": "proxy_pass",
-                  "line": 32,
-                  "args": [
-                    "http://127.0.0.1:8000"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 33,
-                  "args": [
-                    "Host",
-                    "$host"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 34,
-                  "args": [
-                    "X-Real-IP",
-                    "$remote_addr"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 35,
-                  "args": [
-                    "X-Forwarded-For",
-                    "$proxy_add_x_forwarded_for"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 36,
-                  "args": [
-                    "X-Forwarded-Proto",
-                    "$scheme"
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
-      "status": "ok",
-      "errors": [],
-      "parsed": [
-        {
-          "directive": "server",
-          "line": 1,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 2,
-              "args": [
-                "80"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 3,
-              "args": [
-                "customer.emarket.me"
-              ]
-            },
-            {
-              "directive": "return",
-              "line": 5,
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ]
-            }
-          ]
-        },
-        {
-          "directive": "server",
-          "line": 8,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 9,
-              "args": [
-                "443",
-                "ssl",
-                "http2"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 10,
-              "args": [
-                "customer.emarket.me"
-              ]
-            },
-            {
-              "directive": "ssl_certificate",
-              "line": 12,
-              "args": [
-                "/etc/ssl/mock_certs/nginx.crt"
-              ]
-            },
-            {
-              "directive": "ssl_certificate_key",
               "line": 13,
               "args": [
-                "/etc/ssl/mock_certs/nginx.key"
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 18,
-              "args": [
                 "/"
               ],
               "block": [
                 {
-                  "directive": "proxy_pass",
-                  "line": 20,
+                  "directive": "root",
+                  "line": 14,
                   "args": [
-                    "http://127.0.0.1:8002"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 21,
-                  "args": [
-                    "Host",
-                    "$host"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 22,
-                  "args": [
-                    "X-Real-IP",
-                    "$remote_addr"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 23,
-                  "args": [
-                    "X-Forwarded-For",
-                    "$proxy_add_x_forwarded_for"
+                    "/usr/share/nginx/html"
                   ]
                 }
               ]
@@ -1072,7 +815,7 @@
       ]
     },
     {
-      "file": "/etc/nginx/conf.d/emarket.me.conf",
+      "file": "/etc/nginx/conf.d/fail2.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -1085,230 +828,202 @@
               "directive": "listen",
               "line": 2,
               "args": [
-                "80"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 3,
-              "args": [
-                "emarket.me",
-                "www.emarket.me"
-              ]
-            },
-            {
-              "directive": "return",
-              "line": 5,
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ]
-            }
-          ]
-        },
-        {
-          "directive": "server",
-          "line": 8,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 9,
-              "args": [
                 "443",
-                "ssl",
-                "http2"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 10,
-              "args": [
-                "emarket.me",
-                "www.emarket.me"
-              ]
-            },
-            {
-              "directive": "ssl_certificate",
-              "line": 12,
-              "args": [
-                "/etc/ssl/mock_certs/nginx.crt"
-              ]
-            },
-            {
-              "directive": "ssl_certificate_key",
-              "line": 13,
-              "args": [
-                "/etc/ssl/mock_certs/nginx.key"
-              ]
-            },
-            {
-              "directive": "root",
-              "line": 15,
-              "args": [
-                "/var/www/emarket/spa/dist"
-              ]
-            },
-            {
-              "directive": "index",
-              "line": 16,
-              "args": [
-                "index.html"
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 21,
-              "args": [
-                "/"
-              ],
-              "block": [
-                {
-                  "directive": "try_files",
-                  "line": 22,
-                  "args": [
-                    "$uri",
-                    "$uri/",
-                    "/index.html"
-                  ]
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 26,
-              "args": [
-                "/assets"
-              ],
-              "block": [
-                {
-                  "directive": "alias",
-                  "line": 27,
-                  "args": [
-                    "/var/www/emarket/spa/dist/assets"
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
-      "status": "ok",
-      "errors": [],
-      "parsed": [
-        {
-          "directive": "server",
-          "line": 1,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 2,
-              "args": [
-                "80"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 3,
-              "args": [
-                "vendor.emarket.me"
-              ]
-            },
-            {
-              "directive": "return",
-              "line": 5,
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ]
-            }
-          ]
-        },
-        {
-          "directive": "server",
-          "line": 8,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 9,
-              "args": [
-                "443",
-                "ssl",
-                "http2"
-              ]
-            },
-            {
-              "directive": "listen",
-              "line": 11,
-              "args": [
-                "8080",
                 "ssl"
               ]
             },
             {
-              "directive": "server_name",
-              "line": 12,
-              "args": [
-                "vendor.emarket.me"
-              ]
-            },
-            {
               "directive": "ssl_certificate",
-              "line": 14,
+              "line": 3,
               "args": [
                 "/etc/ssl/mock_certs/nginx.crt"
               ]
             },
             {
               "directive": "ssl_certificate_key",
-              "line": 15,
+              "line": 4,
               "args": [
                 "/etc/ssl/mock_certs/nginx.key"
               ]
             },
             {
-              "directive": "location",
-              "line": 20,
+              "directive": "server_name",
+              "line": 5,
               "args": [
-                "/"
+                "fail2.example.com"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 11,
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "line": 12,
+                  "args": [
+                    "all"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 15,
+              "args": [
+                "/proxy"
+              ],
+              "block": [
+                {
+                  "directive": "proxy_pass_header",
+                  "line": 17,
+                  "args": [
+                    "X-Powered-By"
+                  ]
+                },
+                {
+                  "directive": "proxy_pass_header",
+                  "line": 18,
+                  "args": [
+                    "Server"
+                  ]
+                },
+                {
+                  "directive": "proxy_pass",
+                  "line": 19,
+                  "args": [
+                    "http://127.0.0.1:8080"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/conf.d/fail3.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 3,
+              "args": [
+                "80"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 4,
+              "args": [
+                "fail3.example.com"
+              ]
+            },
+            {
+              "directive": "access_log",
+              "line": 7,
+              "args": [
+                "off"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 9,
+              "args": [
+                "/api"
               ],
               "block": [
                 {
                   "directive": "proxy_pass",
-                  "line": 22,
+                  "line": 11,
                   "args": [
-                    "http://127.0.0.1:8001"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 23,
-                  "args": [
-                    "Host",
-                    "$host"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 24,
-                  "args": [
-                    "X-Real-IP",
-                    "$remote_addr"
-                  ]
-                },
-                {
-                  "directive": "proxy_set_header",
-                  "line": 25,
-                  "args": [
-                    "X-Forwarded-For",
-                    "$proxy_add_x_forwarded_for"
+                    "http://127.0.0.1:8081"
                   ]
                 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/conf.d/fail4.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 2,
+              "args": [
+                "443",
+                "ssl"
+              ]
+            },
+            {
+              "directive": "ssl_certificate",
+              "line": 3,
+              "args": [
+                "/etc/ssl/mock_certs/nginx.crt"
+              ]
+            },
+            {
+              "directive": "ssl_certificate_key",
+              "line": 4,
+              "args": [
+                "/etc/ssl/mock_certs/nginx.key"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 5,
+              "args": [
+                "fail4.example.com"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 7,
+              "args": [
+                "/admin"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "line": 9,
+                  "args": [
+                    "all"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "add_header",
+              "line": 13,
+              "args": [
+                "X-Content-Type-Options",
+                ""
+              ]
+            },
+            {
+              "directive": "add_header",
+              "line": 16,
+              "args": [
+                "Content-Security-Policy",
+                ""
               ]
             }
           ]

@@ -2,7 +2,7 @@
   "scan_id": 1,
   "server_ip": "0.0.0.0",
   "compliance_score": 42,
-  "created_at": "2026-04-23T15:48:31Z",
+  "created_at": "2026-04-23T17:33:27Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -36,7 +36,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2222/nginx.conf",
+          "file": "/etc/nginx/nginx.conf",
           "remediations": [
             {
               "action": "add",
@@ -65,7 +65,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -88,7 +88,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/customer.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -114,7 +114,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/emarket.me.conf",
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -140,7 +140,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/vendor.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -201,7 +201,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -246,7 +246,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/customer.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -291,7 +291,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/emarket.me.conf",
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -336,7 +336,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/vendor.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -390,7 +390,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2222/nginx.conf",
+          "file": "/etc/nginx/nginx.conf",
           "remediations": [
             {
               "action": "delete",
@@ -410,7 +410,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
               "action": "delete",
@@ -442,7 +442,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -491,7 +491,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/customer.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -540,7 +540,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/emarket.me.conf",
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -589,7 +589,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/vendor.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -647,7 +647,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2222/nginx.conf",
+          "file": "/etc/nginx/nginx.conf",
           "remediations": [
             {
               "action": "replace",
@@ -674,7 +674,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -697,7 +697,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/customer.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -720,7 +720,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/emarket.me.conf",
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -743,7 +743,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/vendor.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -783,7 +783,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2222/nginx.conf",
+          "file": "/etc/nginx/nginx.conf",
           "remediations": [
             {
               "action": "add",
@@ -838,7 +838,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -978,7 +978,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/customer.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -1118,7 +1118,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/emarket.me.conf",
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -1303,7 +1303,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/vendor.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -1452,7 +1452,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "./tmp/nginx_raw_2222/nginx.conf",
+          "file": "/etc/nginx/nginx.conf",
           "remediations": [
             {
               "action": "add",
@@ -1507,7 +1507,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/admin.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -1581,7 +1581,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/customer.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -1655,7 +1655,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/emarket.me.conf",
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
           "remediations": [
             {
               "action": "add",
@@ -1752,7 +1752,7 @@
           ]
         },
         {
-          "file": "./tmp/nginx_raw_2222/conf.d/vendor.emarket.me.conf",
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
           "remediations": [
             {
               "action": "add",
