@@ -21,13 +21,13 @@ def _location_block(args: list, directives: list) -> dict:
     return _dir("location", args, directives)
 
 
-def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
+def _make_parser_output(parsed_directives: list, file: str = "/etc/nginx/nginx.conf") -> dict:
     return {
         "status": "ok",
         "errors": [],
         "config": [
             {
-                "file": filepath,
+                "file": file,
                 "status": "ok",
                 "errors": [],
                 "parsed": parsed_directives

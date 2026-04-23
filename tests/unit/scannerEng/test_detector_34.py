@@ -21,13 +21,13 @@ def _location_block(args: list, directives: list) -> dict:
     return _dir("location", args, directives)
 
 
-def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
+def _make_parser_output(parsed_directives: list, file: str = "/etc/nginx/nginx.conf") -> dict:
     return {
         "status": "ok",
         "errors": [],
         "config": [
             {
-                "file": filepath,
+                "file": file,
                 "status": "ok",
                 "errors": [],
                 "parsed": parsed_directives
@@ -464,7 +464,7 @@ def test_multifile_app_missing(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "app.conf"
+    assert res[0]["file"] == "app.conf"
 
 
 def test_multifile_inherited_from_nginx(detector):
@@ -503,7 +503,7 @@ def test_multifile_override_in_app(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "app.conf"
+    assert res[0]["file"] == "app.conf"
 
 
 def test_multifile_one_missing(detector):
@@ -522,7 +522,7 @@ def test_multifile_one_missing(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "2.conf"
+    assert res[0]["file"] == "2.conf"
 
 
 def test_multifile_location_include(detector):
@@ -539,7 +539,7 @@ def test_multifile_location_include(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "loc.conf"
+    assert res[0]["file"] == "loc.conf"
 
 
 def test_multifile_inherited_from_server_in_same(detector):
@@ -570,7 +570,7 @@ def test_multifile_correct_identifier(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "app.conf"
+    assert res[0]["file"] == "app.conf"
 
 
 def test_multifile_missing_in_included_params(detector):
@@ -605,7 +605,7 @@ def test_multifile_level2_include(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "api.conf"
+    assert res[0]["file"] == "api.conf"
 
 
 def test_multifile_two_includes_missing(detector):

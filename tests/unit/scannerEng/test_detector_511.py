@@ -21,13 +21,13 @@ def _location_block(args: list, directives: list) -> dict:
     return _dir("location", args, directives)
 
 
-def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
+def _make_parser_output(parsed_directives: list, file: str = "/etc/nginx/nginx.conf") -> dict:
     return {
         "status": "ok",
         "errors": [],
         "config": [
             {
-                "file": filepath,
+                "file": file,
                 "status": "ok",
                 "errors": [],
                 "parsed": parsed_directives
@@ -433,7 +433,7 @@ def test_multi_child_invalid(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/web.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/web.conf"
 
 
 def test_multi_allow_main_deny_child(detector):
@@ -467,7 +467,7 @@ def test_multi_child_missing_deny(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/app.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/app.conf"
 
 
 def test_multi_include_list_missing_deny(detector):

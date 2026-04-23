@@ -21,13 +21,13 @@ def _location_block(args: list, directives: list) -> dict:
     return _dir("location", args, directives)
 
 
-def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
+def _make_parser_output(parsed_directives: list, file: str = "/etc/nginx/nginx.conf") -> dict:
     return {
         "status": "ok",
         "errors": [],
         "config": [
             {
-                "file": filepath,
+                "file": file,
                 "status": "ok",
                 "errors": [],
                 "parsed": parsed_directives
@@ -375,7 +375,7 @@ def test_multi_http_main_valid_child_override_other(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/admin.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/admin.conf"
 
 
 def test_multi_main_empty_children_valid(detector):
@@ -412,7 +412,7 @@ def test_multi_main_empty_one_child_missing(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/web.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/web.conf"
 
 
 def test_multi_include_security_headers_server(detector):
@@ -457,7 +457,7 @@ def test_multi_include_missing_always(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/security.conf"
+    assert res[0]["file"] == "/etc/nginx/security.conf"
 
 
 def test_multi_split_server_missing(detector):
@@ -493,7 +493,7 @@ def test_multi_main_valid_child_server_override_other(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/app.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/app.conf"
 
 
 # --- Cấu trúc AST, Remediation Payload & Edge Cases (7 Tests) ---

@@ -21,13 +21,13 @@ def _location_block(args: list, directives: list) -> dict:
     return _dir("location", args, directives)
 
 
-def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
+def _make_parser_output(parsed_directives: list, file: str = "/etc/nginx/nginx.conf") -> dict:
     return {
         "status": "ok",
         "errors": [],
         "config": [
             {
-                "file": filepath,
+                "file": file,
                 "status": "ok",
                 "errors": [],
                 "parsed": parsed_directives
@@ -229,7 +229,7 @@ def test_missing_in_include_file(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/app.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/app.conf"
     assert res[0]["remediations"][0]["action"] == "add"
 
 
@@ -455,7 +455,7 @@ def test_multifile_main_missing_child_valid(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/nginx.conf"
+    assert res[0]["file"] == "/etc/nginx/nginx.conf"
 
 
 def test_multifile_main_none_child_missing(detector):
@@ -480,7 +480,7 @@ def test_multifile_main_none_child_missing(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/api.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/api.conf"
 
 
 def test_multifile_both_missing(detector):
@@ -541,7 +541,7 @@ def test_multifile_deep_include_missing(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/sub/app.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/sub/app.conf"
 
 # --- Cấu trúc lồng nhau và ngoại lệ (Nested structures & edge cases) ---
 
