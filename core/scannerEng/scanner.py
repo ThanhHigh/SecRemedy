@@ -68,12 +68,14 @@ class Scanner:
         ssh_user: str = "root",
         ssh_pass: str | None = None,
         ssh_key: str | None = None,
+        strict_private: bool = False,
     ):
         self.server_ip = server_ip
         self.ssh_port = ssh_port
         self.ssh_user = ssh_user
         self.ssh_pass = ssh_pass
         self.ssh_key = ssh_key
+        self.strict_private = strict_private
 
     # ------------------------------------------------------------------
     # Public API
@@ -117,7 +119,10 @@ class Scanner:
         results: List[Dict[str, Any]] = []
 
         for recom_id, detector_cls in DETECTOR_REGISTRY.items():
-            detector = detector_cls()
+            if recom_id == "5.1.1":
+                detector = detector_cls(strict_private=self.strict_private)
+            else:
+                detector = detector_cls()
             uncompliances = detector.scan(parser_output)
 
             entry: Dict[str, Any] = {
@@ -239,6 +244,11 @@ def main():
         default=None,
         help="Path to SSH private key (optional).",
     )
+    parser.add_argument(
+        "--strict-private",
+        action="store_true",
+        help="Force Detector 5.1.1 to check for allow/deny at server block level.",
+    )
 
     args = parser.parse_args()
 
@@ -251,6 +261,7 @@ def main():
         ssh_user=args.ssh_user,
         ssh_pass=args.ssh_pass,
         ssh_key=args.ssh_key,
+        strict_private=args.strict_private,
     )
     result = scanner.run(
         input_path=input_path,
