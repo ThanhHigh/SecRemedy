@@ -6,6 +6,45 @@ class Detector32(BaseRecom):
     def __init__(self):
         super().__init__(RecomID.CIS_3_2)
 
+    def _scan_block(self, directives: List[Dict[str, Any]], filepath: str, logical_context: List[str], exact_path: List[Any], is_exception_context: bool) -> List[Dict[str, Any]]:
+        uncompliances = []
+        for idx, directive in enumerate(directives):
+            current_exact_path = exact_path + [idx]
+            dir_name = directive.get("directive", "")
+            args = directive.get("args", [])
+            
+            current_is_exception = is_exception_context
+            if dir_name == "location":
+                args_str = "".join(args).lower()
+                if "favicon.ico" in args_str or "robots.txt" in args_str or "\\.(css|js|jpg|jpeg|png)$" in "".join(args):
+                    current_is_exception = True
+
+            if dir_name == "access_log":
+                if not current_is_exception:
+                    if len(args) > 0:
+                        first_arg = args[0].strip('"\'').lower()
+                        if first_arg == "off" or first_arg == "/dev/null":
+                            uncompliances.append({
+                                "file": filepath,
+                                "remediations": [
+                                    {
+                                        "action": "delete",
+                                        "directive": "access_log",
+                                        "logical_context": logical_context,
+                                        "exact_path": current_exact_path
+                                    }
+                                ]
+                            })
+
+            if "block" in directive:
+                new_logical_context = logical_context + [dir_name]
+                new_exact_path = current_exact_path + ["block"]
+                uncompliances.extend(self._scan_block(
+                    directive["block"], filepath, new_logical_context, new_exact_path, current_is_exception
+                ))
+                
+        return uncompliances
+
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         uncompliances = []
 
@@ -23,7 +62,9 @@ class Detector32(BaseRecom):
             # VD: ["config", 0, "parsed"]
             base_exact_path = ["config", config_idx, "parsed"]
 
-            # Logic chính của detector 3.2
+            uncompliances.extend(self._scan_block(
+                parsed_ast, filepath, [], base_exact_path, False
+            ))
 
         # Gộp các uncompliance trùng file thành 1 entry duy nhất,
         # gom tất cả remediations lại. Khớp với JSON Contract (scan_result.json).

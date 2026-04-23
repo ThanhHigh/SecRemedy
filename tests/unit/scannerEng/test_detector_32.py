@@ -21,13 +21,13 @@ def _location_block(args: list, directives: list) -> dict:
     return _dir("location", args, directives)
 
 
-def _make_parser_output(parsed_directives: list, filepath: str = "/etc/nginx/nginx.conf") -> dict:
+def _make_parser_output(parsed_directives: list, file: str = "/etc/nginx/nginx.conf") -> dict:
     return {
         "status": "ok",
         "errors": [],
         "config": [
             {
-                "file": filepath,
+                "file": file,
                 "status": "ok",
                 "errors": [],
                 "parsed": parsed_directives
@@ -373,7 +373,7 @@ def test_multifile_child_server_off(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "app.conf"
+    assert res[0]["file"] == "app.conf"
 
 
 def test_multifile_parent_http_off(detector):
@@ -392,7 +392,7 @@ def test_multifile_parent_http_off(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "nginx.conf"
+    assert res[0]["file"] == "nginx.conf"
 
 
 def test_multifile_all_children_off(detector):
@@ -439,7 +439,7 @@ def test_multifile_parent_off_child_on(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "nginx.conf"
+    assert res[0]["file"] == "nginx.conf"
 
 
 def test_multifile_exception_include(detector):
