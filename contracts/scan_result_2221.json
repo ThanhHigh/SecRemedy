@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 42,
-  "created_at": "2026-04-23T13:46:30Z",
+  "compliance_score": 33,
+  "created_at": "2026-04-23T15:01:56Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -1363,8 +1363,485 @@
       "title": "Đảm bảo header X-Content-Type-Options được cấu hình và kích hoạt",
       "description": "Header X-Content-Type-Options chỉ thị cho trình duyệt không tự đoán (sniff) kiểu MIME của file, giúp ngăn chặn các cuộc tấn công nhầm lẫn kiểu MIME (MIME type confusion).",
       "impact": "Có thể làm hỏng các ứng dụng cũ nếu khai báo sai Content-Type (ví dụ: trả về script dưới dạng text/plain).",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/nginx.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10,
+                "block",
+                5,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block",
+                8,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block",
+                9,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block",
+                8,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block",
+                9,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                1,
+                "block",
+                4,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                1,
+                "block",
+                4,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block",
+                6,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block",
+                7,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block",
+                6,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block",
+                7,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block",
+                5,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block",
+                5,
+                "block"
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "5.3.2",
