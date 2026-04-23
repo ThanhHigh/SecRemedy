@@ -527,7 +527,7 @@ def test_multifile_proxy_missing_in_child(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "app.conf"
+    assert res[0]["file"] == "app.conf"
 
 
 def test_multifile_inherited_from_main(detector):
@@ -622,7 +622,7 @@ def test_multifile_deep_include(detector):
         ]
     }
     res = detector.scan(out)
-    assert res[0]["filepath"] == "conf.d/sub/app.conf"
+    assert res[0]["file"] == "conf.d/sub/app.conf"
 
 
 def test_multifile_fastcgi_multiple_files(detector):

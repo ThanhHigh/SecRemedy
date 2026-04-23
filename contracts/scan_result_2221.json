@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 58,
-  "created_at": "2026-04-23T03:17:12Z",
+  "compliance_score": 50,
+  "created_at": "2026-04-23T12:39:46Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -1137,8 +1137,144 @@
       "title": "Đảm bảo NGINX reverse proxy không tiết lộ thông tin backend",
       "description": "Khi NGINX đóng vai trò reverse proxy, nó có thể chuyển tiếp các header từ ứng dụng backend (VD: X-Powered-By, Server). Cần loại bỏ các header này trước khi phản hồi cho client để tránh rò rỉ thông tin về công nghệ và phiên bản backend.",
       "impact": "Hạn chế cung cấp thông tin do thám cho kẻ tấn công. Không ảnh hưởng đến chức năng ứng dụng.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "proxy_hide_header",
+              "args": [
+                "X-Powered-By"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block",
+                9,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "proxy_hide_header",
+              "args": [
+                "Server"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block",
+                9,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "proxy_hide_header",
+              "args": [
+                "X-Powered-By"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                1,
+                "block",
+                4,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "proxy_hide_header",
+              "args": [
+                "Server"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                1,
+                "block",
+                4,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "proxy_hide_header",
+              "args": [
+                "X-Powered-By"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block",
+                5,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "proxy_hide_header",
+              "args": [
+                "Server"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block",
+                5,
+                "block"
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "3.2",
