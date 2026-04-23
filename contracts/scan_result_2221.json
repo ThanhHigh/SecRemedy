@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 50,
-  "created_at": "2026-04-23T13:34:44Z",
+  "compliance_score": 42,
+  "created_at": "2026-04-23T13:46:30Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -1297,8 +1297,58 @@
       "title": "Đảm bảo HTTP được chuyển hướng sang HTTPS",
       "description": "Các yêu cầu HTTP không được mã hóa. Cần chuyển hướng tất cả lưu lượng truy cập từ cổng HTTP (mặc định là 80) sang HTTPS để đảm bảo toàn bộ dữ liệu người dùng được mã hóa và an toàn.",
       "impact": "Có thể gây giảm nhẹ hiệu suất do quá trình bắt tay TLS/SSL, nhưng là chi phí cần thiết để đảm bảo bảo mật và độ tin cậy của dịch vụ.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/nginx.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "return",
+              "args": [
+                "301",
+                "https://$host$request_uri"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "return",
+              "args": [
+                "301",
+                "https://$host$request_uri"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block"
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "5.1.1",
