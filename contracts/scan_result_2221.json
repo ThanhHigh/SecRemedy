@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 75,
-  "created_at": "2026-04-23T01:28:40Z",
+  "compliance_score": 67,
+  "created_at": "2026-04-23T02:45:37Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -259,8 +259,7 @@
                 2
               ]
             }
-          ],
-          "filepath": "/etc/nginx/nginx.conf"
+          ]
         }
       ]
     },
@@ -269,8 +268,391 @@
       "title": "Đảm bảo các trang lỗi mặc định và trang index.html không tham chiếu đến NGINX",
       "description": "Các trang lỗi (VD: 404, 500) và trang chào mừng mặc định thường chứa dấu hiệu của NGINX. Cần thay thế bằng các trang tùy chỉnh để không tiết lộ phần mềm máy chủ, giúp ngăn kẻ tấn công nhận dạng công nghệ.",
       "impact": "Cần thêm thời gian quản trị để tạo và bảo trì trang lỗi. Đảm bảo các trang này đơn giản và không tạo ra lỗ hổng mới.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/nginx.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                1,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                1,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/custom_404.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/custom_50x.html"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block"
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "2.5.3",

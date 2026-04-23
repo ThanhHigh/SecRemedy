@@ -496,7 +496,7 @@ def test_multifile_override(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/api.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/api.conf"
 
 
 def test_multifile_group_by_file(detector):
@@ -545,7 +545,7 @@ def test_multifile_deep_path(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/deep/path/to/app.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/deep/path/to/app.conf"
 
 # --- Cấu trúc lồng nhau và ngoại lệ (Nested structures & edge cases) ---
 
