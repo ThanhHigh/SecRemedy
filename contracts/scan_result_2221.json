@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 67,
-  "created_at": "2026-04-23T02:45:37Z",
+  "compliance_score": 58,
+  "created_at": "2026-04-23T03:17:12Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -659,8 +659,478 @@
       "title": "Đảm bảo vô hiệu hóa việc phục vụ các file ẩn",
       "description": "Các file và thư mục ẩn (bắt đầu bằng dấu chấm, VD: .git, .env) thường chứa thông tin nhạy cảm, mã nguồn hoặc cấu hình môi trường. Việc phục vụ các file này cần được vô hiệu hóa để tránh rò rỉ dữ liệu.",
       "impact": "Chặn tất cả file ẩn sẽ làm hỏng xác thực Let's Encrypt/Certbot. Đảm bảo quy tắc ngoại lệ cho '.well-known/acme-challenge' được đặt trước quy tắc từ chối.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/nginx.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                0,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                3,
+                "parsed",
+                1,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                0,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                0,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "logical_context": [
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                5,
+                "parsed",
+                1,
+                "block"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "2.5.4",

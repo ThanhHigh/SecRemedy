@@ -199,7 +199,7 @@ def test_missing_main_file(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/nginx.conf"
+    assert res[0]["file"] == "/etc/nginx/nginx.conf"
 
 
 def test_missing_include_file(detector):
@@ -218,7 +218,7 @@ def test_missing_include_file(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "/etc/nginx/conf.d/default.conf"
+    assert res[0]["file"] == "/etc/nginx/conf.d/default.conf"
 
 
 def test_missing_multiple_servers_same_file(detector):
@@ -504,7 +504,7 @@ def test_edge_deep_include_map(detector):
         ]
     }
     res = detector.scan(out)
-    assert res[0]["filepath"] == "conf.d/sub/app.conf"
+    assert res[0]["file"] == "conf.d/sub/app.conf"
 
 
 def test_edge_main_invalid_child_valid(detector):
@@ -520,7 +520,7 @@ def test_edge_main_invalid_child_valid(detector):
     }
     res = detector.scan(out)
     assert len(res) == 1
-    assert res[0]["filepath"] == "nginx.conf"
+    assert res[0]["file"] == "nginx.conf"
 
 
 def test_edge_ignore_third_party(detector):
