@@ -148,6 +148,12 @@ class Remediate242(BaseRemedy):
                     
                     # Create the default server block structure
                     default_server_block = self._build_default_server_block(server_name)
+
+                    # Avoid duplicate default server blocks by updating in place when one exists.
+                    existing_default_idx = self._find_default_server_index(target_list)
+                    if existing_default_idx >= 0:
+                        target_list[existing_default_idx] = copy.deepcopy(default_server_block)
+                        continue
                     
                     # Insert at position 0 if strict_placement enabled and position_hint == 0
                     if self.strict_placement and position_hint == 0:
@@ -201,6 +207,42 @@ class Remediate242(BaseRemedy):
             "args": [],
             "block": block_directives
         }
+
+    @staticmethod
+    def _is_default_server_block(server_node: dict) -> bool:
+        """Detect whether a server block already acts as default/catch-all."""
+        if not isinstance(server_node, dict) or server_node.get("directive") != "server":
+            return False
+
+        block = server_node.get("block")
+        if not isinstance(block, list):
+            return False
+
+        for item in block:
+            if not isinstance(item, dict):
+                continue
+            directive = item.get("directive")
+            args = item.get("args") if isinstance(item.get("args"), list) else []
+
+            if directive == "server_name" and args == ["_"]:
+                return True
+
+            if directive == "listen" and "default_server" in args:
+                return True
+
+        return False
+
+    @staticmethod
+    def _find_default_server_index(parent_block_list: list) -> int:
+        """Return index of an existing default/catch-all server block, or -1."""
+        if not isinstance(parent_block_list, list):
+            return -1
+
+        for idx, item in enumerate(parent_block_list):
+            if Remediate242._is_default_server_block(item):
+                return idx
+
+        return -1
 
     @staticmethod
     def _upsert_in_block(block_list, directive, args):
