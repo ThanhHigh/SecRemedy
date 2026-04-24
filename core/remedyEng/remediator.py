@@ -15,6 +15,7 @@ from core.remedyEng.recommendations.remediate_242 import Remediate242
 from core.remedyEng.recommendations.remediate_251 import Remediate251
 from core.remedyEng.recommendations.remediate_252 import Remediate252
 from core.remedyEng.recommendations.remediate_253 import Remediate253
+from core.remedyEng.recommendations.remediate_254 import Remediate254
 from core.remedyEng.recommendations.remediate_32 import Remediate32
 from core.remedyEng.recommendations.remediate_34 import Remediate34
 from core.remedyEng.recommendations.remediate_411 import Remediate411
@@ -44,6 +45,7 @@ class Remediator:
         RecomID.CIS_2_5_1: Remediate251,
         RecomID.CIS_2_5_2: Remediate252,
         RecomID.CIS_2_5_3: Remediate253,
+        RecomID.CIS_2_5_4: Remediate254,
         RecomID.CIS_3_2: Remediate32,
         RecomID.CIS_3_4: Remediate34,
         RecomID.CIS_4_1_1: Remediate411,
