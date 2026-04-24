@@ -143,12 +143,6 @@ class BaseRemedy:
         """
         # Override in child classes
         
-        
-        
-
-    def interact_with_user(self) -> None:
-        """Prompt user for any required variables before remediation."""
-        pass
 
     # ==================== Foundation Validation Helpers ====================
 
@@ -328,69 +322,3 @@ class BaseRemedy:
             "mode": mode,
             "diff_text": diff_text,
         }
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # @abstractmethod
-    # def impact_warning(self, config_json: Any) -> bool:
-    #     """Return True when this rule is violated."""
-
-    # @abstractmethod
-    # def remediate(self, config_json: Any) -> Any:
-    #     """Return a remediated config JSON for this rule."""
-
-    # @abstractmethod
-    # def interact_with_user(self) -> None:
-    #     """Prompt user for any required variables before remediation."""
-
-    # def snapshot(self, before_state: Any, after_state: Any) -> None:
-    #     """Store deep-copied snapshots for safe dry-run and diff generation."""
-    #     self._before_state = copy.deepcopy(before_state)
-    #     self._after_state = copy.deepcopy(after_state)
-
-    # def get_diff(self) -> str:
-    #     """Generate a unified diff between pre- and post-remediation states."""
-    #     if self._before_state is None or self._after_state is None:
-    #         return ""
-
-    #     before_json = json.dumps(self._before_state, indent=2, ensure_ascii=False, sort_keys=True)
-    #     after_json = json.dumps(self._after_state, indent=2, ensure_ascii=False, sort_keys=True)
-
-    #     if before_json == after_json:
-    #         return ""
-
-    #     diff_lines = difflib.unified_diff(
-    #         before_json.splitlines(),
-    #         after_json.splitlines(),
-    #         fromfile=f"before_{self.id}",
-    #         tofile=f"after_{self.id}",
-    #         lineterm="",
-    #     )
-    #     return "\n".join(diff_lines)

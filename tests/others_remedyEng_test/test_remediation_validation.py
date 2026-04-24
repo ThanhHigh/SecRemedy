@@ -1,5 +1,7 @@
+from core.remedyEng.ast_editor import ASTEditor
 from core.remedyEng.recommendations.remediate_242 import Remediate242
 from core.remedyEng.recommendations.remediate_252 import Remediate252
+from core.remedyEng.recommendations.remediate_251 import Remediate251
 from core.remedyEng.recommendations.remediate_411 import Remediate411
 
 
@@ -205,5 +207,146 @@ def test_rule_242_places_default_server_in_http_not_root_when_context_is_root():
     root_directives = [node.get("directive") for node in parsed if isinstance(node, dict)]
     assert root_directives == ["http"]
 
+    http_block = _find_first_block(parsed, "http")
+    assert any(item.get("directive") == "server" for item in http_block if isinstance(item, dict))
+
+
+def test_ast_editor_normalizes_new_scan_result_payload():
+    file_path = "/etc/nginx/nginx.conf"
+    exact_path = ["config", 0, "parsed", 5, "block", 2]
+    scan_result = {
+        "recommendations": [
+            {
+                "id": "2.5.1",
+                "uncompliances": [
+                    {
+                        "file": file_path,
+                        "remediations": [
+                            {
+                                "action": "replace",
+                                "directive": "server_tokens",
+                                "value": "off",
+                                "logical_context": ["http"],
+                                "exact_path": exact_path,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+
+    result = ASTEditor.to_context_scan(scan_result, "CIS_2_5_1")
+
+    assert file_path in result
+    remediation = result[file_path][0]
+    assert remediation["context"] == exact_path
+    assert remediation["exact_path"] == exact_path
+    assert remediation["logical_context"] == "http"
+    assert remediation["args"] == ["off"]
+
+
+def test_rule_251_uses_normalized_value_only_payload():
+    remedy = Remediate251()
+    file_path = "/etc/nginx/nginx.conf"
+
+    scan_result = {
+        "recommendations": [
+            {
+                "id": "2.5.1",
+                "uncompliances": [
+                    {
+                        "file": file_path,
+                        "remediations": [
+                            {
+                                "action": "replace",
+                                "directive": "server_tokens",
+                                "value": "off",
+                                "logical_context": ["http"],
+                                "exact_path": ["config", 0, "parsed", 0, "block", 0],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+
+    remedy.read_child_scan_result(scan_result)
+    remedy.child_ast_config = {
+        file_path: {
+            "parsed": [
+                {
+                    "directive": "http",
+                    "args": [],
+                    "block": [
+                        {
+                            "directive": "server_tokens",
+                            "args": ["on"],
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+
+    remedy.remediate()
+
+    parsed = remedy.child_ast_modified[file_path]["parsed"]
+    http_block = _find_first_block(parsed, "http")
+    assert any(
+        item.get("directive") == "server_tokens" and item.get("args") == ["off"]
+        for item in http_block
+        if isinstance(item, dict)
+    )
+
+
+def test_rule_242_uses_new_add_block_payload():
+    remedy = Remediate242()
+    remedy.user_inputs = ["_"]
+    file_path = "/etc/nginx/nginx.conf"
+
+    scan_result = {
+        "recommendations": [
+            {
+                "id": "2.4.2",
+                "uncompliances": [
+                    {
+                        "file": file_path,
+                        "remediations": [
+                            {
+                                "action": "add",
+                                "directive": "server",
+                                "block": [
+                                    {"directive": "listen", "args": ["80", "default_server"]},
+                                    {"directive": "server_name", "args": ["_"]},
+                                    {"directive": "return", "args": ["444"]},
+                                ],
+                                "logical_context": ["http"],
+                                "exact_path": ["config", 0, "parsed", 5, "block", 12],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+
+    remedy.read_child_scan_result(scan_result)
+    remedy.child_ast_config = {
+        file_path: {
+            "parsed": [
+                {
+                    "directive": "http",
+                    "args": [],
+                    "block": [],
+                }
+            ]
+        }
+    }
+
+    remedy.remediate()
+
+    parsed = remedy.child_ast_modified[file_path]["parsed"]
     http_block = _find_first_block(parsed, "http")
     assert any(item.get("directive") == "server" for item in http_block if isinstance(item, dict))

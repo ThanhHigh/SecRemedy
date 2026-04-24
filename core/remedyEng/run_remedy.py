@@ -2,13 +2,141 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
+# Allow direct script execution: `python core/remedyEng/run_remedy.py`
+if __package__ in (None, ""):
+    project_root = Path(__file__).resolve().parents[2]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
 from core.remedyEng.ast_editor import ASTEditor
 from core.remedyEng.remediator import Remediator
 from core.remedyEng.terminal_ui import TerminalUI
+
+
+VALIDATION_SUCCESS = "SUCCESS"
+VALIDATION_FAIL_SYNTAX = "FAIL_SYNTAX"
+VALIDATION_PASS_WITH_WARNINGS = "PASS_WITH_WARNINGS"
+VALIDATION_FAIL_UNKNOWN = "FAIL_UNKNOWN"
+
+
+def _split_nonempty_lines(raw_output: str) -> List[str]:
+    if not raw_output:
+        return []
+    return [line.strip() for line in raw_output.splitlines() if line.strip()]
+
+
+def _classify_nginx_messages(raw_output: str) -> Dict[str, List[str]]:
+    syntax_patterns = [
+        r"unknown directive",
+        r"invalid number of arguments",
+        r"unexpected",
+        r"directive is not allowed here",
+        r"invalid parameter",
+        r"invalid value",
+        r"invalid port",
+        r"duplicate",
+        r"no \"events\" section in configuration",
+        r"\bsyntax\b.*\berror\b",
+    ]
+
+    environment_patterns = [
+        r"cannot open file",
+        r"no such file or directory",
+        r"permission denied",
+        r"ssl_certificate",
+        r"ssl_certificate_key",
+        r"pem_read_bio",
+        r"bio_new_file",
+        r"cannot load certificate",
+        r"cannot load certificate key",
+        r"getpwnam",
+        r"getgrnam",
+        r"open\(\)",
+        r"mkdir\(\)",
+        r"chown\(\)",
+        r"setrlimit",
+        r"failed \(2: no such file or directory\)",
+    ]
+
+    syntax_errors: List[str] = []
+    environment_errors: List[str] = []
+    unknown_errors: List[str] = []
+
+    for line in _split_nonempty_lines(raw_output):
+        normalized = line.lower()
+
+        if "syntax is ok" in normalized or "test is successful" in normalized:
+            continue
+        if "configuration file" in normalized and "test failed" in normalized:
+            continue
+
+        if any(re.search(pattern, normalized) for pattern in syntax_patterns):
+            syntax_errors.append(line)
+            continue
+
+        if any(re.search(pattern, normalized) for pattern in environment_patterns):
+            environment_errors.append(line)
+            continue
+
+        if "[emerg]" in normalized or "nginx:" in normalized:
+            unknown_errors.append(line)
+
+    return {
+        "syntax_errors": syntax_errors,
+        "environment_errors": environment_errors,
+        "unknown_errors": unknown_errors,
+    }
+
+
+def _build_environment_guidance(environment_errors: List[str]) -> List[str]:
+    if not environment_errors:
+        return []
+
+    guidance: List[str] = []
+    merged = "\n".join(environment_errors).lower()
+
+    if (
+        "ssl_certificate" in merged
+        or "ssl_certificate_key" in merged
+        or "cannot load certificate" in merged
+        or "pem_read_bio" in merged
+        or "bio_new_file" in merged
+    ):
+        guidance.append(
+            "Verify SSL certificate and key paths exist on target server, files are readable by nginx user, and key/cert pair is valid."
+        )
+
+    if "permission denied" in merged or "chown()" in merged:
+        guidance.append(
+            "Fix filesystem permissions/ownership so nginx worker user can read included files and referenced resources."
+        )
+
+    if "cannot open file" in merged or "no such file or directory" in merged or "open()" in merged:
+        guidance.append(
+            "Check all referenced include/cert/log/path entries exist on the target host and paths are correct for that environment."
+        )
+
+    if "getpwnam" in merged or "getgrnam" in merged:
+        guidance.append(
+            "Ensure configured nginx user/group exists on the target server, or update user directive to a valid account."
+        )
+
+    if "mkdir()" in merged or "setrlimit" in merged:
+        guidance.append(
+            "Create required runtime directories (pid/log/temp) and apply proper limits/privileges in the target runtime environment."
+        )
+
+    if not guidance:
+        guidance.append(
+            "Resolve environment-specific nginx runtime dependencies directly on target server, then rerun dry-run validation."
+        )
+
+    return guidance
 
 
 def _normalize_path(path: str) -> str:
@@ -100,13 +228,44 @@ def _write_combined_config(ast_config: Dict[str, Any], output_path: Path) -> Non
     output_path.write_text(combined_text, encoding="utf-8")
 
 
-def _run_nginx_dry_test(generated_config: Path) -> tuple[bool, List[str], str]:
+def _run_nginx_dry_test(generated_config: Path) -> Dict[str, Any]:
     cmd = ["nginx", "-t", "-c", str(generated_config)]
     process = subprocess.run(cmd, capture_output=True, text=True, check=False)
     raw_output = "\n".join([process.stdout or "", process.stderr or ""]).strip()
     error_paths = _extract_error_paths(raw_output)
-    is_ok = process.returncode == 0
-    return is_ok, error_paths, raw_output
+
+    if process.returncode == 0:
+        return {
+            "status": VALIDATION_SUCCESS,
+            "error_paths": error_paths,
+            "raw_output": raw_output,
+            "syntax_errors": [],
+            "environment_errors": [],
+            "unknown_errors": [],
+            "environment_guidance": [],
+        }
+
+    classified = _classify_nginx_messages(raw_output)
+    syntax_errors = classified["syntax_errors"]
+    environment_errors = classified["environment_errors"]
+    unknown_errors = classified["unknown_errors"]
+
+    if syntax_errors:
+        status = VALIDATION_FAIL_SYNTAX
+    elif environment_errors and not unknown_errors:
+        status = VALIDATION_PASS_WITH_WARNINGS
+    else:
+        status = VALIDATION_FAIL_UNKNOWN
+
+    return {
+        "status": status,
+        "error_paths": error_paths,
+        "raw_output": raw_output,
+        "syntax_errors": syntax_errors,
+        "environment_errors": environment_errors,
+        "unknown_errors": unknown_errors,
+        "environment_guidance": _build_environment_guidance(environment_errors),
+    }
 
 
 def _find_candidate_remedies(applied_history: List[dict], error_paths: List[str]) -> List[str]:
@@ -183,12 +342,33 @@ if __name__ == "__main__":
         _persist_ast_output(remediator.ast_config, output_path)
         _write_combined_config(remediator.ast_config, generated_path)
 
-        is_ok, error_paths, raw_error = _run_nginx_dry_test(generated_path)
-        if is_ok:
+        validation_result = _run_nginx_dry_test(generated_path)
+        status = validation_result["status"]
+        error_paths = validation_result["error_paths"]
+        raw_error = validation_result["raw_output"]
+
+        if status == VALIDATION_SUCCESS:
             ui.display_validation_ok(str(generated_path))
             break
 
-        ui.display_validation_errors(error_paths=error_paths, raw_error=raw_error)
+        if status == VALIDATION_PASS_WITH_WARNINGS:
+            ui.display_validation_pass_with_warnings(
+                config_path=str(generated_path),
+                error_paths=error_paths,
+                environment_errors=validation_result["environment_errors"],
+                environment_guidance=validation_result["environment_guidance"],
+                raw_error=raw_error,
+            )
+            break
+
+        ui.display_validation_errors(
+            error_paths=error_paths,
+            raw_error=raw_error,
+            status=status,
+            syntax_errors=validation_result["syntax_errors"],
+            environment_errors=validation_result["environment_errors"],
+            unknown_errors=validation_result["unknown_errors"],
+        )
         candidate_ids = _find_candidate_remedies(remediator.applied_history, error_paths)
 
         action = ui.ask_post_error_action()

@@ -46,6 +46,15 @@ class ASTEditor:
     @staticmethod
     def _extract_logical_context(remediation: Dict[str, Any]) -> str:
         """Extract logical context hint (e.g. http/server) if available."""
+        logical_context = remediation.get("logical_context")
+        if isinstance(logical_context, str):
+            return logical_context.strip().lower()
+
+        if isinstance(logical_context, list) and logical_context:
+            first = logical_context[0]
+            if isinstance(first, str):
+                return first.strip().lower()
+
         context = remediation.get("context")
         if isinstance(context, str):
             return context.strip().lower()
@@ -129,6 +138,7 @@ class ASTEditor:
         normalized: Dict[str, Any] = {
             "action": action,
             "context": context_path,
+            "exact_path": context_path,
             "directive": directive,
         }
 
@@ -146,6 +156,9 @@ class ASTEditor:
 
         if "config" in remediation:
             normalized["config"] = remediation.get("config")
+
+        if action == "add" and directive in {"server", "location"} and isinstance(remediation.get("block"), list):
+            normalized["action"] = "add_block"
 
         if directive == "error_page" and "args" not in normalized:
             parsed_args = ASTEditor._split_value_as_args(remediation.get("value"))

@@ -193,23 +193,83 @@ class TerminalUI:
 
     def display_validation_ok(self, config_path: str) -> None:
         """Display successful nginx syntax check."""
-        print(f"Syntax check PASSED: {config_path}")
+        print(f"Syntax dry-run PASSED: {config_path}")
 
     def display_validation_warning(self, message: str) -> None:
         """Display warning in validation/replay flow."""
         print(f"[WARNING] {message}")
 
-    def display_validation_errors(self, error_paths: List[str], raw_error: str) -> None:
-        """Display parsed failing paths and concise raw error output."""
+    def display_validation_pass_with_warnings(
+        self,
+        config_path: str,
+        error_paths: List[str],
+        environment_errors: List[str],
+        environment_guidance: List[str],
+        raw_error: str,
+    ) -> None:
+        """Display result when syntax is acceptable but environment dependencies fail."""
+        print("\n" + "~" * 60)
+        print("Syntax dry-run PASSED with environment warnings".center(60))
+        print("~" * 60)
+        print(f"Generated config: {config_path}")
+        if error_paths:
+            print("Environment-related paths:")
+            for path in error_paths:
+                print(f"- {path}")
+
+        if environment_errors:
+            print("Detected environment issues:")
+            for message in environment_errors:
+                print(f"- {message}")
+
+        if environment_guidance:
+            print("Suggested manual fixes on target server:")
+            for hint in environment_guidance:
+                print(f"- {hint}")
+
+        if raw_error:
+            print("-" * 60)
+            print(raw_error.strip())
+        print("~" * 60)
+
+    def display_validation_errors(
+        self,
+        error_paths: List[str],
+        raw_error: str,
+        status: str,
+        syntax_errors: List[str],
+        environment_errors: List[str],
+        unknown_errors: List[str],
+    ) -> None:
+        """Display categorized validation failures and concise raw output."""
         print("\n" + "!" * 60)
-        print("Syntax check FAILED".center(60))
+        if status == "FAIL_SYNTAX":
+            print("Syntax check FAILED (remediation-related)".center(60))
+        else:
+            print("Syntax check FAILED (unknown cause)".center(60))
         print("!" * 60)
         if error_paths:
-            print("Wrong paths detected:")
+            print("Referenced paths:")
             for path in error_paths:
                 print(f"- {path}")
         else:
-            print("Wrong paths detected: (none extracted)")
+            print("Referenced paths: (none extracted)")
+
+        if syntax_errors:
+            print("Likely remediation syntax issues:")
+            for message in syntax_errors:
+                print(f"- {message}")
+
+        if environment_errors:
+            print("Environment-related messages (informational):")
+            for message in environment_errors:
+                print(f"- {message}")
+
+        if unknown_errors:
+            print("Unclassified error messages:")
+            for message in unknown_errors:
+                print(f"- {message}")
+
         print("-" * 60)
         if raw_error:
             print(raw_error.strip())
