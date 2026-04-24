@@ -17,18 +17,31 @@ class Remediate34(BaseRemedy):
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
 
+    # Valid upstream protocols for nginx proxy_pass (CIS 3.4)
+    _VALID_PROXY_PROTOCOLS = {"http://", "https://", "grpc://", "grpcs://"}
+
     def _validate_user_inputs(self) -> tuple[bool, str]:
         """
         Validate user inputs for proxy configuration (optional).
-        
+
+        Accepts: http://, https://, grpc://, grpcs://, unix:
+        Rejects: ftp://, no-protocol strings, whitespace-only.
+
         Returns:
             (is_valid: bool, error_message: str)
         """
         if len(self.user_inputs) > 0 and self.user_inputs[0].strip():
             proxy_pass = self.user_inputs[0].strip()
-            # Basic validation
-            if not ("://" in proxy_pass or proxy_pass.startswith("unix:")):
-                return (False, f"proxy_pass format invalid: {proxy_pass}. Use format: http://backend or https://backend:port")
+            # Must start with a valid nginx upstream protocol
+            if proxy_pass.startswith("unix:"):
+                return (True, "")
+            if any(proxy_pass.startswith(proto) for proto in self._VALID_PROXY_PROTOCOLS):
+                return (True, "")
+            return (
+                False,
+                f"proxy_pass format invalid: '{proxy_pass}'. "
+                "Use http://, https://, grpc://, grpcs://, or unix:"
+            )
         return (True, "")
     
     def get_user_guidance(self) -> str:
