@@ -72,8 +72,14 @@ class Remediate253(BaseRemedy):
         # Validate server_name if provided (optional)
         if len(self.user_inputs) > 1:
             server_name = self.user_inputs[1].strip()
-            if server_name and not server_name.replace("_", "").replace(".", "").replace("*", "").isalnum():
-                return (False, f"server_name '{server_name}' contains invalid characters")
+            if server_name:
+                # Reject if it contains whitespace
+                if any(c.isspace() for c in server_name):
+                    return (False, f"server_name '{server_name}' contains invalid characters")
+                # After stripping nginx-safe non-alnum chars (_.*), remainder must be alnum or empty
+                remainder = server_name.replace("_", "").replace(".", "").replace("*", "")
+                if remainder and not remainder.isalnum():
+                    return (False, f"server_name '{server_name}' contains invalid characters")
         
         return (True, "")
 
