@@ -204,3 +204,11 @@ python -m core.remedyEng.run_remedy
 ```
 
 > **Lưu ý:** Đảm bảo các container Docker đang chạy trước khi thực hiện bước 1. Tài khoản SSH cần đủ quyền đọc `/etc/nginx`.
+
+## Chạy Unit Tests
+
+Chạy các unit tests độc lập cho remedyEng (không cần Docker/SSH):
+
+```bash
+python -m pytest tests/unit/remedyEng -q
+```
