@@ -1,0 +1,30 @@
+services:
+  nginx_one_to_five:
+    build: .
+    container_name: nginx_one_to_five
+    ports:
+      - "8081:80"
+      - "8443:443"
+      - "2221:22" # Port SSH của máy Five Errors là 2221
+    volumes:
+      - ./vps-one-to-five:/etc/nginx:ro
+
+  nginx_six_to_then:
+    build: .
+    container_name: nginx_six_to_then
+    ports:
+      - "8082:80"
+      - "8444:443"
+      - "2222:22" # Port SSH của máy No Error là 2222
+    volumes:
+      - ./vps-six-to-then:/etc/nginx:ro
+
+  nginx_zero_comply:
+    build: .
+    container_name: nginx_zero_comply
+    ports:
+      - "8080:80"
+      - "8440:443"
+      - "2223:22" # Port SSH của máy Zero Comply là 2223
+    volumes:
+      - ./zero-comply:/etc/nginx:ro

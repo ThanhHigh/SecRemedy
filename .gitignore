@@ -2,4 +2,11 @@ venv/
 .venv/
 __pycache__/
 *.db
-
+tmp/
+backups/
+notes/
+core/remedyEng/archive/
+core/remedyEng/plan/
+.github
+.coverage
+PROJECT_ANALYSIS.md

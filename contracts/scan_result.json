@@ -1,29 +1,223 @@
 {
   "scan_id": 1,
-  "server_ip": "192.168.1.100",
-  "compliance_score": 60,
-  "created_at": "2026-03-08T11:04:56Z",
-  "status": "failed",
-  "failed_rules": [
+  "server_ip": "0.0.0.0",
+  "compliance_score": 83,
+  "created_at": "2026-04-23T01:14:35Z",
+  "recommendations": [
     {
-      "rule_id": "CIS_2.1.3",
-      "rule_name": "Ensure server_tokens directive is set to off",
-      "severity": "High",
-      "target_context": ["http"],
-      "recommended_directive": {
-        "directive": "server_tokens",
-        "args": ["off"]
-      }
+      "id": "2.4.1",
+      "title": "Đảm bảo NGINX chỉ lắng nghe kết nối mạng trên các cổng được ủy quyền",
+      "description": "NGINX chỉ nên được cấu hình để lắng nghe trên các cổng và giao thức được ủy quyền. Việc này giúp giảm thiểu bề mặt tấn công và kiểm soát chặt chẽ các giao thức có thể truy cập.",
+      "impact": "Giảm rủi ro truy cập trái phép. Lưu ý: vô hiệu hóa UDP 443 sẽ làm hỏng HTTP/3, buộc client lùi về HTTP/2 hoặc HTTP/1.1 (TCP).",
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "delete",
+              "directive": "listen",
+              "logical_context": ["server"],
+              "exact_path": ["config", 2, "parsed", 1, "block", 1]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
+          "remediations": [
+            {
+              "action": "delete",
+              "directive": "listen",
+              "logical_context": ["server"],
+              "exact_path": ["config", 5, "parsed", 1, "block", 1]
+            }
+          ]
+        }
+      ]
     },
     {
-      "rule_id": "CIS_5.1.3",
-      "rule_name": "Ensure X-Frame-Options header is configured",
-      "severity": "Medium",
-      "target_context": ["http", "server"],
-      "recommended_directive": {
-        "directive": "add_header",
-        "args": ["X-Frame-Options", "SAMEORIGIN", "always"]
-      }
+      "id": "2.4.2",
+      "title": "Đảm bảo các yêu cầu đến tên máy chủ không xác định bị từ chối",
+      "description": "NGINX định tuyến yêu cầu dựa trên Host header. Nếu không có block server mặc định (catch-all) để từ chối các host không xác định, máy chủ sẽ phản hồi cho các tên miền bất kỳ trỏ tới IP của bạn, dẫn đến nguy cơ rò rỉ ứng dụng nội bộ hoặc tấn công Host Header.",
+      "impact": "Các client truy cập trực tiếp bằng địa chỉ IP hoặc qua CNAME chưa cấu hình sẽ bị từ chối. Cần đảm bảo tất cả tên miền hợp lệ đều được định nghĩa rõ trong các block server riêng.",
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/nginx.conf",
+          "remediations": [
+            {
+              "action": "replace",
+              "directive": "server",
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": ["80", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["[::]:80", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["443", "ssl", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["[::]:443", "ssl", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["443", "quic", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["[::]:443", "quic", "default_server"]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": ["on"]
+                },
+                {
+                  "directive": "server_name",
+                  "args": ["_"]
+                },
+                {
+                  "directive": "return",
+                  "args": ["444"]
+                }
+              ],
+              "logical_context": ["http"],
+              "exact_path": ["config", 0, "parsed", 5, "block", 10]
+            },
+            {
+              "action": "add",
+              "directive": "server",
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": ["80", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["[::]:80", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["443", "ssl", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["[::]:443", "ssl", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["443", "quic", "default_server"]
+                },
+                {
+                  "directive": "listen",
+                  "args": ["[::]:443", "quic", "default_server"]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": ["on"]
+                },
+                {
+                  "directive": "server_name",
+                  "args": ["_"]
+                },
+                {
+                  "directive": "return",
+                  "args": ["444"]
+                }
+              ],
+              "logical_context": ["http"],
+              "exact_path": ["config", 0, "parsed", 5, "block", 12]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2.5.1",
+      "title": "Đảm bảo chỉ thị server_tokens được đặt thành 'off'",
+      "description": "Chỉ thị server_tokens hiển thị số phiên bản NGINX và hệ điều hành trên trang lỗi và HTTP header. Việc hiển thị thông tin này giúp kẻ tấn công dễ dàng dò quét và nhắm mục tiêu vào các lỗ hổng đã biết.",
+      "impact": "Không ảnh hưởng chức năng. Ẩn thông tin phiên bản làm chậm kẻ tấn công và hạn chế các rủi ro từ việc quét lỗ hổng tự động.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "2.5.2",
+      "title": "Đảm bảo các trang lỗi mặc định và trang index.html không tham chiếu đến NGINX",
+      "description": "Các trang lỗi (VD: 404, 500) và trang chào mừng mặc định thường chứa dấu hiệu của NGINX. Cần thay thế bằng các trang tùy chỉnh để không tiết lộ phần mềm máy chủ, giúp ngăn kẻ tấn công nhận dạng công nghệ.",
+      "impact": "Cần thêm thời gian quản trị để tạo và bảo trì trang lỗi. Đảm bảo các trang này đơn giản và không tạo ra lỗ hổng mới.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "2.5.3",
+      "title": "Đảm bảo vô hiệu hóa việc phục vụ các file ẩn",
+      "description": "Các file và thư mục ẩn (bắt đầu bằng dấu chấm, VD: .git, .env) thường chứa thông tin nhạy cảm, mã nguồn hoặc cấu hình môi trường. Việc phục vụ các file này cần được vô hiệu hóa để tránh rò rỉ dữ liệu.",
+      "impact": "Chặn tất cả file ẩn sẽ làm hỏng xác thực Let's Encrypt/Certbot. Đảm bảo quy tắc ngoại lệ cho '.well-known/acme-challenge' được đặt trước quy tắc từ chối.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "2.5.4",
+      "title": "Đảm bảo NGINX reverse proxy không tiết lộ thông tin backend",
+      "description": "Khi NGINX đóng vai trò reverse proxy, nó có thể chuyển tiếp các header từ ứng dụng backend (VD: X-Powered-By, Server). Cần loại bỏ các header này trước khi phản hồi cho client để tránh rò rỉ thông tin về công nghệ và phiên bản backend.",
+      "impact": "Hạn chế cung cấp thông tin do thám cho kẻ tấn công. Không ảnh hưởng đến chức năng ứng dụng.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "3.2",
+      "title": "Đảm bảo tính năng ghi log truy cập (access_log) được bật",
+      "description": "Chỉ thị access_log cho phép ghi nhận các yêu cầu từ client, cung cấp lịch sử sử dụng hệ thống chi tiết phục vụ điều tra sự cố và kiểm toán. Nếu tắt (access_log off;), hệ thống sẽ mù trước các cuộc tấn công web như SQL injection hay Brute Force.",
+      "impact": "Ghi log chi tiết sẽ tốn dung lượng ổ đĩa. Cần cấu hình xoay vòng log (logrotate) và giám sát dung lượng để tránh tình trạng đầy ổ đĩa dẫn đến sập máy chủ.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "3.4",
+      "title": "Đảm bảo các proxy chuyển tiếp thông tin IP nguồn",
+      "description": "Khi NGINX hoạt động như một reverse proxy hoặc load balancer, mặc định máy chủ upstream chỉ thấy địa chỉ IP nội bộ của NGINX. Cần cấu hình các HTTP header như X-Forwarded-For và X-Real-IP để chuyển tiếp địa chỉ IP thực của client đến ứng dụng backend.",
+      "impact": "Cho phép ứng dụng backend ghi log và kiểm soát truy cập dựa trên IP thực của client. Cần cấu hình backend tin tưởng đúng IP của proxy NGINX để tránh bị giả mạo header từ phía client.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "4.1.1",
+      "title": "Đảm bảo HTTP được chuyển hướng sang HTTPS",
+      "description": "Các yêu cầu HTTP không được mã hóa. Cần chuyển hướng tất cả lưu lượng truy cập từ cổng HTTP (mặc định là 80) sang HTTPS để đảm bảo toàn bộ dữ liệu người dùng được mã hóa và an toàn.",
+      "impact": "Có thể gây giảm nhẹ hiệu suất do quá trình bắt tay TLS/SSL, nhưng là chi phí cần thiết để đảm bảo bảo mật và độ tin cậy của dịch vụ.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "5.1.1",
+      "title": "Đảm bảo các bộ lọc allow và deny giới hạn truy cập từ các địa chỉ IP cụ thể",
+      "description": "Kiểm soát truy cập dựa trên địa chỉ IP là cơ chế bảo mật chuyên sâu cơ bản. Bằng cách sử dụng các chỉ thị allow và deny, quyền truy cập vào các block server hoặc location cụ thể có thể được giới hạn ở các mạng đáng tin cậy, đặc biệt hiệu quả để bảo vệ giao diện quản trị nội bộ.",
+      "impact": "Cấu hình sai có thể chặn người dùng hợp lệ. Môi trường động thay đổi IP thường xuyên cần quản lý danh sách truy cập cẩn thận.",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "5.3.1",
+      "title": "Đảm bảo header X-Content-Type-Options được cấu hình và kích hoạt",
+      "description": "Header X-Content-Type-Options chỉ thị cho trình duyệt không tự đoán (sniff) kiểu MIME của file, giúp ngăn chặn các cuộc tấn công nhầm lẫn kiểu MIME (MIME type confusion).",
+      "impact": "Có thể làm hỏng các ứng dụng cũ nếu khai báo sai Content-Type (ví dụ: trả về script dưới dạng text/plain).",
+      "status": "pass",
+      "uncompliances": []
+    },
+    {
+      "id": "5.3.2",
+      "title": "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý (Thủ công)",
+      "description": "Content Security Policy (CSP) là HTTP header cho phép định nghĩa nguồn tài nguyên được duyệt. Giúp ngăn chặn tấn công XSS và tiêm dữ liệu. Chỉ thị frame-ancestors giúp chống Clickjacking.",
+      "impact": "Cấu hình CSP sai sẽ chặn tài nguyên hợp lệ và làm hỏng ứng dụng. Nên dùng chế độ Content-Security-Policy-Report-Only trước khi áp dụng thật.",
+      "status": "pass",
+      "uncompliances": []
     }
   ]
 }
