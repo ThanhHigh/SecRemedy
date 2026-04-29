@@ -5,8 +5,7 @@ Scanner Engine — Module chính của Member 1.
 → tổng hợp kết quả → ghi ra file scan_result.json theo JSON Contract.
 
 Usage (CLI):
-    python -m core.scannerEng.scanner \
-        --ssh-port 2221
+    python -m core.scannerEng.scanner --config config.json
 
 Usage (Import):
     from core.scannerEng.scanner import Scanner
@@ -211,84 +210,52 @@ def main():
         description="SecRemedy Scanner Engine — CIS Benchmark Assessment",
     )
     parser.add_argument(
-        "--input", "-i",
-        help="Path to crossplane parser output JSON file (defaults to contracts/parser_output_<port>.json).",
+        "--config", "-c",
+        default="scanner-config.json",
+        help="Path to configuration file (defaults to config.json).",
     )
-    parser.add_argument(
-        "--output", "-o",
-        help="Path to write the scan result JSON file (defaults to contracts/scan_result_<port>.json).",
-    )
-    parser.add_argument(
-        "--server-ip",
-        default="0.0.0.0",
-        help="IP address of the target Nginx server (metadata only).",
-    )
-    parser.add_argument(
-        "--ssh-port", "--port",
-        type=int,
-        help="SSH port of the target server.",
-    )
-    parser.add_argument(
-        "-a", "--all-ports",
-        action="store_true",
-        help="Quét trên tất cả các port định nghĩa trong docker-compose.yml",
-    )
-    parser.add_argument(
-        "--ssh-user", "--user",
-        default="root",
-        help="SSH username for the target server.",
-    )
-    parser.add_argument(
-        "--ssh-pass",
-        default=None,
-        help="SSH password (optional).",
-    )
-    parser.add_argument(
-        "--ssh-key",
-        default=None,
-        help="Path to SSH private key (optional).",
-    )
-    parser.add_argument(
-        "--strict-private",
-        action="store_true",
-        help="Force Detector 5.1.1 to check for allow/deny at server block level.",
-    )
-
     args = parser.parse_args()
 
-    if args.all_ports:
-        target_ports = []
-        try:
-            import re
-            with open("tests/integration/docker-compose.yml", "r") as f:
-                content = f.read()
-                matches = re.findall(r'"(\d+):22"', content)
-                target_ports = [int(m) for m in matches]
-        except Exception as e:
-            print(f"[-] Lỗi đọc docker-compose.yml: {e}")
-            exit(1)
-        if not target_ports:
-             print("[-] Không tìm thấy port SSH nào trong docker-compose.yml")
-             exit(1)
-    elif args.ssh_port:
-        target_ports = [args.ssh_port]
-    else:
-        parser.error("Bạn phải cung cấp --ssh-port/--port hoặc dùng cờ -a/--all-ports.")
+    config_path = Path(args.config)
+    if not config_path.exists():
+        print(f"[-] Lỗi: Không tìm thấy file cấu hình {args.config}")
+        exit(1)
 
-    for current_port in target_ports:
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config_data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[-] Lỗi cú pháp JSON trong file {args.config}: {e}")
+        exit(1)
+
+    servers = config_data.get("servers", [])
+    if not servers:
+        print(f"[-] Không có server nào được định nghĩa trong {args.config}")
+        exit(1)
+
+    for server in servers:
+        current_port = server.get("port")
+        if not current_port:
+            print("[-] Bỏ qua server thiếu cấu hình 'port'")
+            continue
+
         print(f"\n==========================================")
-        print(f"[*] BẮT ĐẦU SCAN PORT {current_port}")
+        print(
+            f"[*] BẮT ĐẦU SCAN PORT {current_port} (IP: {server.get('ip', '0.0.0.0')})")
         print(f"==========================================")
-        input_path = args.input if (args.input and not args.all_ports) else f"contracts/parser_output_{current_port}.json"
-        output_path = args.output if (args.output and not args.all_ports) else f"contracts/scan_result_{current_port}.json"
+
+        input_path = server.get(
+            "input_path", f"contracts/parser_output_{current_port}.json")
+        output_path = server.get(
+            "output_path", f"contracts/scan_result_{current_port}.json")
 
         scanner = Scanner(
-            server_ip=args.server_ip,
+            server_ip=server.get("ip", "0.0.0.0"),
             ssh_port=current_port,
-            ssh_user=args.ssh_user,
-            ssh_pass=args.ssh_pass,
-            ssh_key=args.ssh_key,
-            strict_private=args.strict_private,
+            ssh_user=server.get("user", "root"),
+            ssh_pass=server.get("pass"),
+            ssh_key=server.get("key"),
+            strict_private=server.get("strict_private", False),
         )
 
         try:
@@ -307,11 +274,14 @@ def main():
                 status_icon = "✅" if r["status"] == "pass" else "❌"
                 print(f"  {status_icon} {r['id']} - {r['title']}")
 
-            print(f"\n[Scanner] 📊 Compliance Score: {result['compliance_score']}%")
-            print(f"[Scanner] 📋 Total: {total} | ✅ Pass: {passed} | ❌ Fail: {failed}")
+            print(
+                f"\n[Scanner] 📊 Compliance Score: {result['compliance_score']}%")
+            print(
+                f"[Scanner] 📋 Total: {total} | ✅ Pass: {passed} | ❌ Fail: {failed}")
         except FileNotFoundError as e:
             print(f"[LỖI] {e}")
-            print(f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/parser.py -P {current_port}' trước.")
+            print(
+                f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/parser.py -P {current_port}' trước.")
         except Exception as e:
             print(f"[LỖI HỆ THỐNG] {e}")
 
