@@ -24,6 +24,7 @@ class BaseRemedy:
 
     has_input: bool = False
     remedy_input_require: List[str] = []
+    remedy_input_defaults: List[Any] = []
     user_inputs: List[Any] = []
 
     child_scan_result: Any = {} #File-grouped remediations: {file_path: [remediations]}
@@ -236,6 +237,35 @@ class BaseRemedy:
             If is_valid=False, error_message describes the validation error
         """
         return (True, "")
+
+    def get_default_user_inputs(self) -> List[Any]:
+        """Return per-field defaults used when user leaves input blank."""
+        defaults = getattr(self, "remedy_input_defaults", [])
+        if not isinstance(defaults, list):
+            return []
+        return copy.deepcopy(defaults)
+
+    def resolve_user_inputs(self) -> List[Any]:
+        """Fill blank user inputs from per-remedy defaults."""
+        resolved = list(self.user_inputs) if isinstance(self.user_inputs, list) else []
+        defaults = self.get_default_user_inputs()
+
+        if len(resolved) < len(defaults):
+            resolved.extend([""] * (len(defaults) - len(resolved)))
+
+        for index, default_value in enumerate(defaults):
+            if index >= len(resolved):
+                break
+
+            current_value = resolved[index]
+            if isinstance(current_value, str):
+                current_value = current_value.strip()
+
+            if current_value == "" and default_value not in (None, ""):
+                resolved[index] = copy.deepcopy(default_value)
+
+        self.user_inputs = resolved
+        return resolved
 
     def _validate_ast_mutation(self, before_ast: Any, after_ast: Any) -> tuple[bool, List[str]]:
         """

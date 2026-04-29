@@ -322,6 +322,9 @@ class TerminalUI:
                 user_input = input().strip()
                 remedy.user_inputs.append(user_input)
 
+            if hasattr(remedy, "resolve_user_inputs"):
+                remedy.resolve_user_inputs()
+
             is_valid, error_msg = remedy._validate_user_inputs()
             if is_valid:
                 debug_print(f"{remedy.id}: Validated user inputs: {remedy.user_inputs}")

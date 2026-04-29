@@ -10,6 +10,11 @@ REMEDY_INPUT_REQUIRE = [
     "error_page_50x", 
     "location_50x_root",
 ]
+REMEDY_INPUT_DEFAULTS = [
+    "/404.html",
+    "/50x.html",
+    "/var/www/html/errors",
+]
 
 
 class Remediate252(BaseRemedy):
@@ -19,10 +24,13 @@ class Remediate252(BaseRemedy):
         self.has_guide_detail = True
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
+        self.remedy_input_defaults = REMEDY_INPUT_DEFAULTS
 
     def remediate(self) -> None:
         """Apply remediation for Rule 2.5.2 by adding/updating custom error_page directives."""
         self.child_ast_modified = {}
+
+        self.resolve_user_inputs()
         
         # Validate user inputs first
         is_valid, error_msg = self._validate_user_inputs()

@@ -214,7 +214,7 @@ def test_15_root_50x_alternate_path_valid(remedy):
 
 
 def test_16_empty_root_50x_valid_no_location_block(remedy):
-    """16. root_50x rỗng → valid, chỉ tạo error_page, không tạo location block."""
+    """16. root_50x rỗng → fallback default root nên location block vẫn có."""
     remedy.user_inputs = ["", "/50x.html", ""]
     ok, msg = remedy._validate_user_inputs()
     assert ok is True
@@ -223,8 +223,12 @@ def test_16_empty_root_50x_valid_no_location_block(remedy):
          {FILE: [_add_remediation(ARGS_50X, CTX_ROOT)]},
          {FILE: _simple_ast()})
 
+    http_block = remedy.child_ast_modified[FILE]["parsed"][0]["block"]
+    ep_args = [n["args"] for n in http_block if n["directive"] == "error_page"]
+    assert ["500", "502", "503", "504", "/50x.html"] in ep_args
+
     server_block = remedy.child_ast_modified[FILE]["parsed"][0]["block"][0]["block"]
-    assert not any(n["directive"] == "location" for n in server_block)
+    assert any(n["directive"] == "location" for n in server_block)
 
 
 def test_17_root_50x_no_leading_slash_rejected(remedy):
@@ -336,6 +340,49 @@ def test_25_creates_new_location_50x(remedy):
     loc_nodes = [n for n in server_block if n["directive"] == "location"]
     assert len(loc_nodes) == 1
     assert loc_nodes[0]["args"] == ["=", "/50x.html"]
+
+
+def test_26_blank_inputs_fall_back_to_guide_defaults(remedy):
+    """26. Enter-only input → dùng guide defaults của 2.5.2."""
+    _run(remedy, ["", "", ""],
+         {FILE: [
+             _add_remediation(ARGS_404, CTX_ROOT),
+             _add_remediation(ARGS_50X, CTX_ROOT),
+         ]},
+         {FILE: _simple_ast()})
+
+    http_block = remedy.child_ast_modified[FILE]["parsed"][0]["block"]
+    ep_args = [n["args"] for n in http_block if n["directive"] == "error_page"]
+    assert ["404", "/404.html"] in ep_args
+    assert ["500", "502", "503", "504", "/50x.html"] in ep_args
+
+    server_block = remedy.child_ast_modified[FILE]["parsed"][0]["block"][0]["block"]
+    location_nodes = [n for n in server_block if n["directive"] == "location"]
+    assert location_nodes
+    loc_block = location_nodes[0]["block"]
+    assert any(n["directive"] == "root" and n["args"] == ["/var/www/html/errors"] for n in loc_block)
+    assert any(n["directive"] == "internal" for n in loc_block)
+
+
+def test_27_blank_root_keeps_explicit_error_pages(remedy):
+    """27. Root rỗng → cũng lấy guide default và vẫn tạo location block."""
+    _run(remedy, ["/custom_404.html", "/custom_50x.html", ""],
+         {FILE: [
+             _add_remediation(ARGS_404, CTX_ROOT),
+             _add_remediation(ARGS_50X, CTX_ROOT),
+         ]},
+         {FILE: _simple_ast()})
+
+    http_block = remedy.child_ast_modified[FILE]["parsed"][0]["block"]
+    ep_args = [n["args"] for n in http_block if n["directive"] == "error_page"]
+    assert ["404", "/custom_404.html"] in ep_args
+    assert ["500", "502", "503", "504", "/custom_50x.html"] in ep_args
+
+    server_block = remedy.child_ast_modified[FILE]["parsed"][0]["block"][0]["block"]
+    location_nodes = [n for n in server_block if n["directive"] == "location"]
+    assert location_nodes
+    loc_block = location_nodes[0]["block"]
+    assert any(n["directive"] == "root" and n["args"] == ["/var/www/html/errors"] for n in loc_block)
 
 
 def test_26_location_50x_has_correct_root(remedy):
@@ -529,13 +576,16 @@ def test_38_only_50x_valid_creates_only_50x_error_page(remedy):
 
 
 def test_39_no_location_block_when_root_50x_empty(remedy):
-    """39. Không chèn location 50x nếu root_50x rỗng."""
+    """39. root_50x rỗng → location dùng default guide root."""
     _run(remedy, ["", "/50x.html", ""],
          {FILE: [_add_remediation(ARGS_50X, CTX_ROOT)]},
          {FILE: _simple_ast()})
 
     server_block = remedy.child_ast_modified[FILE]["parsed"][0]["block"][0]["block"]
-    assert not any(n["directive"] == "location" for n in server_block)
+    location_nodes = [n for n in server_block if n["directive"] == "location"]
+    assert location_nodes
+    loc_block = location_nodes[0]["block"]
+    assert any(n["directive"] == "root" and n["args"] == ["/var/www/html/errors"] for n in loc_block)
 
 
 def test_40_diff_shows_added_error_page_without_breaking_structure(remedy):
