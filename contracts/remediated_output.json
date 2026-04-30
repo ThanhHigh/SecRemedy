@@ -11,7 +11,7 @@
           "directive": "user",
           "line": 1,
           "args": [
-            "www-data"
+            "nginx"
           ]
         },
         {
@@ -23,27 +23,27 @@
         },
         {
           "directive": "error_log",
-          "line": 5,
+          "line": 3,
           "args": [
             "/var/log/nginx/error.log",
-            "error"
+            "warn"
           ]
         },
         {
           "directive": "pid",
-          "line": 6,
+          "line": 4,
           "args": [
             "/var/run/nginx.pid"
           ]
         },
         {
           "directive": "events",
-          "line": 8,
+          "line": 6,
           "args": [],
           "block": [
             {
               "directive": "worker_connections",
-              "line": 9,
+              "line": 7,
               "args": [
                 "1024"
               ]
@@ -52,12 +52,12 @@
         },
         {
           "directive": "http",
-          "line": 12,
+          "line": 10,
           "args": [],
           "block": [
             {
               "directive": "include",
-              "line": 13,
+              "line": 11,
               "args": [
                 "mime.types"
               ],
@@ -67,198 +67,71 @@
             },
             {
               "directive": "default_type",
-              "line": 14,
+              "line": 12,
               "args": [
                 "application/octet-stream"
               ]
             },
             {
               "directive": "server_tokens",
-              "line": 17,
+              "line": 15,
               "args": [
                 "off"
+              ]
+            },
+            {
+              "directive": "log_format",
+              "line": 18,
+              "args": [
+                "main",
+                "$remote_addr - $remote_user [$time_local] \"$request\" ",
+                "$status $body_bytes_sent \"$http_referer\" ",
+                "\"$http_user_agent\" \"$http_x_forwarded_for\""
               ]
             },
             {
               "directive": "access_log",
-              "line": 21,
-              "args": [
-                "off"
-              ]
-            },
-            {
-              "directive": "sendfile",
               "line": 23,
               "args": [
-                "on"
+                "/var/log/nginx/access.log",
+                "main"
               ]
             },
             {
-              "directive": "tcp_nopush",
-              "line": 24,
-              "args": [
-                "on"
-              ]
-            },
-            {
-              "directive": "tcp_nodelay",
-              "line": 25,
-              "args": [
-                "on"
-              ]
-            },
-            {
-              "directive": "keepalive_timeout",
+              "directive": "proxy_hide_header",
               "line": 26,
               "args": [
-                "65"
+                "X-Powered-By"
               ]
             },
             {
-              "directive": "types_hash_max_size",
+              "directive": "proxy_hide_header",
               "line": 27,
               "args": [
-                "2048"
+                "Server"
               ]
             },
             {
-              "directive": "server",
+              "directive": "add_header",
               "line": 30,
-              "args": [],
-              "block": [
-                {
-                  "directive": "listen",
-                  "line": 31,
-                  "args": [
-                    "80",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "line": 33,
-                  "args": [
-                    "443",
-                    "ssl",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "server_name",
-                  "line": 34,
-                  "args": [
-                    "_"
-                  ]
-                },
-                {
-                  "directive": "ssl_certificate",
-                  "line": 35,
-                  "args": [
-                    "/etc/ssl/mock_certs/nginx.crt"
-                  ]
-                },
-                {
-                  "directive": "ssl_certificate_key",
-                  "line": 36,
-                  "args": [
-                    "/etc/ssl/mock_certs/nginx.key"
-                  ]
-                },
-                {
-                  "directive": "ssl_reject_handshake",
-                  "line": 37,
-                  "args": [
-                    "on"
-                  ]
-                },
-                {
-                  "directive": "error_page",
-                  "line": 40,
-                  "args": [
-                    "404",
-                    "/404.html"
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "line": 41,
-                  "args": [
-                    "=",
-                    "/404.html"
-                  ],
-                  "block": [
-                    {
-                      "directive": "root",
-                      "line": 42,
-                      "args": [
-                        "/usr/share/nginx/html"
-                      ]
-                    },
-                    {
-                      "directive": "internal",
-                      "line": 43,
-                      "args": []
-                    }
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "line": 47,
-                  "args": [
-                    "~",
-                    "/\\."
-                  ],
-                  "block": [
-                    {
-                      "directive": "deny",
-                      "line": 48,
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "directive": "return",
-                  "line": 51,
-                  "args": [
-                    "444"
-                  ]
-                },
-                {
-                  "directive": "error_page",
-                  "args": [
-                    "500",
-                    "502",
-                    "503",
-                    "504",
-                    "/50x.html"
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "args": [
-                    "=",
-                    "/50x.html"
-                  ],
-                  "block": [
-                    {
-                      "directive": "root",
-                      "args": [
-                        "/var/www/html"
-                      ]
-                    },
-                    {
-                      "directive": "internal",
-                      "args": []
-                    }
-                  ]
-                }
+              "args": [
+                "X-Content-Type-Options",
+                "nosniff",
+                "always"
+              ]
+            },
+            {
+              "directive": "add_header",
+              "line": 33,
+              "args": [
+                "Content-Security-Policy",
+                "default-src 'self'; frame-ancestors 'self'; form-action 'self';",
+                "always"
               ]
             },
             {
               "directive": "include",
-              "line": 54,
+              "line": 35,
               "args": [
                 "conf.d/*.conf"
               ],
@@ -267,6 +140,141 @@
                 3,
                 4,
                 5
+              ]
+            },
+            {
+              "directive": "server",
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "args": [
+                    "_"
+                  ]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": [
+                    "on"
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "args": [
+                    "444"
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "location",
+                      "args": [
+                        "^~",
+                        "/.well-known/acme-challenge/"
+                      ],
+                      "block": [
+                        {
+                          "directive": "allow",
+                          "args": [
+                            "all"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "directive": "location",
+                      "args": [
+                        "~",
+                        "/\\."
+                      ],
+                      "block": [
+                        {
+                          "directive": "deny",
+                          "args": [
+                            "all"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "directive": "root",
+                      "args": [
+                        "/var/www/html/"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    },
+                    {
+                      "directive": "access_log",
+                      "args": [
+                        "on"
+                      ]
+                    }
+                  ]
+                }
               ]
             }
           ]
@@ -838,7 +846,7 @@
       ]
     },
     {
-      "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
+      "file": "/etc/nginx/conf.d/fail1.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -848,38 +856,100 @@
           "args": [],
           "block": [
             {
-              "directive": "listen",
-              "line": 3,
-              "args": [
-                "80"
-              ]
-            },
-            {
               "directive": "server_name",
-              "line": 4,
+              "line": 7,
               "args": [
-                "admin.emarket.me"
+                "_"
               ]
             },
             {
-              "directive": "root",
+              "directive": "return",
               "line": 8,
               "args": [
-                "/var/www/emarket/admin/public"
+                "200",
+                "OK"
               ]
             },
             {
-              "directive": "index",
-              "line": 9,
+              "directive": "server_tokens",
+              "line": 11,
               "args": [
-                "index.php",
-                "index.html",
-                "index.htm"
+                "on"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 13,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html/"
+                  ]
+                }
               ]
             },
             {
               "directive": "error_page",
-              "line": 12,
+              "args": [
+                "404",
+                "/404.html"
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "=",
+                "/50x.html"
+              ],
+              "block": [
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html/errors"
+                  ]
+                },
+                {
+                  "directive": "internal",
+                  "args": []
+                }
+              ]
+            },
+            {
+              "directive": "error_page",
               "args": [
                 "500",
                 "502",
@@ -890,77 +960,23 @@
             },
             {
               "directive": "location",
-              "line": 13,
-              "args": [
-                "=",
-                "/50x.html"
-              ],
-              "block": [
-                {
-                  "directive": "root",
-                  "line": 14,
-                  "args": [
-                    "/var/www/html"
-                  ]
-                },
-                {
-                  "directive": "internal",
-                  "args": []
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 18,
               "args": [
                 "~",
-                "/\\."
+                "/\\.well-known/acme-challenge/"
               ],
               "block": [
                 {
-                  "directive": "deny",
-                  "line": 19,
+                  "directive": "allow",
                   "args": [
                     "all"
                   ]
                 },
                 {
                   "directive": "access_log",
-                  "line": 20,
                   "args": [
-                    "off"
-                  ]
-                },
-                {
-                  "directive": "log_not_found",
-                  "line": 21,
-                  "args": [
-                    "off"
+                    "on"
                   ]
                 }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 24,
-              "args": [
-                "/"
-              ],
-              "block": [
-                {
-                  "directive": "proxy_pass",
-                  "line": 26,
-                  "args": [
-                    "http://127.0.0.1:8000"
-                  ]
-                }
-              ]
-            },
-            {
-              "directive": "error_page",
-              "args": [
-                "404",
-                "/404.html"
               ]
             }
           ]
@@ -968,7 +984,7 @@
       ]
     },
     {
-      "file": "/etc/nginx/conf.d/customer.emarket.me.conf",
+      "file": "/etc/nginx/conf.d/fail2.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -979,54 +995,44 @@
           "block": [
             {
               "directive": "listen",
+              "line": 2,
+              "args": [
+                "443",
+                "ssl"
+              ]
+            },
+            {
+              "directive": "ssl_certificate",
               "line": 3,
               "args": [
-                "80"
+                "/etc/ssl/mock_certs/nginx.crt"
+              ]
+            },
+            {
+              "directive": "ssl_certificate_key",
+              "line": 4,
+              "args": [
+                "/etc/ssl/mock_certs/nginx.key"
               ]
             },
             {
               "directive": "server_name",
-              "line": 4,
+              "line": 5,
               "args": [
-                "customer.emarket.me"
-              ]
-            },
-            {
-              "directive": "error_page",
-              "line": 9,
-              "args": [
-                "404",
-                "/404.html"
+                "fail2.example.com"
               ]
             },
             {
               "directive": "location",
-              "line": 10,
-              "args": [
-                "=",
-                "/404.html"
-              ],
-              "block": [
-                {
-                  "directive": "root",
-                  "line": 11,
-                  "args": [
-                    "/var/www/error_pages"
-                  ]
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 15,
+              "line": 11,
               "args": [
                 "~",
                 "/\\."
               ],
               "block": [
                 {
-                  "directive": "deny",
-                  "line": 16,
+                  "directive": "allow",
+                  "line": 12,
                   "args": [
                     "all"
                   ]
@@ -1035,17 +1041,83 @@
             },
             {
               "directive": "location",
-              "line": 19,
+              "line": 15,
               "args": [
-                "/"
+                "/proxy"
               ],
               "block": [
                 {
-                  "directive": "proxy_pass",
-                  "line": 21,
+                  "directive": "proxy_pass_header",
+                  "line": 17,
                   "args": [
-                    "http://127.0.0.1:8002"
+                    "X-Powered-By"
                   ]
+                },
+                {
+                  "directive": "proxy_pass_header",
+                  "line": 18,
+                  "args": [
+                    "Server"
+                  ]
+                },
+                {
+                  "directive": "proxy_pass",
+                  "line": 19,
+                  "args": [
+                    "http://127.0.0.1:8080"
+                  ]
+                },
+                {
+                  "directive": "proxy_hide_header",
+                  "args": [
+                    "X-Powered-By"
+                  ]
+                },
+                {
+                  "directive": "proxy_hide_header",
+                  "args": [
+                    "Server"
+                  ]
+                },
+                {
+                  "directive": "proxy_set_header",
+                  "args": [
+                    "X-Forwarded-For",
+                    "$proxy_add_x_forwarded_for"
+                  ]
+                },
+                {
+                  "directive": "proxy_set_header",
+                  "args": [
+                    "X-Real-IP",
+                    "$remote_addr"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/404.html"
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "=",
+                "/50x.html"
+              ],
+              "block": [
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html/errors"
+                  ]
+                },
+                {
+                  "directive": "internal",
+                  "args": []
                 }
               ]
             },
@@ -1058,32 +1130,13 @@
                 "504",
                 "/50x.html"
               ]
-            },
-            {
-              "directive": "location",
-              "args": [
-                "=",
-                "/50x.html"
-              ],
-              "block": [
-                {
-                  "directive": "root",
-                  "args": [
-                    "/var/www/html"
-                  ]
-                },
-                {
-                  "directive": "internal",
-                  "args": []
-                }
-              ]
             }
           ]
         }
       ]
     },
     {
-      "file": "/etc/nginx/conf.d/emarket.me.conf",
+      "file": "/etc/nginx/conf.d/fail3.conf",
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -1103,211 +1156,54 @@
               "directive": "server_name",
               "line": 4,
               "args": [
-                "emarket.me",
-                "www.emarket.me"
+                "fail3.example.com"
               ]
             },
             {
-              "directive": "root",
-              "line": 8,
+              "directive": "access_log",
+              "line": 7,
               "args": [
-                "/var/www/emarket/spa/dist"
+                "off"
               ]
             },
             {
-              "directive": "index",
+              "directive": "location",
               "line": 9,
-              "args": [
-                "index.html"
-              ]
-            },
-            {
-              "directive": "error_page",
-              "line": 12,
-              "args": [
-                "404",
-                "/custom_404.html"
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 13,
-              "args": [
-                "=",
-                "/custom_404.html"
-              ],
-              "block": [
-                {
-                  "directive": "root",
-                  "line": 14,
-                  "args": [
-                    "/var/www/error_pages"
-                  ]
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 18,
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "line": 19,
-                  "args": [
-                    "all"
-                  ]
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 22,
-              "args": [
-                "/"
-              ],
-              "block": [
-                {
-                  "directive": "try_files",
-                  "line": 23,
-                  "args": [
-                    "$uri",
-                    "$uri/",
-                    "/index.html"
-                  ]
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 26,
               "args": [
                 "/api"
               ],
               "block": [
                 {
                   "directive": "proxy_pass",
-                  "line": 28,
+                  "line": 11,
                   "args": [
-                    "http://127.0.0.1:8000"
-                  ]
-                }
-              ]
-            },
-            {
-              "directive": "error_page",
-              "args": [
-                "500",
-                "502",
-                "503",
-                "504",
-                "/50x.html"
-              ]
-            },
-            {
-              "directive": "location",
-              "args": [
-                "=",
-                "/50x.html"
-              ],
-              "block": [
-                {
-                  "directive": "root",
-                  "args": [
-                    "/var/www/html"
+                    "http://127.0.0.1:8081"
                   ]
                 },
                 {
-                  "directive": "internal",
-                  "args": []
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "file": "/etc/nginx/conf.d/vendor.emarket.me.conf",
-      "status": "ok",
-      "errors": [],
-      "parsed": [
-        {
-          "directive": "server",
-          "line": 1,
-          "args": [],
-          "block": [
-            {
-              "directive": "listen",
-              "line": 3,
-              "args": [
-                "80"
-              ]
-            },
-            {
-              "directive": "server_name",
-              "line": 4,
-              "args": [
-                "vendor.emarket.me"
-              ]
-            },
-            {
-              "directive": "error_page",
-              "line": 9,
-              "args": [
-                "403",
-                "/403.html"
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 10,
-              "args": [
-                "=",
-                "/403.html"
-              ],
-              "block": [
-                {
-                  "directive": "root",
-                  "line": 11,
+                  "directive": "proxy_hide_header",
                   "args": [
-                    "/var/www/error_pages"
+                    "X-Powered-By"
                   ]
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 15,
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "block": [
+                },
                 {
-                  "directive": "deny",
-                  "line": 16,
+                  "directive": "proxy_hide_header",
                   "args": [
-                    "all"
+                    "Server"
                   ]
-                }
-              ]
-            },
-            {
-              "directive": "location",
-              "line": 19,
-              "args": [
-                "/"
-              ],
-              "block": [
+                },
                 {
-                  "directive": "proxy_pass",
-                  "line": 21,
+                  "directive": "proxy_set_header",
                   "args": [
-                    "http://127.0.0.1:8001"
+                    "X-Forwarded-For",
+                    "$proxy_add_x_forwarded_for"
+                  ]
+                },
+                {
+                  "directive": "proxy_set_header",
+                  "args": [
+                    "X-Real-IP",
+                    "$remote_addr"
                   ]
                 }
               ]
@@ -1329,7 +1225,7 @@
                 {
                   "directive": "root",
                   "args": [
-                    "/var/www/html"
+                    "/var/www/html/errors"
                   ]
                 },
                 {
@@ -1346,6 +1242,254 @@
                 "503",
                 "504",
                 "/50x.html"
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html/"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "return",
+              "args": [
+                "301",
+                "https://$host$request_uri"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/conf.d/fail4.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 2,
+              "args": [
+                "443",
+                "ssl"
+              ]
+            },
+            {
+              "directive": "ssl_certificate",
+              "line": 3,
+              "args": [
+                "/etc/ssl/mock_certs/nginx.crt"
+              ]
+            },
+            {
+              "directive": "ssl_certificate_key",
+              "line": 4,
+              "args": [
+                "/etc/ssl/mock_certs/nginx.key"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 5,
+              "args": [
+                "fail4.example.com"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 7,
+              "args": [
+                "/admin"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "line": 9,
+                  "args": [
+                    "all"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "add_header",
+              "line": 13,
+              "args": [
+                "X-Content-Type-Options",
+                ""
+              ]
+            },
+            {
+              "directive": "add_header",
+              "line": 16,
+              "args": [
+                "Content-Security-Policy",
+                ""
+              ]
+            },
+            {
+              "directive": "error_page",
+              "args": [
+                "404",
+                "/404.html"
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "=",
+                "/50x.html"
+              ],
+              "block": [
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html/errors"
+                  ]
+                },
+                {
+                  "directive": "internal",
+                  "args": []
+                }
+              ]
+            },
+            {
+              "directive": "error_page",
+              "args": [
+                "500",
+                "502",
+                "503",
+                "504",
+                "/50x.html"
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "location",
+                  "args": [
+                    "^~",
+                    "/.well-known/acme-challenge/"
+                  ],
+                  "block": [
+                    {
+                      "directive": "allow",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "location",
+                  "args": [
+                    "~",
+                    "/\\."
+                  ],
+                  "block": [
+                    {
+                      "directive": "deny",
+                      "args": [
+                        "all"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "directive": "root",
+                  "args": [
+                    "/var/www/html/"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\.well-known/acme-challenge/"
+              ],
+              "block": [
+                {
+                  "directive": "allow",
+                  "args": [
+                    "all"
+                  ]
+                },
+                {
+                  "directive": "access_log",
+                  "args": [
+                    "on"
+                  ]
+                }
               ]
             }
           ]

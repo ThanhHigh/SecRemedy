@@ -1,0 +1,885 @@
+{
+  "status": "failed",
+  "errors": [
+    {
+      "file": "./tmp/nginx_raw_2224/nginx.conf",
+      "error": "[Errno 2] No such file or directory: './tmp/nginx_raw_2224/mime.types'",
+      "line": 27
+    },
+    {
+      "file": "./tmp/nginx_raw_2224/nginxconfig.io/php_fastcgi.conf",
+      "error": "[Errno 2] No such file or directory: './tmp/nginx_raw_2224/fastcgi_params'",
+      "line": 5
+    }
+  ],
+  "config": [
+    {
+      "file": "/etc/nginx/nginx.conf",
+      "status": "failed",
+      "errors": [
+        {
+          "error": "[Errno 2] No such file or directory: './tmp/nginx_raw_2224/mime.types'",
+          "line": 27
+        }
+      ],
+      "parsed": [
+        {
+          "directive": "user",
+          "line": 4,
+          "args": [
+            "www-data"
+          ]
+        },
+        {
+          "directive": "pid",
+          "line": 5,
+          "args": [
+            "/run/nginx.pid"
+          ]
+        },
+        {
+          "directive": "worker_processes",
+          "line": 6,
+          "args": [
+            "auto"
+          ]
+        },
+        {
+          "directive": "worker_rlimit_nofile",
+          "line": 7,
+          "args": [
+            "65535"
+          ]
+        },
+        {
+          "directive": "include",
+          "line": 10,
+          "args": [
+            "modules-enabled/*.conf"
+          ],
+          "includes": []
+        },
+        {
+          "directive": "events",
+          "line": 12,
+          "args": [],
+          "block": [
+            {
+              "directive": "multi_accept",
+              "line": 13,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "worker_connections",
+              "line": 14,
+              "args": [
+                "65535"
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "http",
+          "line": 17,
+          "args": [],
+          "block": [
+            {
+              "directive": "charset",
+              "line": 18,
+              "args": [
+                "utf-8"
+              ]
+            },
+            {
+              "directive": "sendfile",
+              "line": 19,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "tcp_nopush",
+              "line": 20,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "tcp_nodelay",
+              "line": 21,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "types_hash_max_size",
+              "line": 22,
+              "args": [
+                "2048"
+              ]
+            },
+            {
+              "directive": "types_hash_bucket_size",
+              "line": 23,
+              "args": [
+                "64"
+              ]
+            },
+            {
+              "directive": "client_max_body_size",
+              "line": 24,
+              "args": [
+                "16M"
+              ]
+            },
+            {
+              "directive": "include",
+              "line": 27,
+              "args": [
+                "mime.types"
+              ],
+              "includes": []
+            },
+            {
+              "directive": "default_type",
+              "line": 28,
+              "args": [
+                "application/octet-stream"
+              ]
+            },
+            {
+              "directive": "log_format",
+              "line": 31,
+              "args": [
+                "cloudflare",
+                "$remote_addr - $remote_user [$time_local] \"$request\" $status $body_bytes_sent \"$http_referer\" \"$http_user_agent\" $http_cf_ray $http_cf_connecting_ip $http_x_forwarded_for $http_x_forwarded_proto $http_true_client_ip $http_cf_ipcountry $http_cf_visitor $http_cdn_loop"
+              ]
+            },
+            {
+              "directive": "access_log",
+              "line": 34,
+              "args": [
+                "off"
+              ]
+            },
+            {
+              "directive": "error_log",
+              "line": 35,
+              "args": [
+                "/var/log/nginx/error.log",
+                "warn"
+              ]
+            },
+            {
+              "directive": "limit_req_log_level",
+              "line": 38,
+              "args": [
+                "warn"
+              ]
+            },
+            {
+              "directive": "limit_req_zone",
+              "line": 39,
+              "args": [
+                "$binary_remote_addr",
+                "zone=login:10m",
+                "rate=10r/m"
+              ]
+            },
+            {
+              "directive": "ssl_session_timeout",
+              "line": 42,
+              "args": [
+                "1d"
+              ]
+            },
+            {
+              "directive": "ssl_session_cache",
+              "line": 43,
+              "args": [
+                "shared:SSL:10m"
+              ]
+            },
+            {
+              "directive": "ssl_session_tickets",
+              "line": 44,
+              "args": [
+                "off"
+              ]
+            },
+            {
+              "directive": "ssl_dhparam",
+              "line": 47,
+              "args": [
+                "/etc/nginx/dhparam.pem"
+              ]
+            },
+            {
+              "directive": "ssl_protocols",
+              "line": 50,
+              "args": [
+                "TLSv1.2",
+                "TLSv1.3"
+              ]
+            },
+            {
+              "directive": "ssl_ciphers",
+              "line": 51,
+              "args": [
+                "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
+              ]
+            },
+            {
+              "directive": "ssl_stapling",
+              "line": 54,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "ssl_stapling_verify",
+              "line": 55,
+              "args": [
+                "on"
+              ]
+            },
+            {
+              "directive": "resolver",
+              "line": 56,
+              "args": [
+                "1.1.1.1",
+                "1.0.0.1",
+                "8.8.8.8",
+                "8.8.4.4",
+                "208.67.222.222",
+                "208.67.220.220",
+                "valid=60s"
+              ]
+            },
+            {
+              "directive": "resolver_timeout",
+              "line": 57,
+              "args": [
+                "2s"
+              ]
+            },
+            {
+              "directive": "include",
+              "line": 60,
+              "args": [
+                "conf.d/*.conf"
+              ],
+              "includes": []
+            },
+            {
+              "directive": "include",
+              "line": 61,
+              "args": [
+                "sites-enabled/*"
+              ],
+              "includes": [
+                1
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/thanhexample1.com.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "server",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 2,
+              "args": [
+                "443",
+                "ssl",
+                "http2"
+              ]
+            },
+            {
+              "directive": "listen",
+              "line": 3,
+              "args": [
+                "[::]:443",
+                "ssl",
+                "http2"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 4,
+              "args": [
+                "thanhexample1.com"
+              ]
+            },
+            {
+              "directive": "set",
+              "line": 5,
+              "args": [
+                "$base",
+                "/var/www/thanhexample1.com"
+              ]
+            },
+            {
+              "directive": "root",
+              "line": 6,
+              "args": [
+                "$base/public"
+              ]
+            },
+            {
+              "directive": "ssl_certificate",
+              "line": 9,
+              "args": [
+                "/etc/letsencrypt/live/thanhexample1.com/fullchain.pem"
+              ]
+            },
+            {
+              "directive": "ssl_certificate_key",
+              "line": 10,
+              "args": [
+                "/etc/letsencrypt/live/thanhexample1.com/privkey.pem"
+              ]
+            },
+            {
+              "directive": "ssl_trusted_certificate",
+              "line": 11,
+              "args": [
+                "/etc/letsencrypt/live/thanhexample1.com/chain.pem"
+              ]
+            },
+            {
+              "directive": "include",
+              "line": 14,
+              "args": [
+                "nginxconfig.io/security.conf"
+              ],
+              "includes": [
+                2
+              ]
+            },
+            {
+              "directive": "access_log",
+              "line": 17,
+              "args": [
+                "/var/log/nginx/access.log",
+                "cloudflare",
+                "buffer=512k",
+                "flush=1m"
+              ]
+            },
+            {
+              "directive": "error_log",
+              "line": 18,
+              "args": [
+                "/var/log/nginx/error.log",
+                "warn"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 21,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "try_files",
+                  "line": 22,
+                  "args": [
+                    "$uri",
+                    "$uri/",
+                    "/index.html"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 26,
+              "args": [
+                "~",
+                "^/api/"
+              ],
+              "block": [
+                {
+                  "directive": "try_files",
+                  "line": 27,
+                  "args": [
+                    "$uri",
+                    "$uri/",
+                    "/index.php?$query_string"
+                  ]
+                }
+              ]
+            },
+            {
+              "directive": "include",
+              "line": 31,
+              "args": [
+                "nginxconfig.io/general.conf"
+              ],
+              "includes": [
+                3
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 34,
+              "args": [
+                "~",
+                "\\.php$"
+              ],
+              "block": [
+                {
+                  "directive": "fastcgi_pass",
+                  "line": 35,
+                  "args": [
+                    "unix:/var/run/php/php-fpm.sock"
+                  ]
+                },
+                {
+                  "directive": "include",
+                  "line": 36,
+                  "args": [
+                    "nginxconfig.io/php_fastcgi.conf"
+                  ],
+                  "includes": [
+                    4
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "server",
+          "line": 41,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 42,
+              "args": [
+                "443",
+                "ssl",
+                "http2"
+              ]
+            },
+            {
+              "directive": "listen",
+              "line": 43,
+              "args": [
+                "[::]:443",
+                "ssl",
+                "http2"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 44,
+              "args": [
+                "*.thanhexample1.com"
+              ]
+            },
+            {
+              "directive": "ssl_certificate",
+              "line": 47,
+              "args": [
+                "/etc/letsencrypt/live/thanhexample1.com/fullchain.pem"
+              ]
+            },
+            {
+              "directive": "ssl_certificate_key",
+              "line": 48,
+              "args": [
+                "/etc/letsencrypt/live/thanhexample1.com/privkey.pem"
+              ]
+            },
+            {
+              "directive": "ssl_trusted_certificate",
+              "line": 49,
+              "args": [
+                "/etc/letsencrypt/live/thanhexample1.com/chain.pem"
+              ]
+            },
+            {
+              "directive": "return",
+              "line": 50,
+              "args": [
+                "301",
+                "https://thanhexample1.com$request_uri"
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "server",
+          "line": 54,
+          "args": [],
+          "block": [
+            {
+              "directive": "listen",
+              "line": 55,
+              "args": [
+                "80"
+              ]
+            },
+            {
+              "directive": "listen",
+              "line": 56,
+              "args": [
+                "[::]:80"
+              ]
+            },
+            {
+              "directive": "server_name",
+              "line": 57,
+              "args": [
+                ".thanhexample1.com"
+              ]
+            },
+            {
+              "directive": "include",
+              "line": 58,
+              "args": [
+                "nginxconfig.io/letsencrypt.conf"
+              ],
+              "includes": [
+                5
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 60,
+              "args": [
+                "/"
+              ],
+              "block": [
+                {
+                  "directive": "return",
+                  "line": 61,
+                  "args": [
+                    "301",
+                    "https://thanhexample1.com$request_uri"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/nginxconfig.io/security.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "add_header",
+          "line": 2,
+          "args": [
+            "X-XSS-Protection",
+            "1; mode=block",
+            "always"
+          ]
+        },
+        {
+          "directive": "add_header",
+          "line": 3,
+          "args": [
+            "X-Content-Type-Options",
+            "nosniff",
+            "always"
+          ]
+        },
+        {
+          "directive": "add_header",
+          "line": 4,
+          "args": [
+            "Referrer-Policy",
+            "no-referrer-when-downgrade",
+            "always"
+          ]
+        },
+        {
+          "directive": "add_header",
+          "line": 5,
+          "args": [
+            "Content-Security-Policy",
+            "default-src 'self' http: https: ws: wss: data: blob: 'unsafe-inline'; frame-ancestors 'self';",
+            "always"
+          ]
+        },
+        {
+          "directive": "add_header",
+          "line": 6,
+          "args": [
+            "Permissions-Policy",
+            "interest-cohort=()",
+            "always"
+          ]
+        },
+        {
+          "directive": "add_header",
+          "line": 7,
+          "args": [
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+            "always"
+          ]
+        },
+        {
+          "directive": "location",
+          "line": 10,
+          "args": [
+            "~",
+            "/\\.(?!well-known)"
+          ],
+          "block": [
+            {
+              "directive": "deny",
+              "line": 11,
+              "args": [
+                "all"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/nginxconfig.io/general.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "location",
+          "line": 2,
+          "args": [
+            "=",
+            "/favicon.ico"
+          ],
+          "block": [
+            {
+              "directive": "log_not_found",
+              "line": 3,
+              "args": [
+                "off"
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "location",
+          "line": 7,
+          "args": [
+            "=",
+            "/robots.txt"
+          ],
+          "block": [
+            {
+              "directive": "log_not_found",
+              "line": 8,
+              "args": [
+                "off"
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "location",
+          "line": 12,
+          "args": [
+            "~*",
+            "\\.(?:css(\\.map)?|js(\\.map)?|jpe?g|png|gif|ico|cur|heic|webp|tiff?|mp3|m4a|aac|ogg|midi?|wav|mp4|mov|webm|mpe?g|avi|ogv|flv|wmv)$"
+          ],
+          "block": [
+            {
+              "directive": "expires",
+              "line": 13,
+              "args": [
+                "7d"
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "location",
+          "line": 17,
+          "args": [
+            "~*",
+            "\\.(?:svgz?|ttf|ttc|otf|eot|woff2?)$"
+          ],
+          "block": [
+            {
+              "directive": "add_header",
+              "line": 18,
+              "args": [
+                "Access-Control-Allow-Origin",
+                "*"
+              ]
+            },
+            {
+              "directive": "expires",
+              "line": 19,
+              "args": [
+                "7d"
+              ]
+            }
+          ]
+        },
+        {
+          "directive": "gzip",
+          "line": 23,
+          "args": [
+            "on"
+          ]
+        },
+        {
+          "directive": "gzip_vary",
+          "line": 24,
+          "args": [
+            "on"
+          ]
+        },
+        {
+          "directive": "gzip_proxied",
+          "line": 25,
+          "args": [
+            "any"
+          ]
+        },
+        {
+          "directive": "gzip_comp_level",
+          "line": 26,
+          "args": [
+            "6"
+          ]
+        },
+        {
+          "directive": "gzip_types",
+          "line": 27,
+          "args": [
+            "text/plain",
+            "text/css",
+            "text/xml",
+            "application/json",
+            "application/javascript",
+            "application/rss+xml",
+            "application/atom+xml",
+            "image/svg+xml"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/nginxconfig.io/php_fastcgi.conf",
+      "status": "failed",
+      "errors": [
+        {
+          "error": "[Errno 2] No such file or directory: './tmp/nginx_raw_2224/fastcgi_params'",
+          "line": 5
+        }
+      ],
+      "parsed": [
+        {
+          "directive": "try_files",
+          "line": 2,
+          "args": [
+            "$fastcgi_script_name",
+            "=404"
+          ]
+        },
+        {
+          "directive": "include",
+          "line": 5,
+          "args": [
+            "fastcgi_params"
+          ],
+          "includes": []
+        },
+        {
+          "directive": "fastcgi_index",
+          "line": 8,
+          "args": [
+            "index.php"
+          ]
+        },
+        {
+          "directive": "fastcgi_buffers",
+          "line": 9,
+          "args": [
+            "8",
+            "16k"
+          ]
+        },
+        {
+          "directive": "fastcgi_buffer_size",
+          "line": 10,
+          "args": [
+            "32k"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 13,
+          "args": [
+            "DOCUMENT_ROOT",
+            "$realpath_root"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 14,
+          "args": [
+            "SCRIPT_FILENAME",
+            "$realpath_root$fastcgi_script_name"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 15,
+          "args": [
+            "PHP_ADMIN_VALUE",
+            "open_basedir=$base/:/usr/lib/php/:/tmp/"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/nginxconfig.io/letsencrypt.conf",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "location",
+          "line": 2,
+          "args": [
+            "^~",
+            "/.well-known/acme-challenge/"
+          ],
+          "block": [
+            {
+              "directive": "root",
+              "line": 3,
+              "args": [
+                "/var/www/_letsencrypt"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
