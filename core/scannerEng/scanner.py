@@ -211,7 +211,7 @@ def main():
     )
     parser.add_argument(
         "--config", "-c",
-        default="scanner-config.json",
+        default="configs.json",
         help="Path to configuration file (defaults to config.json).",
     )
     args = parser.parse_args()

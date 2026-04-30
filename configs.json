@@ -26,6 +26,15 @@
       "strict_private": false,
       "input_path": "contracts/parser_output_2223.json",
       "output_path": "contracts/scan_result_2223.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2224,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "contracts/parser_output_2224.json",
+      "output_path": "contracts/scan_result_2224.json"
     }
   ]
 }

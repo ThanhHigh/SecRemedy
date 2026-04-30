@@ -122,46 +122,40 @@ class NginxParser:
         return payload
 
 
-# --- Khối xử lý CLI Arguments ---
-if __name__ == "__main__":
-    # Khởi tạo ArgumentParser
+def main():
     parser_cli = argparse.ArgumentParser(
-        description="Nginx Configuration AST Parser (Crossplane Wrapper)")
-
-    # Thêm tham số -P hoặc --port
-    parser_cli.add_argument("-P", "--port", type=int,
-                            help="Port của Nginx Server đã được fetch (VD: 2221, 2222)")
-
-    parser_cli.add_argument("-a", "--all-ports", action="store_true",
-                            help="Phân tích trên tất cả các port định nghĩa trong docker-compose.yml")
-
-    # Thêm tham số -o hoặc --output (Tùy chọn, nếu không truyền sẽ tự sinh tên theo port)
+        description="Nginx Configuration AST Parser (Crossplane Wrapper)"
+    )
     parser_cli.add_argument(
-        "-o", "--output", help="Đường dẫn file JSON output (Tùy chọn)")
-
-    # Phân tích các tham số người dùng nhập vào
+        "--config", "-c",
+        default="configs.json",
+        help="Path to configuration file (defaults to configs.json)."
+    )
     args = parser_cli.parse_args()
 
-    if args.all_ports:
-        target_ports = []
-        try:
-            with open("tests/integration/docker-compose.yml", "r") as f:
-                content = f.read()
-                # Find all mappings to port 22, e.g., "2221:22"
-                matches = re.findall(r'"(\d+):22"', content)
-                target_ports = [int(m) for m in matches]
-        except Exception as e:
-            print(f"[-] Lỗi đọc docker-compose.yml: {e}")
-            exit(1)
-        if not target_ports:
-             print("[-] Không tìm thấy port SSH nào trong docker-compose.yml")
-             exit(1)
-    elif args.port:
-        target_ports = [args.port]
-    else:
-        parser_cli.error("Bạn phải cung cấp -P/--port hoặc dùng cờ -a/--all-ports.")
+    config_path = args.config
+    if not os.path.exists(config_path):
+        print(f"[-] Lỗi: Không tìm thấy file cấu hình {config_path}")
+        exit(1)
 
-    for current_port in target_ports:
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config_data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[-] Lỗi cú pháp JSON trong file {config_path}: {e}")
+        exit(1)
+
+    servers = config_data.get("servers", [])
+    if not servers:
+        print(f"[-] Không có server nào được định nghĩa trong {config_path}")
+        exit(1)
+
+    for server in servers:
+        current_port = server.get("port")
+        if not current_port:
+            print("[-] Bỏ qua server thiếu cấu hình 'port'")
+            continue
+
         print(f"\n==========================================")
         print(f"[*] BẮT ĐẦU PARSE PORT {current_port}")
         print(f"==========================================")
@@ -171,12 +165,13 @@ if __name__ == "__main__":
         # Kiểm tra xem thư mục đã được fetcher.py tải về chưa
         if not os.path.exists(TARGET_DIR):
             print(f"[LỖI] Không tìm thấy thư mục cấu hình: {TARGET_DIR}")
-            print(f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/fetcher.py -P {current_port}' trước để tải cấu hình về máy.")
+            print(
+                f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/fetcher.py --config {config_path}' trước để tải cấu hình về máy.")
             continue
 
-        # 2. Xác định tên file JSON đầu ra tự động dựa trên Port
-        # Nếu người dùng không truyền -o, mặc định sẽ là contracts/config_ast_<port>.json
-        output_contract_file = args.output if (args.output and not args.all_ports) else f"contracts/parser_output_{current_port}.json"
+        # 2. Xác định tên file JSON đầu ra tự động dựa trên config (đóng vai trò là input_path của scanner)
+        output_contract_file = server.get(
+            "input_path", f"contracts/parser_output_{current_port}.json")
 
         # 3. Thực thi Parser
         nginx_parser = NginxParser(base_config_path=TARGET_DIR)
@@ -191,3 +186,8 @@ if __name__ == "__main__":
 
         except Exception as e:
             print(f"[LỖI HỆ THỐNG] {e}")
+
+
+# --- Khối xử lý CLI Arguments ---
+if __name__ == "__main__":
+    main()
