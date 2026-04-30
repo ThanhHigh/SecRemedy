@@ -150,14 +150,24 @@
                   "directive": "listen",
                   "line": 44,
                   "args": [
-                    "80"
+                    "80",
+                    "default_server"
                   ]
                 },
                 {
                   "directive": "listen",
                   "line": 45,
                   "args": [
-                    "443"
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "line": 46,
+                  "args": [
+                    "_"
                   ]
                 },
                 {
