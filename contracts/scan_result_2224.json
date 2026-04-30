@@ -1,56 +1,16 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 0,
-<<<<<<< HEAD
-  "created_at": "2026-04-30T09:41:25Z",
-=======
+  "compliance_score": 25,
   "created_at": "2026-04-30T10:22:02Z",
->>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
   "recommendations": [
     {
       "id": "2.4.1",
       "title": "Đảm bảo NGINX chỉ lắng nghe kết nối mạng trên các cổng được ủy quyền",
       "description": "NGINX chỉ nên được cấu hình để lắng nghe trên các cổng và giao thức được ủy quyền. Việc này giúp giảm thiểu bề mặt tấn công và kiểm soát chặt chẽ các giao thức có thể truy cập.",
       "impact": "Giảm rủi ro truy cập trái phép. Lưu ý: vô hiệu hóa UDP 443 sẽ làm hỏng HTTP/3, buộc client lùi về HTTP/2 hoặc HTTP/1.1 (TCP).",
-      "status": "fail",
-      "uncompliances": [
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "delete",
-              "directive": "listen",
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block",
-                0
-              ]
-            },
-            {
-              "action": "delete",
-              "directive": "listen",
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block",
-                1
-              ]
-            }
-          ]
-        }
-      ]
+      "status": "pass",
+      "uncompliances": []
     },
     {
       "id": "2.4.2",
@@ -59,91 +19,6 @@
       "impact": "Các client truy cập trực tiếp bằng địa chỉ IP hoặc qua CNAME chưa cấu hình sẽ bị từ chối. Cần đảm bảo tất cả tên miền hợp lệ đều được định nghĩa rõ trong các block server riêng.",
       "status": "fail",
       "uncompliances": [
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "replace",
-              "directive": "server",
-              "args": [],
-              "block": [
-                {
-                  "directive": "listen",
-                  "args": [
-                    "80",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "[::]:80",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "443",
-                    "ssl",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "[::]:443",
-                    "ssl",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "443",
-                    "quic",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "[::]:443",
-                    "quic",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "ssl_reject_handshake",
-                  "args": [
-                    "on"
-                  ]
-                },
-                {
-                  "directive": "server_name",
-                  "args": [
-                    "_"
-                  ]
-                },
-                {
-                  "directive": "return",
-                  "args": [
-                    "444"
-                  ]
-                }
-              ],
-              "logical_context": [
-                "http"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0
-              ]
-            }
-          ]
-        },
         {
           "file": "/etc/nginx/nginx.conf",
           "remediations": [
@@ -224,9 +99,9 @@
                 "config",
                 0,
                 "parsed",
-                5,
+                6,
                 "block",
-                11
+                25
               ]
             }
           ]
@@ -238,32 +113,8 @@
       "title": "Đảm bảo chỉ thị server_tokens được đặt thành 'off'",
       "description": "Chỉ thị server_tokens hiển thị số phiên bản NGINX và hệ điều hành trên trang lỗi và HTTP header. Việc hiển thị thông tin này giúp kẻ tấn công dễ dàng dò quét và nhắm mục tiêu vào các lỗ hổng đã biết.",
       "impact": "Không ảnh hưởng chức năng. Ẩn thông tin phiên bản làm chậm kẻ tấn công và hạn chế các rủi ro từ việc quét lỗ hổng tự động.",
-      "status": "fail",
-      "uncompliances": [
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "replace",
-              "directive": "server_tokens",
-              "args": [
-                "off"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block",
-                4
-              ]
-            }
-          ]
-        }
-      ]
+      "status": "pass",
+      "uncompliances": []
     },
     {
       "id": "2.5.2",
@@ -273,57 +124,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "404",
-                "/custom_404.html"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "500",
-                "502",
-                "503",
-                "504",
-                "/custom_50x.html"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
           "remediations": [
             {
               "action": "add",
@@ -363,12 +164,7 @@
                 0,
                 "block"
               ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail2.conf",
-          "remediations": [
+            },
             {
               "action": "add",
               "directive": "error_page",
@@ -381,9 +177,9 @@
               ],
               "exact_path": [
                 "config",
-                3,
+                2,
                 "parsed",
-                0,
+                1,
                 "block"
               ]
             },
@@ -402,17 +198,12 @@
               ],
               "exact_path": [
                 "config",
-                3,
+                2,
                 "parsed",
-                0,
+                1,
                 "block"
               ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail3.conf",
-          "remediations": [
+            },
             {
               "action": "add",
               "directive": "error_page",
@@ -425,9 +216,9 @@
               ],
               "exact_path": [
                 "config",
-                4,
+                2,
                 "parsed",
-                0,
+                2,
                 "block"
               ]
             },
@@ -446,53 +237,9 @@
               ],
               "exact_path": [
                 "config",
-                4,
+                2,
                 "parsed",
-                0,
-                "block"
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail4.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "404",
-                "/custom_404.html"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                5,
-                "parsed",
-                0,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "500",
-                "502",
-                "503",
-                "504",
-                "/custom_50x.html"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                5,
-                "parsed",
-                0,
+                2,
                 "block"
               ]
             }
@@ -508,64 +255,7 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "location",
-              "args": [
-                "/"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ],
-              "block": [
-                {
-                  "directive": "location",
-                  "args": [
-                    "^~",
-                    "/.well-known/acme-challenge/"
-                  ],
-                  "block": [
-                    {
-                      "directive": "allow",
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "args": [
-                    "~",
-                    "/\\."
-                  ],
-                  "block": [
-                    {
-                      "directive": "deny",
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
           "remediations": [
             {
               "action": "add",
@@ -615,50 +305,7 @@
                   ]
                 }
               ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail2.conf",
-          "remediations": [
-            {
-              "action": "replace",
-              "directive": "location",
-              "args": [
-                "~",
-                "/\\."
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                3,
-                "parsed",
-                0,
-                "block",
-                4
-              ],
-              "block": [
-                {
-                  "directive": "deny",
-                  "args": [
-                    "all"
-                  ]
-                },
-                {
-                  "directive": "return",
-                  "args": [
-                    "404"
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail3.conf",
-          "remediations": [
+            },
             {
               "action": "add",
               "directive": "location",
@@ -670,9 +317,9 @@
               ],
               "exact_path": [
                 "config",
-                4,
+                2,
                 "parsed",
-                0,
+                1,
                 "block"
               ],
               "block": [
@@ -707,12 +354,7 @@
                   ]
                 }
               ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail4.conf",
-          "remediations": [
+            },
             {
               "action": "add",
               "directive": "location",
@@ -724,9 +366,9 @@
               ],
               "exact_path": [
                 "config",
-                5,
+                2,
                 "parsed",
-                0,
+                2,
                 "block"
               ],
               "block": [
@@ -774,11 +416,11 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/conf.d/fail2.conf",
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
           "remediations": [
             {
               "action": "add",
-              "directive": "proxy_hide_header",
+              "directive": "fastcgi_hide_header",
               "args": [
                 "X-Powered-By"
               ],
@@ -788,76 +430,11 @@
               ],
               "exact_path": [
                 "config",
-                3,
+                2,
                 "parsed",
                 0,
                 "block",
-                5,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "proxy_hide_header",
-              "args": [
-                "Server"
-              ],
-              "logical_context": [
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                3,
-                "parsed",
-                0,
-                "block",
-                5,
-                "block"
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail3.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "proxy_hide_header",
-              "args": [
-                "X-Powered-By"
-              ],
-              "logical_context": [
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                4,
-                "parsed",
-                0,
-                "block",
-                3,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "proxy_hide_header",
-              "args": [
-                "Server"
-              ],
-              "logical_context": [
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                4,
-                "parsed",
-                0,
-                "block",
-                3,
+                14,
                 "block"
               ]
             }
@@ -873,21 +450,21 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/conf.d/fail3.conf",
+          "file": "/etc/nginx/nginx.conf",
           "remediations": [
             {
               "action": "delete",
               "directive": "access_log",
               "logical_context": [
-                "server"
+                "http"
               ],
               "exact_path": [
                 "config",
-                4,
-                "parsed",
                 0,
+                "parsed",
+                6,
                 "block",
-                2
+                11
               ]
             }
           ]
@@ -902,11 +479,53 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/conf.d/fail2.conf",
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
           "remediations": [
             {
               "action": "add",
-              "directive": "proxy_set_header",
+              "directive": "fastcgi_param",
+              "args": [
+                "X-Forwarded-For",
+                "$proxy_add_x_forwarded_for"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block",
+                14,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "fastcgi_param",
+              "args": [
+                "X-Real-IP",
+                "$remote_addr"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                0,
+                "block",
+                14,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "fastcgi_param",
               "args": [
                 "X-Forwarded-For",
                 "$proxy_add_x_forwarded_for"
@@ -918,17 +537,17 @@
               ],
               "exact_path": [
                 "config",
-                3,
+                2,
                 "parsed",
                 0,
                 "block",
-                5,
+                14,
                 "block"
               ]
             },
             {
               "action": "add",
-              "directive": "proxy_set_header",
+              "directive": "fastcgi_param",
               "args": [
                 "X-Real-IP",
                 "$remote_addr"
@@ -940,22 +559,17 @@
               ],
               "exact_path": [
                 "config",
-                3,
+                2,
                 "parsed",
                 0,
                 "block",
-                5,
+                14,
                 "block"
               ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail3.conf",
-          "remediations": [
+            },
             {
               "action": "add",
-              "directive": "proxy_set_header",
+              "directive": "fastcgi_param",
               "args": [
                 "X-Forwarded-For",
                 "$proxy_add_x_forwarded_for"
@@ -967,17 +581,17 @@
               ],
               "exact_path": [
                 "config",
-                4,
+                2,
                 "parsed",
                 0,
                 "block",
-                3,
+                14,
                 "block"
               ]
             },
             {
               "action": "add",
-              "directive": "proxy_set_header",
+              "directive": "fastcgi_param",
               "args": [
                 "X-Real-IP",
                 "$remote_addr"
@@ -989,11 +603,11 @@
               ],
               "exact_path": [
                 "config",
-                4,
+                2,
                 "parsed",
                 0,
                 "block",
-                3,
+                14,
                 "block"
               ]
             }
@@ -1009,37 +623,10 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/nginx.conf",
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
           "remediations": [
             {
-              "action": "replace",
-              "directive": "return",
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block",
-                3
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "replace",
+              "action": "add",
               "directive": "return",
               "args": [
                 "301",
@@ -1052,31 +639,7 @@
                 "config",
                 2,
                 "parsed",
-                0,
-                "block",
-                3
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail3.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "return",
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                4,
-                "parsed",
-                0,
+                2,
                 "block"
               ]
             }
@@ -1089,55 +652,8 @@
       "title": "Đảm bảo các bộ lọc allow và deny giới hạn truy cập từ các địa chỉ IP cụ thể",
       "description": "Kiểm soát truy cập dựa trên địa chỉ IP là cơ chế bảo mật chuyên sâu cơ bản. Bằng cách sử dụng các chỉ thị allow và deny, quyền truy cập vào các block server hoặc location cụ thể có thể được giới hạn ở các mạng đáng tin cậy, đặc biệt hiệu quả để bảo vệ giao diện quản trị nội bộ.",
       "impact": "Cấu hình sai có thể chặn người dùng hợp lệ. Môi trường động thay đổi IP thường xuyên cần quản lý danh sách truy cập cẩn thận.",
-      "status": "fail",
-      "uncompliances": [
-        {
-          "file": "/etc/nginx/conf.d/fail2.conf",
-          "remediations": [
-            {
-              "action": "delete",
-              "directive": "allow",
-              "logical_context": [
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                3,
-                "parsed",
-                0,
-                "block",
-                4,
-                "block",
-                0
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail4.conf",
-          "remediations": [
-            {
-              "action": "delete",
-              "directive": "allow",
-              "logical_context": [
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                5,
-                "parsed",
-                0,
-                "block",
-                4,
-                "block",
-                0
-              ]
-            }
-          ]
-        }
-      ]
+      "status": "pass",
+      "uncompliances": []
     },
     {
       "id": "5.3.1",
@@ -1147,10 +663,132 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/conf.d/fail4.conf",
+          "file": "/etc/nginx/nginxconfig.io/general.conf",
           "remediations": [
             {
-              "action": "replace",
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                3,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                3,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                1,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                2,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                3,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
+          "remediations": [
+            {
+              "action": "add",
               "directive": "add_header",
               "args": [
                 "X-Content-Type-Options",
@@ -1163,11 +801,10 @@
               ],
               "exact_path": [
                 "config",
-                5,
+                2,
                 "parsed",
-                0,
-                "block",
-                5
+                1,
+                "block"
               ]
             },
             {
@@ -1185,16 +822,16 @@
               ],
               "exact_path": [
                 "config",
-                5,
+                2,
                 "parsed",
-                0,
+                2,
                 "block",
                 4,
                 "block"
               ]
             },
             {
-              "action": "replace",
+              "action": "add",
               "directive": "add_header",
               "args": [
                 "X-Content-Type-Options",
@@ -1206,11 +843,10 @@
               ],
               "exact_path": [
                 "config",
-                5,
+                2,
                 "parsed",
-                0,
-                "block",
-                5
+                1,
+                "block"
               ]
             },
             {
@@ -1227,11 +863,76 @@
               ],
               "exact_path": [
                 "config",
-                5,
+                2,
                 "parsed",
-                0,
+                2,
                 "block",
                 4,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/nginxconfig.io/letsencrypt.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                6,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                6,
+                "parsed",
+                0,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                6,
+                "parsed",
+                0,
                 "block"
               ]
             }
@@ -1247,7 +948,107 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/conf.d/fail4.conf",
+          "file": "/etc/nginx/nginxconfig.io/general.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "Content-Security-Policy",
+                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                4,
+                "parsed",
+                3,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "Content-Security-Policy",
+                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                1,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "Content-Security-Policy",
+                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                2,
+                "block",
+                4,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/nginxconfig.io/letsencrypt.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "Content-Security-Policy",
+                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                6,
+                "parsed",
+                0,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/nginxconfig.io/security.conf",
           "remediations": [
             {
               "action": "replace",
@@ -1263,11 +1064,9 @@
               ],
               "exact_path": [
                 "config",
-                5,
+                3,
                 "parsed",
-                0,
-                "block",
-                6
+                3
               ]
             }
           ]

@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "status": "failed",
   "errors": [
     {
@@ -22,6 +23,15 @@
           "line": 27
         }
       ],
+=======
+  "status": "ok",
+  "errors": [],
+  "config": [
+    {
+      "file": "/etc/nginx/nginx.conf",
+      "status": "ok",
+      "errors": [],
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
       "parsed": [
         {
           "directive": "user",
@@ -114,28 +124,57 @@
               ]
             },
             {
+<<<<<<< HEAD
               "directive": "types_hash_max_size",
               "line": 22,
               "args": [
+=======
+              "directive": "server_tokens",
+              "line": 22,
+              "args": [
+                "off"
+              ]
+            },
+            {
+              "directive": "log_not_found",
+              "line": 23,
+              "args": [
+                "off"
+              ]
+            },
+            {
+              "directive": "types_hash_max_size",
+              "line": 24,
+              "args": [
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
                 "2048"
               ]
             },
             {
               "directive": "types_hash_bucket_size",
+<<<<<<< HEAD
               "line": 23,
+=======
+              "line": 25,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "64"
               ]
             },
             {
               "directive": "client_max_body_size",
+<<<<<<< HEAD
               "line": 24,
+=======
+              "line": 26,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "16M"
               ]
             },
             {
               "directive": "include",
+<<<<<<< HEAD
               "line": 27,
               "args": [
                 "mime.types"
@@ -145,11 +184,25 @@
             {
               "directive": "default_type",
               "line": 28,
+=======
+              "line": 29,
+              "args": [
+                "mime.types"
+              ],
+              "includes": [
+                1
+              ]
+            },
+            {
+              "directive": "default_type",
+              "line": 30,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "application/octet-stream"
               ]
             },
             {
+<<<<<<< HEAD
               "directive": "log_format",
               "line": 31,
               "args": [
@@ -160,12 +213,17 @@
             {
               "directive": "access_log",
               "line": 34,
+=======
+              "directive": "access_log",
+              "line": 33,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "off"
               ]
             },
             {
               "directive": "error_log",
+<<<<<<< HEAD
               "line": 35,
               "args": [
                 "/var/log/nginx/error.log",
@@ -186,39 +244,64 @@
                 "$binary_remote_addr",
                 "zone=login:10m",
                 "rate=10r/m"
+=======
+              "line": 34,
+              "args": [
+                "/dev/null"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "ssl_session_timeout",
+<<<<<<< HEAD
               "line": 42,
+=======
+              "line": 37,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "1d"
               ]
             },
             {
               "directive": "ssl_session_cache",
+<<<<<<< HEAD
               "line": 43,
+=======
+              "line": 38,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "shared:SSL:10m"
               ]
             },
             {
               "directive": "ssl_session_tickets",
+<<<<<<< HEAD
               "line": 44,
+=======
+              "line": 39,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "off"
               ]
             },
             {
               "directive": "ssl_dhparam",
+<<<<<<< HEAD
               "line": 47,
+=======
+              "line": 42,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "/etc/nginx/dhparam.pem"
               ]
             },
             {
               "directive": "ssl_protocols",
+<<<<<<< HEAD
               "line": 50,
+=======
+              "line": 45,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "TLSv1.2",
                 "TLSv1.3"
@@ -226,28 +309,44 @@
             },
             {
               "directive": "ssl_ciphers",
+<<<<<<< HEAD
               "line": 51,
+=======
+              "line": 46,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
               ]
             },
             {
               "directive": "ssl_stapling",
+<<<<<<< HEAD
               "line": 54,
+=======
+              "line": 49,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "on"
               ]
             },
             {
               "directive": "ssl_stapling_verify",
+<<<<<<< HEAD
               "line": 55,
+=======
+              "line": 50,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "on"
               ]
             },
             {
               "directive": "resolver",
+<<<<<<< HEAD
               "line": 56,
+=======
+              "line": 51,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "1.1.1.1",
                 "1.0.0.1",
@@ -260,14 +359,22 @@
             },
             {
               "directive": "resolver_timeout",
+<<<<<<< HEAD
               "line": 57,
+=======
+              "line": 52,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "2s"
               ]
             },
             {
               "directive": "include",
+<<<<<<< HEAD
               "line": 60,
+=======
+              "line": 55,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "conf.d/*.conf"
               ],
@@ -275,12 +382,20 @@
             },
             {
               "directive": "include",
+<<<<<<< HEAD
               "line": 61,
+=======
+              "line": 56,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "sites-enabled/*"
               ],
               "includes": [
+<<<<<<< HEAD
                 1
+=======
+                2
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             }
           ]
@@ -288,7 +403,575 @@
       ]
     },
     {
+<<<<<<< HEAD
       "file": "/etc/nginx/sites-enabled/thanhexample1.com.conf",
+=======
+      "file": "/etc/nginx/mime.types",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "types",
+          "line": 1,
+          "args": [],
+          "block": [
+            {
+              "directive": "text/html",
+              "line": 2,
+              "args": [
+                "html",
+                "htm",
+                "shtml"
+              ]
+            },
+            {
+              "directive": "text/css",
+              "line": 3,
+              "args": [
+                "css"
+              ]
+            },
+            {
+              "directive": "text/xml",
+              "line": 4,
+              "args": [
+                "xml"
+              ]
+            },
+            {
+              "directive": "image/gif",
+              "line": 5,
+              "args": [
+                "gif"
+              ]
+            },
+            {
+              "directive": "image/jpeg",
+              "line": 6,
+              "args": [
+                "jpeg",
+                "jpg"
+              ]
+            },
+            {
+              "directive": "application/javascript",
+              "line": 7,
+              "args": [
+                "js"
+              ]
+            },
+            {
+              "directive": "application/atom+xml",
+              "line": 8,
+              "args": [
+                "atom"
+              ]
+            },
+            {
+              "directive": "application/rss+xml",
+              "line": 9,
+              "args": [
+                "rss"
+              ]
+            },
+            {
+              "directive": "text/mathml",
+              "line": 10,
+              "args": [
+                "mml"
+              ]
+            },
+            {
+              "directive": "text/plain",
+              "line": 11,
+              "args": [
+                "txt"
+              ]
+            },
+            {
+              "directive": "text/vnd.sun.j2me.app-descriptor",
+              "line": 12,
+              "args": [
+                "jad"
+              ]
+            },
+            {
+              "directive": "text/vnd.wap.wml",
+              "line": 13,
+              "args": [
+                "wml"
+              ]
+            },
+            {
+              "directive": "text/x-component",
+              "line": 14,
+              "args": [
+                "htc"
+              ]
+            },
+            {
+              "directive": "image/png",
+              "line": 16,
+              "args": [
+                "png"
+              ]
+            },
+            {
+              "directive": "image/tiff",
+              "line": 17,
+              "args": [
+                "tif",
+                "tiff"
+              ]
+            },
+            {
+              "directive": "image/vnd.wap.wbmp",
+              "line": 18,
+              "args": [
+                "wbmp"
+              ]
+            },
+            {
+              "directive": "image/x-icon",
+              "line": 19,
+              "args": [
+                "ico"
+              ]
+            },
+            {
+              "directive": "image/x-jng",
+              "line": 20,
+              "args": [
+                "jng"
+              ]
+            },
+            {
+              "directive": "image/x-ms-bmp",
+              "line": 21,
+              "args": [
+                "bmp"
+              ]
+            },
+            {
+              "directive": "image/svg+xml",
+              "line": 22,
+              "args": [
+                "svg",
+                "svgz"
+              ]
+            },
+            {
+              "directive": "image/webp",
+              "line": 23,
+              "args": [
+                "webp"
+              ]
+            },
+            {
+              "directive": "application/font-woff",
+              "line": 25,
+              "args": [
+                "woff"
+              ]
+            },
+            {
+              "directive": "application/java-archive",
+              "line": 26,
+              "args": [
+                "jar",
+                "war",
+                "ear"
+              ]
+            },
+            {
+              "directive": "application/json",
+              "line": 27,
+              "args": [
+                "json"
+              ]
+            },
+            {
+              "directive": "application/mac-binhex40",
+              "line": 28,
+              "args": [
+                "hqx"
+              ]
+            },
+            {
+              "directive": "application/msword",
+              "line": 29,
+              "args": [
+                "doc"
+              ]
+            },
+            {
+              "directive": "application/pdf",
+              "line": 30,
+              "args": [
+                "pdf"
+              ]
+            },
+            {
+              "directive": "application/postscript",
+              "line": 31,
+              "args": [
+                "ps",
+                "eps",
+                "ai"
+              ]
+            },
+            {
+              "directive": "application/rtf",
+              "line": 32,
+              "args": [
+                "rtf"
+              ]
+            },
+            {
+              "directive": "application/vnd.apple.mpegurl",
+              "line": 33,
+              "args": [
+                "m3u8"
+              ]
+            },
+            {
+              "directive": "application/vnd.ms-excel",
+              "line": 34,
+              "args": [
+                "xls"
+              ]
+            },
+            {
+              "directive": "application/vnd.ms-fontobject",
+              "line": 35,
+              "args": [
+                "eot"
+              ]
+            },
+            {
+              "directive": "application/vnd.ms-powerpoint",
+              "line": 36,
+              "args": [
+                "ppt"
+              ]
+            },
+            {
+              "directive": "application/vnd.wap.wmlc",
+              "line": 37,
+              "args": [
+                "wmlc"
+              ]
+            },
+            {
+              "directive": "application/vnd.google-earth.kml+xml",
+              "line": 38,
+              "args": [
+                "kml"
+              ]
+            },
+            {
+              "directive": "application/vnd.google-earth.kmz",
+              "line": 39,
+              "args": [
+                "kmz"
+              ]
+            },
+            {
+              "directive": "application/x-7z-compressed",
+              "line": 40,
+              "args": [
+                "7z"
+              ]
+            },
+            {
+              "directive": "application/x-cocoa",
+              "line": 41,
+              "args": [
+                "cco"
+              ]
+            },
+            {
+              "directive": "application/x-java-archive-diff",
+              "line": 42,
+              "args": [
+                "jardiff"
+              ]
+            },
+            {
+              "directive": "application/x-java-jnlp-file",
+              "line": 43,
+              "args": [
+                "jnlp"
+              ]
+            },
+            {
+              "directive": "application/x-makeself",
+              "line": 44,
+              "args": [
+                "run"
+              ]
+            },
+            {
+              "directive": "application/x-perl",
+              "line": 45,
+              "args": [
+                "pl",
+                "pm"
+              ]
+            },
+            {
+              "directive": "application/x-pilot",
+              "line": 46,
+              "args": [
+                "prc",
+                "pdb"
+              ]
+            },
+            {
+              "directive": "application/x-rar-compressed",
+              "line": 47,
+              "args": [
+                "rar"
+              ]
+            },
+            {
+              "directive": "application/x-redhat-package-manager",
+              "line": 48,
+              "args": [
+                "rpm"
+              ]
+            },
+            {
+              "directive": "application/x-sea",
+              "line": 49,
+              "args": [
+                "sea"
+              ]
+            },
+            {
+              "directive": "application/x-shockwave-flash",
+              "line": 50,
+              "args": [
+                "swf"
+              ]
+            },
+            {
+              "directive": "application/x-stuffit",
+              "line": 51,
+              "args": [
+                "sit"
+              ]
+            },
+            {
+              "directive": "application/x-tcl",
+              "line": 52,
+              "args": [
+                "tcl",
+                "tk"
+              ]
+            },
+            {
+              "directive": "application/x-x509-ca-cert",
+              "line": 53,
+              "args": [
+                "der",
+                "pem",
+                "crt"
+              ]
+            },
+            {
+              "directive": "application/x-xpinstall",
+              "line": 54,
+              "args": [
+                "xpi"
+              ]
+            },
+            {
+              "directive": "application/xhtml+xml",
+              "line": 55,
+              "args": [
+                "xhtml"
+              ]
+            },
+            {
+              "directive": "application/xspf+xml",
+              "line": 56,
+              "args": [
+                "xspf"
+              ]
+            },
+            {
+              "directive": "application/zip",
+              "line": 57,
+              "args": [
+                "zip"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 59,
+              "args": [
+                "bin",
+                "exe",
+                "dll"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 60,
+              "args": [
+                "deb"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 61,
+              "args": [
+                "dmg"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 62,
+              "args": [
+                "iso",
+                "img"
+              ]
+            },
+            {
+              "directive": "application/octet-stream",
+              "line": 63,
+              "args": [
+                "msi",
+                "msp",
+                "msm"
+              ]
+            },
+            {
+              "directive": "audio/midi",
+              "line": 65,
+              "args": [
+                "mid",
+                "midi",
+                "kar"
+              ]
+            },
+            {
+              "directive": "audio/mpeg",
+              "line": 66,
+              "args": [
+                "mp3"
+              ]
+            },
+            {
+              "directive": "audio/ogg",
+              "line": 67,
+              "args": [
+                "ogg"
+              ]
+            },
+            {
+              "directive": "audio/x-m4a",
+              "line": 68,
+              "args": [
+                "m4a"
+              ]
+            },
+            {
+              "directive": "audio/x-realaudio",
+              "line": 69,
+              "args": [
+                "ra"
+              ]
+            },
+            {
+              "directive": "video/3gpp",
+              "line": 71,
+              "args": [
+                "3gpp",
+                "3gp"
+              ]
+            },
+            {
+              "directive": "video/mp4",
+              "line": 72,
+              "args": [
+                "mp4"
+              ]
+            },
+            {
+              "directive": "video/mpeg",
+              "line": 73,
+              "args": [
+                "mpeg",
+                "mpg",
+                "pe"
+              ]
+            },
+            {
+              "directive": "video/quicktime",
+              "line": 74,
+              "args": [
+                "mov"
+              ]
+            },
+            {
+              "directive": "video/webm",
+              "line": 75,
+              "args": [
+                "webm"
+              ]
+            },
+            {
+              "directive": "video/x-flv",
+              "line": 76,
+              "args": [
+                "flv"
+              ]
+            },
+            {
+              "directive": "video/x-m4v",
+              "line": 77,
+              "args": [
+                "m4v"
+              ]
+            },
+            {
+              "directive": "video/x-mng",
+              "line": 78,
+              "args": [
+                "mng"
+              ]
+            },
+            {
+              "directive": "video/x-ms-asf",
+              "line": 79,
+              "args": [
+                "asx",
+                "asf"
+              ]
+            },
+            {
+              "directive": "video/x-ms-wmv",
+              "line": 80,
+              "args": [
+                "wmv"
+              ]
+            },
+            {
+              "directive": "video/x-msvideo",
+              "line": 81,
+              "args": [
+                "avi"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/example.com.conf",
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
       "status": "ok",
       "errors": [],
       "parsed": [
@@ -319,7 +1002,11 @@
               "directive": "server_name",
               "line": 4,
               "args": [
+<<<<<<< HEAD
                 "thanhexample1.com"
+=======
+                "example.com"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
@@ -327,7 +1014,11 @@
               "line": 5,
               "args": [
                 "$base",
+<<<<<<< HEAD
                 "/var/www/thanhexample1.com"
+=======
+                "/var/www/example.com"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
@@ -341,21 +1032,33 @@
               "directive": "ssl_certificate",
               "line": 9,
               "args": [
+<<<<<<< HEAD
                 "/etc/letsencrypt/live/thanhexample1.com/fullchain.pem"
+=======
+                "/etc/letsencrypt/live/example.com/fullchain.pem"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "ssl_certificate_key",
               "line": 10,
               "args": [
+<<<<<<< HEAD
                 "/etc/letsencrypt/live/thanhexample1.com/privkey.pem"
+=======
+                "/etc/letsencrypt/live/example.com/privkey.pem"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "ssl_trusted_certificate",
               "line": 11,
               "args": [
+<<<<<<< HEAD
                 "/etc/letsencrypt/live/thanhexample1.com/chain.pem"
+=======
+                "/etc/letsencrypt/live/example.com/chain.pem"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
@@ -365,7 +1068,11 @@
                 "nginxconfig.io/security.conf"
               ],
               "includes": [
+<<<<<<< HEAD
                 2
+=======
+                3
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
@@ -373,7 +1080,11 @@
               "line": 17,
               "args": [
                 "/var/log/nginx/access.log",
+<<<<<<< HEAD
                 "cloudflare",
+=======
+                "combined",
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
                 "buffer=512k",
                 "flush=1m"
               ]
@@ -387,14 +1098,28 @@
               ]
             },
             {
+<<<<<<< HEAD
               "directive": "location",
               "line": 21,
               "args": [
+=======
+              "directive": "index",
+              "line": 21,
+              "args": [
+                "index.php"
+              ]
+            },
+            {
+              "directive": "location",
+              "line": 24,
+              "args": [
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
                 "/"
               ],
               "block": [
                 {
                   "directive": "try_files",
+<<<<<<< HEAD
                   "line": 22,
                   "args": [
                     "$uri",
@@ -415,6 +1140,9 @@
                 {
                   "directive": "try_files",
                   "line": 27,
+=======
+                  "line": 25,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
                   "args": [
                     "$uri",
                     "$uri/",
@@ -425,17 +1153,29 @@
             },
             {
               "directive": "include",
+<<<<<<< HEAD
               "line": 31,
+=======
+              "line": 29,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "nginxconfig.io/general.conf"
               ],
               "includes": [
+<<<<<<< HEAD
                 3
+=======
+                4
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "location",
+<<<<<<< HEAD
               "line": 34,
+=======
+              "line": 32,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "~",
                 "\\.php$"
@@ -443,19 +1183,31 @@
               "block": [
                 {
                   "directive": "fastcgi_pass",
+<<<<<<< HEAD
                   "line": 35,
+=======
+                  "line": 33,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
                   "args": [
                     "unix:/var/run/php/php-fpm.sock"
                   ]
                 },
                 {
                   "directive": "include",
+<<<<<<< HEAD
                   "line": 36,
+=======
+                  "line": 34,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
                   "args": [
                     "nginxconfig.io/php_fastcgi.conf"
                   ],
                   "includes": [
+<<<<<<< HEAD
                     4
+=======
+                    5
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
                   ]
                 }
               ]
@@ -464,12 +1216,20 @@
         },
         {
           "directive": "server",
+<<<<<<< HEAD
           "line": 41,
+=======
+          "line": 39,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
           "args": [],
           "block": [
             {
               "directive": "listen",
+<<<<<<< HEAD
               "line": 42,
+=======
+              "line": 40,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "443",
                 "ssl",
@@ -478,7 +1238,11 @@
             },
             {
               "directive": "listen",
+<<<<<<< HEAD
               "line": 43,
+=======
+              "line": 41,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "[::]:443",
                 "ssl",
@@ -487,91 +1251,159 @@
             },
             {
               "directive": "server_name",
+<<<<<<< HEAD
               "line": 44,
               "args": [
                 "*.thanhexample1.com"
+=======
+              "line": 42,
+              "args": [
+                "*.example.com"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "ssl_certificate",
+<<<<<<< HEAD
               "line": 47,
               "args": [
                 "/etc/letsencrypt/live/thanhexample1.com/fullchain.pem"
+=======
+              "line": 45,
+              "args": [
+                "/etc/letsencrypt/live/example.com/fullchain.pem"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "ssl_certificate_key",
+<<<<<<< HEAD
               "line": 48,
               "args": [
                 "/etc/letsencrypt/live/thanhexample1.com/privkey.pem"
+=======
+              "line": 46,
+              "args": [
+                "/etc/letsencrypt/live/example.com/privkey.pem"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "ssl_trusted_certificate",
+<<<<<<< HEAD
               "line": 49,
               "args": [
                 "/etc/letsencrypt/live/thanhexample1.com/chain.pem"
+=======
+              "line": 47,
+              "args": [
+                "/etc/letsencrypt/live/example.com/chain.pem"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "return",
+<<<<<<< HEAD
               "line": 50,
               "args": [
                 "301",
                 "https://thanhexample1.com$request_uri"
+=======
+              "line": 48,
+              "args": [
+                "301",
+                "https://example.com$request_uri"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             }
           ]
         },
         {
           "directive": "server",
+<<<<<<< HEAD
           "line": 54,
+=======
+          "line": 52,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
           "args": [],
           "block": [
             {
               "directive": "listen",
+<<<<<<< HEAD
               "line": 55,
+=======
+              "line": 53,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "80"
               ]
             },
             {
               "directive": "listen",
+<<<<<<< HEAD
               "line": 56,
+=======
+              "line": 54,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "[::]:80"
               ]
             },
             {
               "directive": "server_name",
+<<<<<<< HEAD
               "line": 57,
               "args": [
                 ".thanhexample1.com"
+=======
+              "line": 55,
+              "args": [
+                ".example.com"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "include",
+<<<<<<< HEAD
               "line": 58,
+=======
+              "line": 56,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "nginxconfig.io/letsencrypt.conf"
               ],
               "includes": [
+<<<<<<< HEAD
                 5
+=======
+                6
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               ]
             },
             {
               "directive": "location",
+<<<<<<< HEAD
               "line": 60,
+=======
+              "line": 58,
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
               "args": [
                 "/"
               ],
               "block": [
                 {
                   "directive": "return",
+<<<<<<< HEAD
                   "line": 61,
                   "args": [
                     "301",
                     "https://thanhexample1.com$request_uri"
+=======
+                  "line": 59,
+                  "args": [
+                    "301",
+                    "https://example.com$request_uri"
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
                   ]
                 }
               ]
@@ -785,6 +1617,7 @@
     },
     {
       "file": "/etc/nginx/nginxconfig.io/php_fastcgi.conf",
+<<<<<<< HEAD
       "status": "failed",
       "errors": [
         {
@@ -792,6 +1625,10 @@
           "line": 5
         }
       ],
+=======
+      "status": "ok",
+      "errors": [],
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
       "parsed": [
         {
           "directive": "try_files",
@@ -807,7 +1644,13 @@
           "args": [
             "fastcgi_params"
           ],
+<<<<<<< HEAD
           "includes": []
+=======
+          "includes": [
+            7
+          ]
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
         },
         {
           "directive": "fastcgi_index",
@@ -880,6 +1723,169 @@
           ]
         }
       ]
+<<<<<<< HEAD
+=======
+    },
+    {
+      "file": "/etc/nginx/fastcgi_params",
+      "status": "ok",
+      "errors": [],
+      "parsed": [
+        {
+          "directive": "fastcgi_param",
+          "line": 1,
+          "args": [
+            "QUERY_STRING",
+            "$query_string"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 2,
+          "args": [
+            "REQUEST_METHOD",
+            "$request_method"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 3,
+          "args": [
+            "CONTENT_TYPE",
+            "$content_type"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 4,
+          "args": [
+            "CONTENT_LENGTH",
+            "$content_length"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 6,
+          "args": [
+            "SCRIPT_NAME",
+            "$fastcgi_script_name"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 7,
+          "args": [
+            "REQUEST_URI",
+            "$request_uri"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 8,
+          "args": [
+            "DOCUMENT_URI",
+            "$document_uri"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 9,
+          "args": [
+            "DOCUMENT_ROOT",
+            "$document_root"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 10,
+          "args": [
+            "SERVER_PROTOCOL",
+            "$server_protocol"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 11,
+          "args": [
+            "REQUEST_SCHEME",
+            "$scheme"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 12,
+          "args": [
+            "HTTPS",
+            "$https",
+            "if_not_empty"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 14,
+          "args": [
+            "GATEWAY_INTERFACE",
+            "CGI/1.1"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 15,
+          "args": [
+            "SERVER_SOFTWARE",
+            "nginx/$nginx_version"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 17,
+          "args": [
+            "REMOTE_ADDR",
+            "$remote_addr"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 18,
+          "args": [
+            "REMOTE_PORT",
+            "$remote_port"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 19,
+          "args": [
+            "SERVER_ADDR",
+            "$server_addr"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 20,
+          "args": [
+            "SERVER_PORT",
+            "$server_port"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 21,
+          "args": [
+            "SERVER_NAME",
+            "$server_name"
+          ]
+        },
+        {
+          "directive": "fastcgi_param",
+          "line": 24,
+          "args": [
+            "REDIRECT_STATUS",
+            "200"
+          ]
+        }
+      ]
+>>>>>>> 8d5e3fe (fix(scanner): remove broken mock include logic in detector 531)
     }
   ]
 }
