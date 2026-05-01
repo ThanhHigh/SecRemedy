@@ -16,6 +16,7 @@ if __package__ in (None, ""):
 from core.remedyEng.ast_editor import ASTEditor
 from core.remedyEng.remediator import Remediator
 from core.remedyEng.terminal_ui import TerminalUI
+from core.remedyEng.export_manager import ExportManager
 
 
 VALIDATION_SUCCESS = "SUCCESS"
@@ -319,7 +320,19 @@ if __name__ == "__main__":
         action="store_true",
         help="Enable strict JSON log schema checks for CIS 3.1",
     )
+    parser.add_argument(
+        "--export-base-dir",
+        type=str,
+        help="Base directory for exported remediated config folders and tarballs (defaults to repo tmp/)",
+    )
     args = parser.parse_args()
+
+    project_root = Path(__file__).resolve().parents[2]
+    export_base_dir = (
+        Path(args.export_base_dir).expanduser().resolve()
+        if args.export_base_dir
+        else (project_root / "tmp").resolve()
+    )
 
     remediator = Remediator(
         strict_placement=args.strict_placement,
@@ -415,4 +428,20 @@ if __name__ == "__main__":
 
     _persist_ast_output(remediator.ast_config, output_path)
     ui.display_output_saved(str(output_path))
+    # Export remediated config folder and tarball under repo tmp/ by default.
+    try:
+        exporter = ExportManager(remediator.ast_config, remediator.ast_scan, base_tmp=export_base_dir)
+        out_dir, tar_path = exporter.export_config_folder(scan_path=(args.scan_result if args.scan_result else None))
+        exporter.create_tarball(out_dir, tar_path)
+        # Persist a parser-style contract for the remediated AST
+        folder_name, _ = exporter._derive_names(args.scan_result if args.scan_result else None)
+        remediated_contract = Path("contracts") / f"parser_output_{folder_name}.json"
+        exporter.persist_parser_output(remediated_contract)
+        print(f"Export base dir: {export_base_dir}")
+        print(f"Exported remediated config folder: {out_dir}")
+        print(f"Created tarball: {tar_path}")
+        print(f"Saved remediated parser output: {remediated_contract}")
+    except Exception as exc:
+        print(f"Export failed: {exc}")
+
     ui.display_remedy_closer()
