@@ -298,6 +298,88 @@ def _persist_ast_output(ast_config: Dict[str, Any], output_path: Path) -> None:
         json.dump(ast_config, f, indent=2)
 
 
+def _resolve_job_path(raw_path: str, project_root: Path, config_dir: Path) -> Path:
+    candidate = Path(raw_path).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+
+    config_candidate = (config_dir / candidate).resolve()
+    project_candidate = (project_root / candidate).resolve()
+
+    if config_candidate.exists():
+        return config_candidate
+    if project_candidate.exists():
+        return project_candidate
+    return project_candidate
+
+
+def _load_batch_jobs(config_file: Path, project_root: Path) -> List[Dict[str, Any]]:
+    with config_file.expanduser().resolve().open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    if isinstance(payload, dict) and isinstance(payload.get("servers"), list):
+        raw_jobs = payload["servers"]
+    elif isinstance(payload, list):
+        raw_jobs = payload
+    elif isinstance(payload, dict):
+        raw_jobs = [payload]
+    else:
+        raise ValueError("Batch config must be a JSON object or array of jobs.")
+
+    jobs: List[Dict[str, Any]] = []
+    config_dir = config_file.parent
+
+    for index, raw_job in enumerate(raw_jobs):
+        if not isinstance(raw_job, dict):
+            raise ValueError(f"Batch job at index {index} must be a JSON object.")
+
+        ast_path_value = raw_job.get("ast_config") or raw_job.get("input_path")
+        scan_path_value = raw_job.get("scan_result") or raw_job.get("scan_result_path")
+        remediate_ast_value = raw_job.get("remediate_ast")
+        remediate_config_value = raw_job.get("remediate_config")
+
+        if not ast_path_value or not scan_path_value or not remediate_ast_value or not remediate_config_value:
+            raise ValueError(
+                "Each batch job needs ast_config, scan_result, remediate_ast, and remediate_config."
+            )
+
+        jobs.append(
+            {
+                **raw_job,
+                "ast_config": _resolve_job_path(str(ast_path_value), project_root, config_dir),
+                "scan_result": _resolve_job_path(str(scan_path_value), project_root, config_dir),
+                "remediate_ast": _resolve_job_path(str(remediate_ast_value), project_root, config_dir),
+                "remediate_config": _resolve_job_path(str(remediate_config_value), project_root, config_dir),
+            }
+        )
+
+    return jobs
+
+
+def _run_batch_job(job: Dict[str, Any], project_root: Path, job_index: int, total_jobs: int) -> None:
+    print(f"[batch] Job {job_index}/{total_jobs}: {job['ast_config']} + {job['scan_result']}")
+
+    remediator = Remediator(
+        strict_placement=bool(job.get("strict_placement", False)),
+        strict_json_validation=bool(job.get("json_schema_strict", False)),
+    )
+    if isinstance(job.get("remedy_inputs"), dict):
+        remediator.batch_remedy_inputs = job["remedy_inputs"]
+    remediator.get_input_ast(config_path=str(job["ast_config"]), scan_path=str(job["scan_result"]))
+    remediator.ast_config = remediator.apply_remediations(interactive=False)
+
+    remediate_ast_path = Path(job["remediate_ast"])
+    remediate_config_dir = Path(job["remediate_config"])
+
+    _persist_ast_output(remediator.ast_config, remediate_ast_path)
+    
+    exporter = ExportManager(remediator.ast_config, remediator.ast_scan, base_tmp=remediate_config_dir.parent)
+    out_dir, tar_path = exporter.export_config_folder(output_dir=str(remediate_config_dir))
+
+    print(f"[batch] saved AST: {remediate_ast_path}")
+    print(f"[batch] saved config folder: {out_dir}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run SecRemedy remediation pipeline")
     parser.add_argument(
@@ -325,6 +407,11 @@ if __name__ == "__main__":
         type=str,
         help="Base directory for exported remediated config folders and tarballs (defaults to repo tmp/)",
     )
+    parser.add_argument(
+        "--config-file",
+        type=str,
+        help="Path to batch remediation config JSON with server jobs",
+    )
     args = parser.parse_args()
 
     project_root = Path(__file__).resolve().parents[2]
@@ -334,6 +421,13 @@ if __name__ == "__main__":
         else (project_root / "tmp").resolve()
     )
 
+    if args.config_file:
+        batch_config_file = Path(args.config_file).expanduser().resolve()
+        batch_jobs = _load_batch_jobs(batch_config_file, project_root)
+        for index, job in enumerate(batch_jobs, start=1):
+            _run_batch_job(job, project_root, index, len(batch_jobs))
+        sys.exit(0)
+
     remediator = Remediator(
         strict_placement=args.strict_placement,
         strict_json_validation=args.json_schema_strict,
@@ -342,7 +436,7 @@ if __name__ == "__main__":
 
     remediator.display_header()
     remediator.get_input_ast(config_path=args.input, scan_path=args.scan_result)
-    remediator.ast_config = remediator.apply_remediations()
+    remediator.ast_config = remediator.apply_remediations(interactive=True)
 
     output_path = Path("contracts/remediated_output.json").resolve()
     generated_path = Path("tmp/generated/nginx.generated.conf").resolve()

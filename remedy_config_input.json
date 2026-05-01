@@ -1,0 +1,34 @@
+{
+  "servers": [
+    {
+      "ip": "0.0.0.0",
+      "port": 2224,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "ast_config": "tmp/contrast/parser_output_2224.json",
+      "scan_result": "tmp/contrast/scan_result_2224.json",
+      "remediate_ast": "tmp/remedies_output/2224/remediated_output.json",
+      "remediate_config": "tmp/remedies_output/2224/config",
+      "remedy_inputs": {
+        "2.5.3": ["/var/www/html", "_"],
+        "3.2": ["global:/var/log/nginx/access.log combined", "off"]
+      }
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2221,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "ast_config": "contracts/parser_output_2221.json",
+      "scan_result": "contracts/scan_result_2221.json",
+      "remediate_ast": "tmp/remedies_output/2221/remediated_output.json",
+      "remediate_config": "tmp/remedies_output/2221/config",
+      "remedy_inputs": {
+        "2.5.3": ["/var/www/html", "_"],
+        "3.2": ["global:/var/log/nginx/access.log combined", "off"]
+      }
+    }
+  ]
+}

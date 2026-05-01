@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 from core.remedyEng.base_remedy import BaseRemedy
 from core.recom_registry import RecomID
@@ -59,6 +59,7 @@ class Remediator:
         self.ast_scan = {}
         self.ast_baseline = {}
         self.applied_history = []
+        self.batch_remedy_inputs: Dict[str, List[Any]] = {}
         self.strict_placement = strict_placement
         self.strict_json_validation = strict_json_validation
 
@@ -126,7 +127,33 @@ class Remediator:
         remedy.read_child_ast_config(ast_config)
         return bool(remedy.child_ast_config)
     
-    def apply_remediations(self) -> dict:
+    def _prepare_user_inputs(self, remedy: BaseRemedy, interactive: bool) -> bool:
+        """Resolve or collect per-remedy inputs before remediation."""
+        if not remedy.has_input:
+            return True
+
+        if interactive:
+            return TerminalUI.get_instance().collect_and_validate_user_inputs(remedy)
+
+        batch_inputs = self.batch_remedy_inputs.get(remedy.id)
+        if isinstance(batch_inputs, list):
+            remedy.user_inputs = copy.deepcopy(batch_inputs)
+        else:
+            remedy.user_inputs = remedy.get_default_user_inputs()
+
+        if hasattr(remedy, "resolve_user_inputs"):
+            remedy.resolve_user_inputs()
+
+        is_valid, error_msg = remedy._validate_user_inputs()
+        if not is_valid:
+            TerminalUI.get_instance().display_validation_warning(
+                f"Skipping {remedy.id} due to invalid batch inputs: {error_msg}"
+            )
+            return False
+
+        return True
+
+    def apply_remediations(self, interactive: bool = True) -> dict:
         """
         Orchestrate the full remediation flow for all applicable rules.
         
@@ -147,28 +174,29 @@ class Remediator:
         self.ast_baseline = copy.deepcopy(self.ast_config)
         self.applied_history = []
         modified_ast_config = copy.deepcopy(self.ast_baseline)
+        ui = TerminalUI.get_instance()
         
         for remedy_cls in self.REMEDIATION_REGISTRY.values():
             remedy = remedy_cls()
 
             if not self._prepare_remedy(remedy, modified_ast_config):
-                print(f"No violations found for Rule {remedy.id}. Skipping.")
+                if interactive:
+                    print(f"No violations found for Rule {remedy.id}. Skipping.")
                 continue
-            
-            # Display remedy information
-            TerminalUI.get_instance().display_remedy_info(remedy)
-            
-            # Ask if user wants to proceed
-            pre_decision = TerminalUI.get_instance().display_remedy_decision(pre_diff=True)
+
+            if interactive:
+                ui.display_remedy_info(remedy)
+
+            pre_decision = True if not interactive else ui.display_remedy_decision(pre_diff=True)
             if not pre_decision:
-                TerminalUI.get_instance().display_remedy_rejected(remedy)
+                if interactive:
+                    ui.display_remedy_rejected(remedy)
                 continue
-            
-            # Collect user inputs if needed
-            if remedy.has_input:
-                if not TerminalUI.get_instance().collect_and_validate_user_inputs(remedy):
-                    TerminalUI.get_instance().display_remedy_rejected(remedy)
-                    continue
+
+            if not self._prepare_user_inputs(remedy, interactive):
+                if interactive:
+                    ui.display_remedy_rejected(remedy)
+                continue
             
             # Apply remediation
             remedy.remediate()
@@ -185,20 +213,21 @@ class Remediator:
                 if payload["mode"] == "ast":
                     fallback_count += 1
 
-                TerminalUI.get_instance().display_remedy_file_diff(
-                    remedy_id=remedy.id,
-                    file_path=file_path,
-                    violation_count=payload["violation_count"],
-                    mode=payload["mode"],
-                    diff_text=payload["diff_text"],
-                )
+                if interactive:
+                    ui.display_remedy_file_diff(
+                        remedy_id=remedy.id,
+                        file_path=file_path,
+                        violation_count=payload["violation_count"],
+                        mode=payload["mode"],
+                        diff_text=payload["diff_text"],
+                    )
 
                 if not payload["diff_text"]:
                     remedy.file_approval_status[file_path] = False
                     unchanged_count += 1
                     continue
 
-                file_decision = TerminalUI.get_instance().display_file_diff_decision()
+                file_decision = True if not interactive else ui.display_file_diff_decision()
                 remedy.file_approval_status[file_path] = file_decision
 
                 if file_decision:
@@ -207,16 +236,18 @@ class Remediator:
                 else:
                     rejected_count += 1
 
-            TerminalUI.get_instance().display_remedy_summary(
-                remedy_id=remedy.id,
-                accepted=accepted_count,
-                rejected=rejected_count,
-                unchanged=unchanged_count,
-                fallback=fallback_count,
-            )
+            if interactive:
+                ui.display_remedy_summary(
+                    remedy_id=remedy.id,
+                    accepted=accepted_count,
+                    rejected=rejected_count,
+                    unchanged=unchanged_count,
+                    fallback=fallback_count,
+                )
 
             if not approved_changes:
-                TerminalUI.get_instance().display_remedy_rejected(remedy)
+                if interactive:
+                    ui.display_remedy_rejected(remedy)
                 continue
 
             modified_ast_config = self.merge_remediation(modified_ast_config, approved_changes)
