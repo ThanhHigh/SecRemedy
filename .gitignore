@@ -10,3 +10,8 @@ core/remedyEng/plan/
 .github
 .coverage
 PROJECT_ANALYSIS.md
+.antigravity
+.vscode/
+.agents/
+.gemini/
+.pytest_cache/
