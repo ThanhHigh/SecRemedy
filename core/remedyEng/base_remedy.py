@@ -6,6 +6,8 @@ from typing import Any, Dict, List
 from core.recom_registry import Recommendation
 from core.remedyEng.ast_editor import ASTEditor
 from core.remedyEng.diff_generator import generate_ast_fallback_diff, generate_unified_diff
+from core.remedyEng.debug_logger import info as debug_info, verbose as debug_verbose, trace as debug_trace, enabled as debug_enabled
+
 
 class BaseRemedy:
     """Base class for all remedies. """
@@ -71,6 +73,8 @@ class BaseRemedy:
             rule_id=rule_id
         )
         self.child_scan_result = result  # Dict: {file_path: [remediations]}
+        if debug_enabled():
+            debug_verbose("SCAN_EXTRACT", f"Rule {rule_id} extracted remediations for {len(result.keys())} files", {"files": list(result.keys())})
 
     def read_child_ast_config(self, ast_config: Any) -> None:
         """
@@ -101,6 +105,8 @@ class BaseRemedy:
             
             if file_index == -1:
                 # File not found, skip it
+                if debug_enabled():
+                    debug_info("BLOCK_MATCH", f"AST file not found for scan file '{file_path}'")
                 continue
             
             # Extract the config entry for this file
@@ -345,6 +351,17 @@ class BaseRemedy:
         else:
             mode = "ast"
             diff_text = generate_ast_fallback_diff(before_ast, after_ast, file_path)
+
+        if debug_enabled():
+            debug_verbose("DIFF", f"Built diff for {file_path}", {"mode": mode, "diff_length": len(diff_text) if diff_text else 0})
+            # At VERBOSE/TRACE levels the full diff will be captured by the debug logger when enabled
+            if diff_text:
+                debug_trace = None
+                try:
+                    from core.remedyEng.debug_logger import trace as debug_trace_fn
+                    debug_trace_fn("DIFF_FULL", f"Full diff for {file_path}", {"diff": diff_text})
+                except Exception:
+                    pass
 
         return {
             "file_path": file_path,

@@ -428,7 +428,44 @@ if __name__ == "__main__":
         type=str,
         help="Path to batch job config JSON file for non-interactive remediation runs (optional)",
     )
+    parser.add_argument(
+        "--dev-debug",
+        action="store_true",
+        help="Enable development debug logging for remedyEng (writes to debug file)",
+    )
+    parser.add_argument(
+        "--dev-debug-level",
+        type=str,
+        choices=["INFO", "VERBOSE", "TRACE"],
+        default="INFO",
+        help="Development debug level",
+    )
+    parser.add_argument(
+        "--dev-debug-file",
+        type=str,
+        default=str((Path("tmp") / "remedy_debug.log").resolve()),
+        help="Path to write development debug log (default: tmp/remedy_debug.log)",
+    )
+    parser.add_argument(
+        "--dev-debug-stderr",
+        action="store_true",
+        help="Also emit development debug lines to stderr in addition to file",
+    )
     args = parser.parse_args()
+
+    # Initialize development debug logger if requested
+    try:
+        from core.remedyEng.debug_logger import configure as _configure_debug
+
+        _configure_debug(
+            enabled=bool(args.dev_debug),
+            level=(args.dev_debug_level if getattr(args, "dev_debug_level", None) else "INFO"),
+            file_path=(args.dev_debug_file if getattr(args, "dev_debug_file", None) else None),
+            to_stderr=bool(getattr(args, "dev_debug_stderr", False)),
+        )
+    except Exception:
+        # Best-effort: do not fail if debug logger is unavailable
+        pass
 
     project_root = Path(__file__).resolve().parents[2]
     export_base_dir = (

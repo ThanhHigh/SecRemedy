@@ -25,6 +25,7 @@ from core.remedyEng.recommendations.remediate_532 import Remediate532
 
 from core.remedyEng.ast_editor import ASTEditor
 from core.remedyEng.terminal_ui import TerminalUI
+from core.remedyEng.debug_logger import info as debug_info, verbose as debug_verbose, trace as debug_trace, enabled as debug_enabled
 
 class Remediator:
     """Apply remediation through all Child Remedies base on Results, interact with User, Generate new AST """
@@ -153,6 +154,61 @@ class Remediator:
 
         return True
 
+    def _debug_remedy_execution(self, remedy: BaseRemedy, phase: str, meta: Optional[dict] = None) -> None:
+        """Emit a development debug event for a single remedy execution phase."""
+        if not debug_enabled():
+            return
+
+        payload = {
+            "remedy_id": remedy.id,
+            "remedy_class": remedy.__class__.__name__,
+        }
+        if meta:
+            payload.update(meta)
+        debug_trace("REMEDY_EXECUTE", phase, payload)
+
+    def _run_remedy_with_debug(self, remedy: BaseRemedy, on_error_return: Optional[dict] = None) -> bool:
+        """Run remedy.remediate() with debug lifecycle logs.
+
+        Returns True on success, False on exception.
+        """
+        try:
+            affected_files = []
+            if debug_enabled():
+                affected_files = list(remedy.get_affected_files())
+                self._debug_remedy_execution(
+                    remedy,
+                    "before_remediate",
+                    {
+                        "affected_files": affected_files,
+                        "scan_file_count": len(remedy.child_scan_result),
+                    },
+                )
+
+            remedy.remediate()
+
+            if debug_enabled():
+                self._debug_remedy_execution(
+                    remedy,
+                    "after_remediate",
+                    {
+                        "affected_files": affected_files,
+                        "modified_files": sorted(list(remedy.child_ast_modified.keys())) if isinstance(remedy.child_ast_modified, dict) else [],
+                    },
+                )
+            return True
+        except Exception as exc:
+            if debug_enabled():
+                self._debug_remedy_execution(
+                    remedy,
+                    "remediate_exception",
+                    {
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    },
+                )
+            return False
+
     def apply_remediations(self, interactive: bool = True) -> dict:
         """
         Orchestrate the full remediation flow for all applicable rules.
@@ -179,9 +235,14 @@ class Remediator:
         for remedy_cls in self.REMEDIATION_REGISTRY.values():
             remedy = remedy_cls()
 
+            if debug_enabled():
+                debug_verbose("ORCHESTRATION", f"Starting remedy {remedy.id} ({remedy_cls.__name__})")
+
             if not self._prepare_remedy(remedy, self.ast_baseline):
                 if interactive:
                     print(f"No violations found for Rule {remedy.id}. Skipping.")
+                if debug_enabled():
+                    debug_info("ORCHESTRATION", f"Skipping remedy {remedy.id}: no violations")
                 continue
 
             if interactive:
@@ -199,7 +260,13 @@ class Remediator:
                 continue
             
             # Apply remediation
-            remedy.remediate()
+            if not self._run_remedy_with_debug(remedy):
+                if interactive:
+                    ui.display_validation_warning(
+                        f"Rule {remedy.id} failed during remediate() execution."
+                    )
+                    ui.display_remedy_rejected(remedy)
+                continue
             remedy.child_ast_modified = self._filter_validated_changes(remedy)
 
             approved_changes = {}
@@ -244,6 +311,9 @@ class Remediator:
                     unchanged=unchanged_count,
                     fallback=fallback_count,
                 )
+
+            if debug_enabled():
+                debug_verbose("ORCHESTRATION", f"Remedy {remedy.id} summary: accepted={accepted_count} rejected={rejected_count} unchanged={unchanged_count} fallback={fallback_count}")
 
             if not approved_changes:
                 if interactive:
@@ -305,7 +375,8 @@ class Remediator:
         if not remedy.child_scan_result:
             return modified_ast_config
 
-        remedy.remediate()
+        if not self._run_remedy_with_debug(remedy, on_error_return=modified_ast_config):
+            return modified_ast_config
         remedy.child_ast_modified = self._filter_validated_changes(remedy)
         approved_files = set(record.get("approved_files", []))
         approved_changes = {
@@ -348,7 +419,11 @@ class Remediator:
                 TerminalUI.get_instance().display_remedy_rejected(remedy)
                 return modified_ast_config, None
 
-        remedy.remediate()
+        if not self._run_remedy_with_debug(remedy, on_error_return=modified_ast_config):
+            TerminalUI.get_instance().display_validation_warning(
+                f"Rule {remedy.id} failed during remediate() execution."
+            )
+            return modified_ast_config, None
         remedy.child_ast_modified = self._filter_validated_changes(remedy)
         approved_changes = {}
         accepted_count = 0

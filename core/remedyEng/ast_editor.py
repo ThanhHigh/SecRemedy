@@ -9,6 +9,7 @@ import shlex
 from typing import Any, Dict, List, Union
 
 import crossplane
+from core.remedyEng.debug_logger import info as debug_info, verbose as debug_verbose, trace as debug_trace, enabled as debug_enabled
 
 
 class ASTEditor:
@@ -316,6 +317,8 @@ class ASTEditor:
             return -1
         
         normalized_search = ASTEditor._normalize_file_path(file_path)
+        if debug_enabled():
+            debug_verbose("BLOCK_MATCH", f"Searching for file '{file_path}' -> normalized '{normalized_search}'")
         if not normalized_search:
             return -1
         
@@ -327,6 +330,8 @@ class ASTEditor:
             normalized_entry = ASTEditor._normalize_file_path(entry_file)
             
             if normalized_entry == normalized_search:
+                if debug_enabled():
+                    debug_info("BLOCK_MATCH", f"Found file '{entry_file}' at index {index}", {"search": normalized_search, "entry": normalized_entry})
                 return index
         
         return -1
@@ -513,21 +518,34 @@ class ASTEditor:
         args = patch.get("args", [])
         block = patch.get("block")
 
+        if debug_enabled():
+            debug_verbose("PATCH_PLAN", f"Applying patch action={action} exact_path={exact_path} directive={directive}", patch)
+
         if action == "delete":
             if isinstance(target_key, int) and isinstance(parent, list) and 0 <= target_key < len(parent):
                 parent.pop(target_key)
+                if debug_enabled():
+                    debug_info("PATCH_APPLY", f"DELETE succeeded at {exact_path}", {"action": "delete", "exact_path": exact_path})
                 return True
             if isinstance(parent, dict) and isinstance(target_key, str) and target_key in parent:
                 del parent[target_key]
+                if debug_enabled():
+                    debug_info("PATCH_APPLY", f"DELETE succeeded at {exact_path}", {"action": "delete", "exact_path": exact_path})
                 return True
+            if debug_enabled():
+                debug_info("PATCH_APPLY", f"DELETE failed at {exact_path}", {"reason": "target not found", "action": "delete", "exact_path": exact_path})
             return False
 
         if action in {"replace", "modify", "modify_directive"}:
             if isinstance(parent, list) and isinstance(target_key, int) and 0 <= target_key < len(parent):
                 replacement = ASTEditor._build_patch_node(patch)
                 if not replacement:
+                    if debug_enabled():
+                        debug_info("PATCH_APPLY", f"REPLACE failed (empty replacement) at {exact_path}", {"action": "replace", "exact_path": exact_path})
                     return False
                 parent[target_key] = replacement
+                if debug_enabled():
+                    debug_info("PATCH_APPLY", f"REPLACE succeeded at {exact_path}", {"action": "replace", "exact_path": exact_path})
                 return True
 
             if isinstance(target, dict):
@@ -539,10 +557,14 @@ class ASTEditor:
                     target["args"] = copy.deepcopy(args)
                 if isinstance(block, list):
                     target["block"] = copy.deepcopy(block)
+                if debug_enabled():
+                    debug_info("PATCH_APPLY", f"MODIFY succeeded at {exact_path}", {"action": action, "exact_path": exact_path})
                 return True
 
             if isinstance(target, list) and isinstance(directive, str) and directive:
                 return ASTEditor._upsert_in_list(target, directive, args, block)
+            if debug_enabled():
+                debug_info("PATCH_APPLY", f"REPLACE/MODIFY failed at {exact_path}", {"reason": "target mismatch or invalid", "action": action, "exact_path": exact_path})
             return False
 
         if action in {"upsert", "add", "add_directive"}:
@@ -558,6 +580,8 @@ class ASTEditor:
                     target["block"] = copy.deepcopy(block)
                 return True
 
+            if debug_enabled():
+                debug_info("PATCH_APPLY", f"UPSERT/ADD failed at {exact_path}", {"action": action, "exact_path": exact_path})
             return False
 
         if action == "append":
@@ -567,6 +591,8 @@ class ASTEditor:
             if isinstance(parent, list):
                 parent.append(ASTEditor._build_patch_node(patch))
                 return True
+            if debug_enabled():
+                debug_info("PATCH_APPLY", f"APPEND failed at {exact_path}", {"action": "append", "exact_path": exact_path})
             return False
 
         if action == "insert_after":
@@ -574,8 +600,12 @@ class ASTEditor:
                 insert_index = min(target_key + 1, len(parent))
                 parent.insert(insert_index, ASTEditor._build_patch_node(patch))
                 return True
+            if debug_enabled():
+                debug_info("PATCH_APPLY", f"INSERT_AFTER failed at {exact_path}", {"action": "insert_after", "exact_path": exact_path})
             return False
 
+        if debug_enabled():
+            debug_info("PATCH_APPLY", f"Unknown action {action} at {exact_path}", {"action": action, "exact_path": exact_path})
         return False
 
     @staticmethod
@@ -605,6 +635,8 @@ class ASTEditor:
             normalized["_order"] = index
             normalized_patches.append(normalized)
 
+        if debug_enabled():
+            debug_verbose("PATCH_PLAN", f"Normalized patches count: {len(normalized_patches)}")
         selected: Dict[tuple, Dict[str, Any]] = {}
         for patch in normalized_patches:
             key = tuple(patch["exact_path"])
@@ -625,7 +657,18 @@ class ASTEditor:
             reverse=True,
         )
 
+        if debug_enabled():
+            debug_verbose("PATCH_PLAN", f"Selected patches count: {len(ordered_patches)}; ordering will be applied in reverse-path order")
+            # list keys briefly
+            try:
+                keys = [p.get("exact_path") for p in ordered_patches]
+                debug_trace("PATCH_PLAN", f"Ordered exact_paths: {keys}")
+            except Exception:
+                pass
+
         for patch in ordered_patches:
+            if debug_enabled():
+                debug_trace("PATCH_APPLY", f"Applying ordered patch", patch)
             ASTEditor._apply_patch(working, patch)
 
         return working
