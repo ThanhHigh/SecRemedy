@@ -451,6 +451,185 @@ class ASTEditor:
         """Render AST data to stable JSON text for diff fallback."""
         return json.dumps(ast_data, indent=2, sort_keys=True)
 
+    @staticmethod
+    def _build_patch_node(patch: Dict[str, Any]) -> Dict[str, Any]:
+        node: Dict[str, Any] = {}
+
+        directive = patch.get("directive")
+        if isinstance(directive, str) and directive:
+            node["directive"] = directive
+
+        if "args" in patch:
+            args = patch.get("args")
+            node["args"] = copy.deepcopy(args) if isinstance(args, list) else []
+
+        if "block" in patch and isinstance(patch.get("block"), list):
+            node["block"] = copy.deepcopy(patch.get("block"))
+
+        if "config" in patch:
+            node["config"] = copy.deepcopy(patch.get("config"))
+
+        return node
+
+    @staticmethod
+    def _path_sort_key(path: List[Union[str, int]]) -> tuple:
+        signature = []
+        for item in path:
+            if isinstance(item, int):
+                signature.append((0, item))
+            else:
+                signature.append((1, str(item)))
+        return (len(path), tuple(signature))
+
+    @staticmethod
+    def _upsert_in_list(block_list: Any, directive: str, args: Any, block: Any = None) -> bool:
+        if not isinstance(block_list, list) or not isinstance(directive, str) or not directive:
+            return False
+
+        replacement = {"directive": directive, "args": copy.deepcopy(args) if isinstance(args, list) else []}
+        if isinstance(block, list):
+            replacement["block"] = copy.deepcopy(block)
+
+        for item in block_list:
+            if isinstance(item, dict) and item.get("directive") == directive:
+                item.update(replacement)
+                return True
+
+        block_list.append(replacement)
+        return True
+
+    @staticmethod
+    def _apply_patch(data: Any, patch: Dict[str, Any]) -> bool:
+        exact_path = patch.get("exact_path")
+        if not isinstance(exact_path, list) or not exact_path:
+            return False
+
+        action = ASTEditor._normalize_action(patch.get("action", ""))
+        parent_path = exact_path[:-1]
+        target_key = exact_path[-1]
+        parent = ASTEditor.get_child_ast_config(data, parent_path) if parent_path else data
+        target = ASTEditor.get_child_ast_config(data, exact_path)
+        directive = patch.get("directive", "")
+        args = patch.get("args", [])
+        block = patch.get("block")
+
+        if action == "delete":
+            if isinstance(target_key, int) and isinstance(parent, list) and 0 <= target_key < len(parent):
+                parent.pop(target_key)
+                return True
+            if isinstance(parent, dict) and isinstance(target_key, str) and target_key in parent:
+                del parent[target_key]
+                return True
+            return False
+
+        if action in {"replace", "modify", "modify_directive"}:
+            if isinstance(parent, list) and isinstance(target_key, int) and 0 <= target_key < len(parent):
+                replacement = ASTEditor._build_patch_node(patch)
+                if not replacement:
+                    return False
+                parent[target_key] = replacement
+                return True
+
+            if isinstance(target, dict):
+                if isinstance(directive, str) and directive and target.get("directive") not in {directive, ""}:
+                    return False
+                if isinstance(directive, str) and directive:
+                    target["directive"] = directive
+                if isinstance(args, list):
+                    target["args"] = copy.deepcopy(args)
+                if isinstance(block, list):
+                    target["block"] = copy.deepcopy(block)
+                return True
+
+            if isinstance(target, list) and isinstance(directive, str) and directive:
+                return ASTEditor._upsert_in_list(target, directive, args, block)
+            return False
+
+        if action in {"upsert", "add", "add_directive"}:
+            if isinstance(target, list):
+                return ASTEditor._upsert_in_list(target, directive, args, block)
+
+            if isinstance(target, dict):
+                if isinstance(directive, str) and directive and target.get("directive") not in {directive, ""}:
+                    return False
+                if isinstance(args, list):
+                    target["args"] = copy.deepcopy(args)
+                if isinstance(block, list):
+                    target["block"] = copy.deepcopy(block)
+                return True
+
+            return False
+
+        if action == "append":
+            if isinstance(target, list):
+                target.append(ASTEditor._build_patch_node(patch))
+                return True
+            if isinstance(parent, list):
+                parent.append(ASTEditor._build_patch_node(patch))
+                return True
+            return False
+
+        if action == "insert_after":
+            if isinstance(parent, list) and isinstance(target_key, int):
+                insert_index = min(target_key + 1, len(parent))
+                parent.insert(insert_index, ASTEditor._build_patch_node(patch))
+                return True
+            return False
+
+        return False
+
+    @staticmethod
+    def apply_reverse_path_patches(ast_data: Any, patches: Any) -> Any:
+        """Apply patch list with reverse-path ordering and same-path conflict resolution."""
+        if not isinstance(ast_data, list) or not isinstance(patches, list):
+            return copy.deepcopy(ast_data)
+
+        normalized_patches: List[Dict[str, Any]] = []
+        for index, patch in enumerate(patches):
+            if not isinstance(patch, dict):
+                continue
+
+            exact_path = ASTEditor._extract_context_path(patch)
+            if not exact_path:
+                continue
+
+            try:
+                priority_value = int(patch.get("priority", 0))
+            except (TypeError, ValueError):
+                priority_value = 0
+
+            normalized = copy.deepcopy(patch)
+            normalized["action"] = ASTEditor._normalize_action(normalized.get("action", ""))
+            normalized["exact_path"] = exact_path
+            normalized["priority"] = priority_value
+            normalized["_order"] = index
+            normalized_patches.append(normalized)
+
+        selected: Dict[tuple, Dict[str, Any]] = {}
+        for patch in normalized_patches:
+            key = tuple(patch["exact_path"])
+            current = selected.get(key)
+            if current is None:
+                selected[key] = patch
+                continue
+
+            current_rank = (current.get("priority", 0), current.get("_order", -1))
+            new_rank = (patch.get("priority", 0), patch.get("_order", -1))
+            if new_rank >= current_rank:
+                selected[key] = patch
+
+        working = copy.deepcopy(ast_data)
+        ordered_patches = sorted(
+            selected.values(),
+            key=lambda item: (ASTEditor._path_sort_key(item["exact_path"]), item.get("priority", 0), item.get("_order", 0)),
+            reverse=True,
+        )
+
+        for patch in ordered_patches:
+            ASTEditor._apply_patch(working, patch)
+
+        return working
+
 
     # @staticmethod
     # def set_by_context(data: Any, context: List[Union[str, int]], value: Any) -> bool:

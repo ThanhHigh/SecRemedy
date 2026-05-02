@@ -38,7 +38,7 @@ class Remediate251(BaseRemedy):
         This has no user input - automatically fixes to "off"
         """
         self.child_ast_modified = {}
-        
+
         # Process each file that has violations
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
@@ -55,7 +55,7 @@ class Remediate251(BaseRemedy):
             if not isinstance(file_violations, list):
                 continue
             
-            # Apply each violation fix
+            patches = []
             for violation in file_violations:
                 if not isinstance(violation, dict):
                     continue
@@ -81,10 +81,22 @@ class Remediate251(BaseRemedy):
                         continue
 
                     target = ASTEditor.get_child_ast_config(parsed_copy, target_context)
-                    if isinstance(target, dict) and target.get("directive") == "server_tokens":
-                        target["args"] = args if isinstance(args, list) and args else ["off"]
-                    elif isinstance(target, list):
-                        self._upsert_in_block(target, "server_tokens", args if isinstance(args, list) and args else ["off"])
+                    if not isinstance(target, dict) and not isinstance(target, list):
+                        continue
+                    if isinstance(target, dict) and target.get("directive") != "server_tokens":
+                        continue
+
+                    patches.append(
+                        {
+                            "action": "upsert",
+                            "exact_path": target_context,
+                            "directive": "server_tokens",
+                            "args": args if isinstance(args, list) and args else ["off"],
+                            "priority": 0,
+                        }
+                    )
+
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             
             # Store modified config
             self.child_ast_modified[file_path] = {

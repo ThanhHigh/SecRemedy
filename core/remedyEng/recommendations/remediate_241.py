@@ -22,7 +22,7 @@ class Remediate241(BaseRemedy):
         Note: May have multiple violations per file.
         """
         self.child_ast_modified = {}
-        
+
         # Process each file that has violations
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
@@ -39,9 +39,7 @@ class Remediate241(BaseRemedy):
             if not isinstance(file_violations, list):
                 continue
             
-            # Apply each violation fix (may be multiple deletes per file).
-            # Delete deeper paths first, then higher sibling indexes, so list positions do not shift.
-            normalized_deletions = []
+            patches = []
             for violation in file_violations:
                 if not isinstance(violation, dict):
                     continue
@@ -59,20 +57,16 @@ class Remediate241(BaseRemedy):
                 if not relative_context:
                     continue
 
-                normalized_deletions.append(relative_context)
+                patches.append(
+                    {
+                        "action": "delete",
+                        "exact_path": relative_context,
+                        "directive": "listen",
+                        "priority": 0,
+                    }
+                )
 
-            def _sort_key(context_path):
-                normalized = []
-                for item in context_path:
-                    if isinstance(item, int):
-                        normalized.append((0, -item))
-                    else:
-                        normalized.append((1, str(item)))
-                return (-len(context_path), tuple(normalized))
-
-            for relative_context in sorted(normalized_deletions, key=_sort_key):
-                # Use ASTEditor to remove the item at this path
-                ASTEditor.remove_by_context(parsed_copy, relative_context)
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             
             # Store modified config only if changes were made
             self.child_ast_modified[file_path] = {

@@ -179,7 +179,7 @@ class Remediator:
         for remedy_cls in self.REMEDIATION_REGISTRY.values():
             remedy = remedy_cls()
 
-            if not self._prepare_remedy(remedy, modified_ast_config):
+            if not self._prepare_remedy(remedy, self.ast_baseline):
                 if interactive:
                     print(f"No violations found for Rule {remedy.id}. Skipping.")
                 continue
@@ -331,7 +331,7 @@ class Remediator:
         modified_ast_config = copy.deepcopy(ast_input)
         remedy = remedy_cls()
 
-        if not self._prepare_remedy(remedy, modified_ast_config):
+        if not self._prepare_remedy(remedy, self.ast_baseline):
             TerminalUI.get_instance().display_validation_warning(
                 f"No violations found for Rule {remedy.id}."
             )

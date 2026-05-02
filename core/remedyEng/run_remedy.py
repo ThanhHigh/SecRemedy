@@ -423,6 +423,11 @@ if __name__ == "__main__":
         type=str,
         help="Base directory for exported remediated config folders and tarballs (defaults to repo tmp/)",
     )
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to batch job config JSON file for non-interactive remediation runs (optional)",
+    )
     args = parser.parse_args()
 
     project_root = Path(__file__).resolve().parents[2]
@@ -432,7 +437,9 @@ if __name__ == "__main__":
         else (project_root / "tmp").resolve()
     )
 
-    batch_config_file = (project_root / "remedy_config_input.json").resolve()
+    batch_config_file = (project_root / "tmp/thanh-remedy_config_input.json").resolve()
+    if args.config:
+        batch_config_file = Path(args.config).expanduser().resolve()
     if batch_config_file.exists():
         batch_jobs = _load_batch_jobs(batch_config_file, project_root)
         for index, job in enumerate(batch_jobs, start=1):
