@@ -38,6 +38,13 @@ class Remediate531(BaseRemedy):
         
         Action: ADD/REPLACE - Adds or replaces add_header X-Content-Type-Options "nosniff" always;
         User must confirm before applying.
+
+        Two-phase approach:
+        Phase 1 - Process violations listed in the scan result (handles replace actions too).
+        Phase 2 - Sweep-walk the entire AST and inject the header into any server/location
+                   block that does not have it yet. This covers blocks added by earlier
+                   remedies (e.g. 2.4.2 catch-all server, 2.5.3 location blocks) that were
+                   not present when the original scan was taken.
         """
         self.child_ast_modified = {}
         
@@ -50,6 +57,8 @@ class Remediate531(BaseRemedy):
             # User declined
             return
         
+        HEADER_ARGS = ["X-Content-Type-Options", '"nosniff"', "always"]
+
         # Process each file that has violations
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
@@ -66,7 +75,7 @@ class Remediate531(BaseRemedy):
             if not isinstance(file_violations, list):
                 continue
             
-            # Apply each violation fix
+            # -- Phase 1: Process violations from scan result --
             for violation in file_violations:
                 if not isinstance(violation, dict):
                     continue
@@ -74,35 +83,118 @@ class Remediate531(BaseRemedy):
                 action = violation.get("action", "")
                 directive = violation.get("directive", "")
                 args = violation.get("args", [])
-                exact_path = violation.get("exact_path", [])
+                header_args = args if args else HEADER_ARGS
                 
                 # For rule 5.3.1, handle both "add" and "replace" actions
-                if directive != "add_header" or not exact_path:
+                if directive != "add_header":
                     continue
                 
+                exact_path = self._relative_context(violation.get("exact_path", []))
+                if not exact_path:
+                    continue
+
                 if action == "add":
-                    # Add the header directive
-                    parent_path = exact_path[:-1] if exact_path else []
-                    parent = ASTEditor.get_child_ast_config(parsed_copy, parent_path)
+                    # For add: exact_path points to the block list
+                    parent_path = exact_path[:-1] if len(exact_path) > 1 else []
+                    parent = ASTEditor.get_child_ast_config(parsed_copy, parent_path) if parent_path else parsed_copy
                     
-                    if parent and isinstance(parent, list):
-                        # Create the new directive
-                        new_directive = {
-                            "directive": "add_header",
-                            "args": args if args else ["X-Content-Type-Options", '"nosniff"', "always"]
-                        }
-                        parent.append(new_directive)
+                    if isinstance(parent, list):
+                        self._upsert_in_block(parent, "add_header", header_args)
+                    elif isinstance(parent, dict) and isinstance(parent.get("block"), list):
+                        self._upsert_in_block(parent["block"], "add_header", header_args)
                 
                 elif action == "replace":
-                    # Replace an existing invalid header
+                    # For replace: exact_path points directly to the directive to replace
                     target = ASTEditor.get_child_ast_config(parsed_copy, exact_path)
                     if target and isinstance(target, dict) and target.get("directive") == "add_header":
-                        target["args"] = args if args else ["X-Content-Type-Options", '"nosniff"', "always"]
+                        target["args"] = copy.deepcopy(header_args)
             
+            # -- Phase 2: Sweep entire AST for any server/location missing the header --
+            # Covers blocks added by earlier remedies not present in original scan.
+            self._inject_header_to_all_eligible_blocks(parsed_copy, HEADER_ARGS)
+
             # Store modified config
             self.child_ast_modified[file_path] = {
                 "parsed": parsed_copy
             }
+
+    @staticmethod
+    def _inject_header_to_all_eligible_blocks(nodes: list, header_args: list) -> None:
+        r"""
+        Recursively walk all server and location blocks in the AST and inject
+        add_header X-Content-Type-Options if not already present.
+
+        Only injects into blocks that are valid nginx scopes for security headers:
+          - server blocks
+          - location blocks
+        (http blocks are handled by the scan violations path above)
+
+        Skips blocks that already have the header set.
+        """
+        if not isinstance(nodes, list):
+            return
+
+        INJECTABLE_SCOPES = {"server", "location"}
+        header_name = header_args[0] if header_args else ""
+
+        def _walk(node_list: list) -> None:
+            if not isinstance(node_list, list):
+                return
+            for node in node_list:
+                if not isinstance(node, dict):
+                    continue
+                directive = node.get("directive", "")
+                block = node.get("block")
+                if directive in INJECTABLE_SCOPES and isinstance(block, list):
+                    # Check if header already present
+                    has_header = any(
+                        isinstance(item, dict)
+                        and item.get("directive") == "add_header"
+                        and isinstance(item.get("args"), list)
+                        and len(item["args"]) > 0
+                        and item["args"][0] == header_name
+                        for item in block
+                    )
+                    if not has_header:
+                        block.append({
+                            "directive": "add_header",
+                            "args": copy.deepcopy(header_args),
+                        })
+                    # Always recurse to cover nested location blocks
+                    _walk(block)
+
+        _walk(nodes)
+
+    @staticmethod
+    def _upsert_in_block(block_list, directive, args):
+        """
+        Upsert a directive in a block list.
+        For add_header, only updates if the header name matches (compare args[0]).
+        Otherwise, appends a new directive.
+        """
+        if not isinstance(block_list, list) or not args:
+            return
+        
+        # For add_header, match by header name (args[0])
+        if directive == "add_header" and len(args) > 0:
+            header_name = args[0]
+            for item in block_list:
+                if (isinstance(item, dict) and 
+                    item.get("directive") == directive and 
+                    len(item.get("args", [])) > 0 and 
+                    item["args"][0] == header_name):
+                    # Found existing header with same name, update it
+                    item["args"] = copy.deepcopy(args)
+                    return
+            # No matching header found, append new one
+            block_list.append({"directive": directive, "args": copy.deepcopy(args)})
+        else:
+            # For other directives, use original logic
+            for item in block_list:
+                if isinstance(item, dict) and item.get("directive") == directive:
+                    item["args"] = copy.deepcopy(args)
+                    return
+            block_list.append({"directive": directive, "args": copy.deepcopy(args)})
 
     def get_user_guidance(self) -> str:
         """Return guidance for X-Content-Type-Options rule."""

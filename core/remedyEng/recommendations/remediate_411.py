@@ -148,19 +148,78 @@ class Remediate411(BaseRemedy):
                     if server_blocks:
                         target = ASTEditor.get_child_ast_config(parsed_copy, server_blocks[0])
 
+                # Guard: skip catch-all SSL-reject server blocks.
+                # These blocks use ssl_reject_handshake on; return 444; to silently
+                # drop unknown-host SSL connections. Overwriting return 444 with
+                # return 301 here would break that pattern.
+                if self._is_ssl_reject_server_block(target):
+                    continue
+
                 # Build return directive args
                 return_args = [redirect_code, redirect_target]
 
                 # Context can point to directive list or to existing directive
                 if isinstance(target, list):
-                    self._upsert_in_block(target, "return", return_args)
+                    # Additionally guard: if this list is inside an SSL-reject server,
+                    # skip it. Walk up the context to check the parent server block.
+                    if not self._context_is_ssl_reject(parsed_copy, rel_ctx):
+                        self._upsert_in_block(target, "return", return_args)
                 elif isinstance(target, dict):
                     if target.get("directive") == "return":
-                        target["args"] = copy.deepcopy(return_args)
+                        # Never replace return 444 (SSL reject)
+                        if target.get("args") != ["444"]:
+                            target["args"] = copy.deepcopy(return_args)
                     elif isinstance(target.get("block"), list):
-                        self._upsert_in_block(target["block"], "return", return_args)
+                        if not self._is_ssl_reject_server_block(target.get("block")):
+                            self._upsert_in_block(target["block"], "return", return_args)
 
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
+
+    @staticmethod
+    def _is_ssl_reject_server_block(block) -> bool:
+        """
+        Return True if the given block list belongs to a catch-all SSL-reject server.
+
+        A catch-all SSL-reject server is identified by having:
+          ssl_reject_handshake on;
+        OR an existing:
+          return 444;
+        These blocks must NOT be overwritten with return 301.
+        """
+        if not isinstance(block, list):
+            return False
+        for item in block:
+            if not isinstance(item, dict):
+                continue
+            directive = item.get("directive", "")
+            if directive == "ssl_reject_handshake" and item.get("args") == ["on"]:
+                return True
+            if directive == "return" and item.get("args") == ["444"]:
+                return True
+        return False
+
+    @staticmethod
+    def _context_is_ssl_reject(parsed_copy: list, rel_ctx: list) -> bool:
+        """
+        Walk up the context path to find if the enclosing server block is an
+        SSL-reject catch-all. Returns True if it is (remedy should skip).
+        """
+        if not isinstance(rel_ctx, list) or not rel_ctx:
+            return False
+        # Server blocks are typically at parsed_copy[N] or parsed_copy[N].block[M]
+        # We try to find the server directive by walking up the context path.
+        from core.remedyEng.ast_editor import ASTEditor
+        for trim_len in range(1, len(rel_ctx) + 1):
+            candidate_ctx = rel_ctx[:-trim_len]
+            if not candidate_ctx:
+                candidate = parsed_copy
+            else:
+                candidate = ASTEditor.get_child_ast_config(parsed_copy, candidate_ctx)
+            if isinstance(candidate, dict) and candidate.get("directive") == "server":
+                block = candidate.get("block", [])
+                if Remediate411._is_ssl_reject_server_block(block):
+                    return True
+        return False
 
     @staticmethod
     def _upsert_in_block(block_list, directive, args):

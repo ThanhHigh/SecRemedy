@@ -392,7 +392,7 @@ if __name__ == "__main__":
         type=str,
         help="Path to scan result JSON (optional; if omitted, prompt in TUI)",
     )
-    parser.add_argument(
+    parser.add_argument(  
         "--strict-placement",
         action="store_true",
         help="Enable strict directive placement for rules that require ordering (e.g., CIS 2.4.2)",

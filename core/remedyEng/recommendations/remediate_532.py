@@ -98,27 +98,28 @@ class Remediate532(BaseRemedy):
                 
                 action = violation.get("action", "")
                 directive = violation.get("directive", "")
-                exact_path = violation.get("exact_path", [])
                 
                 # For rule 5.3.2, handle both "add" and "replace" actions
-                if directive != "add_header" or not exact_path:
+                if directive != "add_header":
                     continue
-                
+
+                exact_path = self._relative_context(violation.get("exact_path", []))
+                if not exact_path:
+                    continue
+
                 if action == "add":
-                    # Add the CSP header directive
-                    parent_path = exact_path[:-1] if exact_path else []
-                    parent = ASTEditor.get_child_ast_config(parsed_copy, parent_path)
+                    # For add: exact_path points to the index where we should insert
+                    # Extract parent path (all but last element) and target index
+                    parent_path = exact_path[:-1] if len(exact_path) > 1 else []
+                    parent = ASTEditor.get_child_ast_config(parsed_copy, parent_path) if parent_path else parsed_copy
                     
-                    if parent and isinstance(parent, list):
-                        # Create the new directive with CSP policy
-                        new_directive = {
-                            "directive": "add_header",
-                            "args": ["Content-Security-Policy", f'"{csp_policy}"', "always"]
-                        }
-                        parent.append(new_directive)
+                    if isinstance(parent, list):
+                        self._upsert_in_block(parent, "add_header", ["Content-Security-Policy", f'"{csp_policy}"', "always"])
+                    elif isinstance(parent, dict) and isinstance(parent.get("block"), list):
+                        self._upsert_in_block(parent["block"], "add_header", ["Content-Security-Policy", f'"{csp_policy}"', "always"])
                 
                 elif action == "replace":
-                    # Replace an existing invalid CSP header
+                    # For replace: exact_path points directly to the directive to replace
                     target = ASTEditor.get_child_ast_config(parsed_copy, exact_path)
                     if target and isinstance(target, dict) and target.get("directive") == "add_header":
                         target["args"] = ["Content-Security-Policy", f'"{csp_policy}"', "always"]
@@ -127,6 +128,37 @@ class Remediate532(BaseRemedy):
             self.child_ast_modified[file_path] = {
                 "parsed": parsed_copy
             }
+
+    @staticmethod
+    def _upsert_in_block(block_list, directive, args):
+        """
+        Upsert a directive in a block list.
+        For add_header, only updates if the header name matches (compare args[0]).
+        Otherwise, appends a new directive.
+        """
+        if not isinstance(block_list, list) or not args:
+            return
+        
+        # For add_header, match by header name (args[0])
+        if directive == "add_header" and len(args) > 0:
+            header_name = args[0]
+            for item in block_list:
+                if (isinstance(item, dict) and 
+                    item.get("directive") == directive and 
+                    len(item.get("args", [])) > 0 and 
+                    item["args"][0] == header_name):
+                    # Found existing header with same name, update it
+                    item["args"] = copy.deepcopy(args)
+                    return
+            # No matching header found, append new one
+            block_list.append({"directive": directive, "args": copy.deepcopy(args)})
+        else:
+            # For other directives, use original logic
+            for item in block_list:
+                if isinstance(item, dict) and item.get("directive") == directive:
+                    item["args"] = copy.deepcopy(args)
+                    return
+            block_list.append({"directive": directive, "args": copy.deepcopy(args)})
 
     def get_user_guidance(self) -> str:
         """Return guidance for CSP rule."""

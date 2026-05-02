@@ -137,17 +137,25 @@ class Remediate511(BaseRemedy):
                 
                 action = violation.get("action", "")
                 directive = violation.get("directive", "")
-                logical_context = violation.get("logical_context", [])
                 exact_path = violation.get("exact_path", [])
-                
-                # For rule 5.1.1, we add allow and deny directives
-                if action != "add" or not exact_path:
+
+                rel_ctx = self._relative_context(exact_path)
+                if not rel_ctx:
                     continue
-                
-                # Find or create the location block at the specified path
-                target_block = ASTEditor.get_child_ast_config(parsed_copy, exact_path)
-                
-                if target_block and isinstance(target_block, list):
+
+                target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+
+                if action == "delete":
+                    if isinstance(target, dict) and target.get("directive") == "allow":
+                        ASTEditor.remove_by_context(parsed_copy, rel_ctx)
+                    continue
+
+                if action != "add":
+                    continue
+
+                target_block = target if isinstance(target, list) else target.get("block") if isinstance(target, dict) else None
+
+                if isinstance(target_block, list):
                     # Add allow directives for each IP
                     for ip in ips:
                         allow_directive = {

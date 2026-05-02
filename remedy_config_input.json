@@ -6,8 +6,8 @@
       "user": "root",
       "pass": "root",
       "strict_private": false,
-      "ast_config": "tmp/contrast/parser_output_2224.json",
-      "scan_result": "tmp/contrast/scan_result_2224.json",
+      "ast_config": "contracts/parser_output_2224.json",
+      "scan_result": "contracts/scan_result_2224.json",
       "remediate_ast": "tmp/remedies_output/2224/remediated_output.json",
       "remediate_config": "tmp/remedies_output/2224/config",
       "remedy_inputs": {

@@ -59,16 +59,19 @@ class Remediate251(BaseRemedy):
             for violation in file_violations:
                 if not isinstance(violation, dict):
                     continue
-                
+
                 action = violation.get("action", "")
                 context = violation.get("context", [])
                 directive = violation.get("directive", "")
                 args = violation.get("args", [])
-                
-                # For rule 2.5.1, accept action aliases normalized from scanner payloads.
-                if action not in {"replace", "modify", "modify_directive"} or directive != "server_tokens":
+
+                if directive != "server_tokens":
                     continue
                 
+                # Only process replace/modify actions - "add" is not relevant for server_tokens
+                if action not in {"replace", "modify", "modify_directive"}:
+                    continue
+
                 # Convert context to relative path within this file
                 relative_context = self._relative_context(context)
                 target_contexts = [relative_context] if relative_context else self._find_directive_contexts(parsed_copy, "server_tokens")
@@ -78,14 +81,25 @@ class Remediate251(BaseRemedy):
                         continue
 
                     target = ASTEditor.get_child_ast_config(parsed_copy, target_context)
-                    if target and isinstance(target, dict) and target.get("directive") == "server_tokens":
-                        # Ensure it is exactly ["off"] unless scanner provided another explicit value.
+                    if isinstance(target, dict) and target.get("directive") == "server_tokens":
                         target["args"] = args if isinstance(args, list) and args else ["off"]
+                    elif isinstance(target, list):
+                        self._upsert_in_block(target, "server_tokens", args if isinstance(args, list) and args else ["off"])
             
             # Store modified config
             self.child_ast_modified[file_path] = {
                 "parsed": parsed_copy
             }
+
+    @staticmethod
+    def _upsert_in_block(block_list, directive, args):
+        if not isinstance(block_list, list):
+            return
+        for item in block_list:
+            if isinstance(item, dict) and item.get("directive") == directive:
+                item["args"] = copy.deepcopy(args)
+                return
+        block_list.append({"directive": directive, "args": copy.deepcopy(args)})
 
     def get_user_guidance(self) -> str:
         """Return guidance for server_tokens rule."""

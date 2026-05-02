@@ -90,15 +90,20 @@ class Remediate32(BaseRemedy):
                 if not rel_ctx:
                     continue
 
+                target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+                if not isinstance(target, (list, dict)):
+                    continue
+
                 scope = self._infer_scope(rel_ctx)
                 user_args = self._access_log_args_for_scope(scope_map, scope)
                 args = user_args if user_args else remediation.get("args", [])
                 if not isinstance(args, list) or not args:
                     continue
 
-                # modify_directive/replace: update target directive args.
-                if remediation.get("action") in {"modify_directive", "replace"}:
-                    target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+                action = remediation.get("action")
+
+                # delete/modify/replace: update the offending access_log directive in place.
+                if action in {"delete", "modify_directive", "replace"}:
                     if isinstance(target, dict) and target.get("directive") == "access_log":
                         target["args"] = copy.deepcopy(args)
 
@@ -111,9 +116,14 @@ class Remediate32(BaseRemedy):
                                 [log_not_found_value],
                             )
 
+                    elif isinstance(target, list):
+                        self._upsert_in_block(target, "access_log", args)
+                        if log_not_found_value in {"on", "off"}:
+                            self._upsert_in_block(target, "log_not_found", [log_not_found_value])
+
                 # add/add_directive: add access_log into target directive list.
-                elif remediation.get("action") in {"add", "add_directive"}:
-                    target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+                elif action in {"add", "add_directive"}:
+                    target_list = target if isinstance(target, list) else target.get("block") if isinstance(target, dict) else None
                     if isinstance(target_list, list):
                         self._upsert_in_block(target_list, "access_log", args)
                         if log_not_found_value in {"on", "off"}:
