@@ -574,6 +574,32 @@ class ASTEditor:
             block_list.append(replacement)
             return True
 
+        if directive in {"proxy_set_header", "grpc_set_header"} and isinstance(args, list) and len(args) > 0:
+            header_key = args[0]
+            for item in block_list:
+                if not isinstance(item, dict) or item.get("directive") != directive:
+                    continue
+                iargs = item.get("args") or []
+                if len(iargs) > 0 and iargs[0] == header_key:
+                    item.clear()
+                    item.update(replacement)
+                    return True
+            block_list.append(replacement)
+            return True
+
+        if directive == "fastcgi_param" and isinstance(args, list) and len(args) > 0:
+            param_key = args[0]
+            for item in block_list:
+                if not isinstance(item, dict) or item.get("directive") != "fastcgi_param":
+                    continue
+                iargs = item.get("args") or []
+                if len(iargs) > 0 and iargs[0] == param_key:
+                    item.clear()
+                    item.update(replacement)
+                    return True
+            block_list.append(replacement)
+            return True
+
         for item in block_list:
             if isinstance(item, dict) and item.get("directive") == directive:
                 item.update(replacement)

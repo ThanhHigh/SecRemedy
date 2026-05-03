@@ -115,6 +115,9 @@ class Remediate253(BaseRemedy):
                 continue
 
             parsed_copy = copy.deepcopy(parsed)
+            patches: list = []
+            reorder_targets: set[tuple] = set()
+
             for remediation in self.child_scan_result[file_path]:
                 if not isinstance(remediation, dict):
                     continue
@@ -142,6 +145,8 @@ class Remediate253(BaseRemedy):
                     if not isinstance(target_list, list):
                         continue
 
+                    reorder_targets.add(tuple(target_ctx))
+
                     has_nested_locations = any(
                         isinstance(location_node, dict) and location_node.get("directive") == "location"
                         for location_node in location_block
@@ -158,12 +163,8 @@ class Remediate253(BaseRemedy):
                                 if not isinstance(node_block, list):
                                     node_copy["block"] = []
                                     node_block = node_copy["block"]
-                                self._upsert_in_block(node_block, "root", [root_path])
+                                Remediate253._upsert_in_block(node_block, "root", [root_path])
 
-                            # Strip allow/deny directives from ACME location so 5.1.1
-                            # scanner does not flag a bare allow without deny all.
-                            # nginx defaults to allowing all when no ACL is set, so
-                            # the functional behavior is unchanged.
                             if self._is_acme_location(node_copy):
                                 node_copy["block"] = [
                                     item for item in node_copy.get("block", [])
@@ -171,21 +172,34 @@ class Remediate253(BaseRemedy):
                                     and item.get("directive") not in {"allow", "deny"}
                                 ]
 
-                            self._upsert_location_node(target_list, node_copy)
+                            loc_args = node_copy.get("args", [])
+                            idx = Remediate253._location_child_index(target_list, loc_args)
+                            if idx is not None:
+                                blk = node_copy.get("block")
+                                patches.append({
+                                    "action": "replace",
+                                    "exact_path": list(target_ctx) + [idx],
+                                    "directive": "location",
+                                    "args": copy.deepcopy(loc_args),
+                                    "block": copy.deepcopy(blk) if isinstance(blk, list) else [],
+                                    "priority": 0,
+                                })
+                            else:
+                                patches.append({
+                                    "action": "add_block",
+                                    "exact_path": target_ctx,
+                                    "block": copy.deepcopy(node_copy),
+                                    "priority": 0,
+                                })
                     else:
-                        # CRITICAL: Add ACME exception location BEFORE deny location.
-                        # This ensures ACME challenges succeed even when /\. is blocked.
-                        # IMPORTANT: Do NOT add allow/deny inside the ACME location.
-                        # The 5.1.1 scanner flags bare `allow all` without `deny all`.
-                        # nginx defaults to allowing all traffic when no ACL is configured,
-                        # so an empty block is functionally identical to `allow all`.
                         acme_location = {
                             "directive": "location",
                             "args": ["~", "/\\.well-known/acme-challenge/"],
-                            "block": [],
+                            "block": [
+                                {"directive": "allow", "args": ["all"]},
+                                {"directive": "access_log", "args": ["on"]},
+                            ],
                         }
-                        self._upsert_location_node(target_list, acme_location)
-
                         deny_location = {
                             "directive": "location",
                             "args": copy.deepcopy(remediation.get("args", ["~", "/\\."])),
@@ -196,16 +210,60 @@ class Remediate253(BaseRemedy):
                             if not isinstance(deny_block, list):
                                 deny_location["block"] = []
                                 deny_block = deny_location["block"]
-                            self._upsert_in_block(deny_block, "root", [root_path])
+                            Remediate253._upsert_in_block(deny_block, "root", [root_path])
 
-                        self._upsert_location_node(target_list, deny_location)
-                        
-                        # Ensure ACME is before deny (reorder if needed)
-                        self._ensure_acme_before_deny(target_list)
+                        acme_idx = Remediate253._location_child_index(target_list, acme_location["args"])
+                        if acme_idx is not None:
+                            patches.append({
+                                "action": "replace",
+                                "exact_path": list(target_ctx) + [acme_idx],
+                                "directive": "location",
+                                "args": copy.deepcopy(acme_location["args"]),
+                                "block": copy.deepcopy(acme_location["block"]),
+                                "priority": 0,
+                            })
+                        else:
+                            patches.append({
+                                "action": "add_block",
+                                "exact_path": target_ctx,
+                                "block": copy.deepcopy(acme_location),
+                                "priority": 0,
+                            })
 
-                    # Optional server_name override at parent level if requested
+                        deny_args = deny_location["args"]
+                        deny_idx = Remediate253._location_child_index(target_list, deny_args)
+                        if deny_idx is not None:
+                            deny_blk = deny_location.get("block")
+                            patches.append({
+                                "action": "replace",
+                                "exact_path": list(target_ctx) + [deny_idx],
+                                "directive": "location",
+                                "args": copy.deepcopy(deny_args),
+                                "block": copy.deepcopy(deny_blk) if isinstance(deny_blk, list) else [],
+                                "priority": 0,
+                            })
+                        else:
+                            patches.append({
+                                "action": "add_block",
+                                "exact_path": target_ctx,
+                                "block": copy.deepcopy(deny_location),
+                                "priority": 0,
+                            })
+
                     if server_name:
-                        self._upsert_in_block(target_list, "server_name", [server_name])
+                        patches.append({
+                            "action": "upsert",
+                            "exact_path": target_ctx,
+                            "directive": "server_name",
+                            "args": [server_name],
+                            "priority": 2,
+                        })
+
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
+            for ctx_tup in reorder_targets:
+                tl = ASTEditor.get_child_ast_config(parsed_copy, list(ctx_tup))
+                if isinstance(tl, list):
+                    Remediate253._ensure_acme_before_deny(tl)
 
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
@@ -224,6 +282,15 @@ class Remediate253(BaseRemedy):
             # Look for either literal or regex pattern for acme challenge path
             return args[0].strip('"\'') == "~" and (".well-known/acme-challenge" in arg_str or r"\.well-known/acme-challenge" in arg_str)
         return False
+
+    @staticmethod
+    def _location_child_index(block_list: list, args: list) -> int | None:
+        if not isinstance(block_list, list) or not isinstance(args, list):
+            return None
+        for i, item in enumerate(block_list):
+            if isinstance(item, dict) and item.get("directive") == "location" and item.get("args") == args:
+                return i
+        return None
 
     @staticmethod
     def _ensure_acme_before_deny(block_list: list) -> None:
@@ -254,56 +321,6 @@ class Remediate253(BaseRemedy):
         if acme_index >= 0 and deny_index >= 0 and deny_index < acme_index:
             acme_node = block_list.pop(acme_index)
             block_list.insert(deny_index, acme_node)
-
-    @staticmethod
-    def _upsert_location_node(block_list, location_node):
-        if not isinstance(block_list, list) or not isinstance(location_node, dict):
-            return
-
-        args = location_node.get("args", [])
-        if not isinstance(args, list):
-            return
-
-        for item in block_list:
-            if isinstance(item, dict) and item.get("directive") == "location" and item.get("args") == args:
-                item["block"] = copy.deepcopy(location_node.get("block", []))
-                return
-
-        if Remediate253._is_acme_location(location_node):
-            deny_index = -1
-            for index, item in enumerate(block_list):
-                if isinstance(item, dict) and item.get("directive") == "location" and Remediate253._is_deny_hidden_location(item):
-                    deny_index = index
-                    break
-            if deny_index >= 0:
-                block_list.insert(deny_index, copy.deepcopy(location_node))
-                return
-
-        block_list.append(copy.deepcopy(location_node))
-
-    @staticmethod
-    def _upsert_location_block(block_list, args, location_block):
-        """
-        Update or insert location block with given args and block content.
-        
-        Args:
-            block_list: List to modify
-            args: Location args (e.g., ["~", "/\\."])
-            location_block: Block content (list of directives)
-        """
-        for item in block_list:
-            if not isinstance(item, dict):
-                continue
-            if item.get("directive") == "location" and item.get("args") == args:
-                item["block"] = copy.deepcopy(location_block)
-                return
-        block_list.append(
-            {
-                "directive": "location",
-                "args": copy.deepcopy(args),
-                "block": copy.deepcopy(location_block),
-            }
-        )
 
     @staticmethod
     def _upsert_in_block(block_list, directive, args):

@@ -39,6 +39,48 @@ class Remediate532(BaseRemedy):
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
         self.default_csp = "default-src 'self'; frame-ancestors 'self'; form-action 'self';"
 
+    @staticmethod
+    def _generate_sweep_patches(nodes: list, header_args: list) -> list:
+        """Patches for server/location blocks missing Content-Security-Policy add_header."""
+        patches: list = []
+        injectable_scopes = {"server", "location"}
+        header_name = header_args[0] if header_args else ""
+
+        def _sweep(node_list: list, path_prefix: list) -> None:
+            if not isinstance(node_list, list):
+                return
+            for idx, node in enumerate(node_list):
+                if not isinstance(node, dict):
+                    continue
+                directive = node.get("directive", "")
+                block = node.get("block")
+
+                if directive in injectable_scopes and isinstance(block, list):
+                    has_header = any(
+                        isinstance(item, dict)
+                        and item.get("directive") == "add_header"
+                        and isinstance(item.get("args"), list)
+                        and len(item["args"]) > 0
+                        and item["args"][0] == header_name
+                        for item in block
+                    )
+
+                    if not has_header:
+                        current_path = path_prefix + [idx, "block"]
+                        patches.append({
+                            "action": "add",
+                            "exact_path": current_path,
+                            "directive": "add_header",
+                            "args": copy.deepcopy(header_args),
+                            "priority": 1,
+                        })
+
+                if isinstance(block, list):
+                    _sweep(block, path_prefix + [idx, "block"])
+
+        _sweep(nodes, [])
+        return patches
+
     def _get_csp_policy(self) -> str:
         """
         Determine which CSP policy to use based on user input.
@@ -83,82 +125,55 @@ class Remediate532(BaseRemedy):
             if not isinstance(remediations, dict) or "parsed" not in remediations:
                 continue
             
-            # Deep copy the parsed section for modification
             parsed_copy = copy.deepcopy(remediations["parsed"])
-            
-            # Get violations for this file
+
             file_violations = self.child_scan_result[file_path]
             if not isinstance(file_violations, list):
                 continue
-            
-            # Apply each violation fix
-            for violation in file_violations:
-                if not isinstance(violation, dict):
-                    continue
-                
-                action = violation.get("action", "")
-                directive = violation.get("directive", "")
-                
-                # For rule 5.3.2, handle both "add" and "replace" actions
-                if directive != "add_header":
-                    continue
 
-                exact_path = self._relative_context(violation.get("exact_path", []))
-                if not exact_path:
+            header_args = ["Content-Security-Policy", f'"{csp_policy}"', "always"]
+
+            header_violations = [
+                v for v in file_violations
+                if isinstance(v, dict) and v.get("directive") == "add_header"
+            ]
+            if not header_violations:
+                continue
+
+            patches = []
+
+            for violation in header_violations:
+                action = violation.get("action", "")
+                raw_path = ASTEditor._extract_context_path(violation)
+                exact_path = self._relative_context(raw_path) if raw_path else []
+                if not exact_path or not ASTEditor.path_is_valid(parsed_copy, exact_path):
                     continue
 
                 if action == "add":
-                    # For add: exact_path points to the index where we should insert
-                    # Extract parent path (all but last element) and target index
-                    parent_path = exact_path[:-1] if len(exact_path) > 1 else []
-                    parent = ASTEditor.get_child_ast_config(parsed_copy, parent_path) if parent_path else parsed_copy
-                    
-                    if isinstance(parent, list):
-                        self._upsert_in_block(parent, "add_header", ["Content-Security-Policy", f'"{csp_policy}"', "always"])
-                    elif isinstance(parent, dict) and isinstance(parent.get("block"), list):
-                        self._upsert_in_block(parent["block"], "add_header", ["Content-Security-Policy", f'"{csp_policy}"', "always"])
-                
+                    patches.append({
+                        "action": "add",
+                        "exact_path": exact_path,
+                        "directive": "add_header",
+                        "args": copy.deepcopy(header_args),
+                        "priority": 0,
+                    })
                 elif action == "replace":
-                    # For replace: exact_path points directly to the directive to replace
-                    target = ASTEditor.get_child_ast_config(parsed_copy, exact_path)
-                    if target and isinstance(target, dict) and target.get("directive") == "add_header":
-                        target["args"] = ["Content-Security-Policy", f'"{csp_policy}"', "always"]
-            
-            # Store modified config
-            self.child_ast_modified[file_path] = {
-                "parsed": parsed_copy
-            }
+                    patches.append({
+                        "action": "upsert",
+                        "exact_path": exact_path,
+                        "directive": "add_header",
+                        "args": copy.deepcopy(header_args),
+                        "priority": 0,
+                    })
 
-    @staticmethod
-    def _upsert_in_block(block_list, directive, args):
-        """
-        Upsert a directive in a block list.
-        For add_header, only updates if the header name matches (compare args[0]).
-        Otherwise, appends a new directive.
-        """
-        if not isinstance(block_list, list) or not args:
-            return
-        
-        # For add_header, match by header name (args[0])
-        if directive == "add_header" and len(args) > 0:
-            header_name = args[0]
-            for item in block_list:
-                if (isinstance(item, dict) and 
-                    item.get("directive") == directive and 
-                    len(item.get("args", [])) > 0 and 
-                    item["args"][0] == header_name):
-                    # Found existing header with same name, update it
-                    item["args"] = copy.deepcopy(args)
-                    return
-            # No matching header found, append new one
-            block_list.append({"directive": directive, "args": copy.deepcopy(args)})
-        else:
-            # For other directives, use original logic
-            for item in block_list:
-                if isinstance(item, dict) and item.get("directive") == directive:
-                    item["args"] = copy.deepcopy(args)
-                    return
-            block_list.append({"directive": directive, "args": copy.deepcopy(args)})
+            if header_violations and not patches:
+                continue
+
+            sweep_patches = Remediate532._generate_sweep_patches(parsed_copy, header_args)
+            patches.extend(sweep_patches)
+
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
+            self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     def get_user_guidance(self) -> str:
         """Return guidance for CSP rule."""

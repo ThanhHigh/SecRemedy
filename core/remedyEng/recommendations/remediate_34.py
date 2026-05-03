@@ -170,6 +170,7 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
                 continue
 
             parsed_copy = copy.deepcopy(parsed)
+            patches = []
             for remediation in self.child_scan_result[file_path]:
                 if not isinstance(remediation, dict):
                     continue
@@ -185,36 +186,25 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
                 if not isinstance(target_list, list):
                     continue
 
-                # add/add_directive for header-like directives from scan result context.
                 if action in {"add", "add_directive"} and directive_name in {"proxy_set_header", "fastcgi_param", "grpc_set_header"}:
                     args = remediation.get("args", [])
                     if isinstance(args, list) and len(args) >= 2:
-                        self._upsert_proxy_header(target_list, directive_name, args)
+                        patches.append({
+                            "action": "upsert",
+                            "exact_path": rel_ctx,
+                            "directive": directive_name,
+                            "args": copy.deepcopy(args),
+                            "priority": 0,
+                        })
 
-                # Keep proxy_pass aligned with user input at the same proxying block.
                 if proxy_pass_value:
-                    self._upsert_proxy_pass(target_list, proxy_pass_value)
+                    patches.append({
+                        "action": "upsert",
+                        "exact_path": rel_ctx,
+                        "directive": "proxy_pass",
+                        "args": [proxy_pass_value],
+                        "priority": 1,
+                    })
 
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
-
-    @staticmethod
-    def _upsert_proxy_header(block_list, directive_name, args):
-        for item in block_list:
-            if not isinstance(item, dict):
-                continue
-            if item.get("directive") != directive_name:
-                continue
-            current_args = item.get("args", [])
-            if isinstance(current_args, list) and current_args and current_args[0] == args[0]:
-                item["args"] = copy.deepcopy(args)
-                return
-        block_list.append({"directive": directive_name, "args": copy.deepcopy(args)})
-
-    @staticmethod
-    def _upsert_proxy_pass(block_list, proxy_pass_value: str):
-        args = [proxy_pass_value]
-        for item in block_list:
-            if isinstance(item, dict) and item.get("directive") == "proxy_pass":
-                item["args"] = copy.deepcopy(args)
-                return
-        block_list.append({"directive": "proxy_pass", "args": copy.deepcopy(args)})

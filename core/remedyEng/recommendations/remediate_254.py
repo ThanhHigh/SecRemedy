@@ -49,6 +49,7 @@ class Remediate254(BaseRemedy):
             if not isinstance(file_remediations, list):
                 continue
 
+            patches = []
             for remediation in file_remediations:
                 if not isinstance(remediation, dict):
                     continue
@@ -64,13 +65,23 @@ class Remediate254(BaseRemedy):
                 if not isinstance(args, list) or not args or not isinstance(args[0], str):
                     continue
 
+                hide_args = [args[0]]
                 target_contexts = self._resolve_target_contexts(parsed_copy, remediation, directive)
                 for target_ctx in target_contexts:
                     target_list = ASTEditor.get_child_ast_config(parsed_copy, target_ctx)
                     if not isinstance(target_list, list):
                         continue
-                    self._upsert_hide_header(target_list, directive, [args[0]])
+                    if Remediate254._hide_header_present(target_list, directive, hide_args):
+                        continue
+                    patches.append({
+                        "action": "append",
+                        "exact_path": target_ctx,
+                        "directive": directive,
+                        "args": copy.deepcopy(hide_args),
+                        "priority": 0,
+                    })
 
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     def _resolve_target_contexts(
@@ -130,11 +141,11 @@ class Remediate254(BaseRemedy):
         return unique_contexts
 
     @staticmethod
-    def _upsert_hide_header(block_list: List[Any], directive: str, args: List[str]) -> None:
-        """Insert directive when missing; keep existing equivalent directive untouched."""
+    def _hide_header_present(block_list: List[Any], directive: str, args: List[str]) -> bool:
+        """True if block_list already has equivalent hide_header line."""
         target_header = args[0].strip().lower() if args and isinstance(args[0], str) else ""
         if not target_header:
-            return
+            return True
 
         for item in block_list:
             if not isinstance(item, dict):
@@ -146,9 +157,9 @@ class Remediate254(BaseRemedy):
                 continue
             existing_header = existing_args[0].strip().lower() if isinstance(existing_args[0], str) else ""
             if existing_header == target_header:
-                return
+                return True
 
-        block_list.append({"directive": directive, "args": copy.deepcopy(args)})
+        return False
 
     def get_user_guidance(self) -> str:
         return """Rule 2.5.4 (Hide upstream information headers):

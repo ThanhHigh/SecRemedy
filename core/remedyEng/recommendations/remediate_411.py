@@ -128,6 +128,7 @@ class Remediate411(BaseRemedy):
                 continue
 
             parsed_copy = copy.deepcopy(parsed)
+            patches = []
             for remediation in self.child_scan_result[file_path]:
                 if not isinstance(remediation, dict):
                     continue
@@ -139,40 +140,54 @@ class Remediate411(BaseRemedy):
                 rel_ctx = self._relative_context(remediation.get("context", []))
                 target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
 
-                # Empty relative context resolves to parsed root; never add return there.
                 if isinstance(target, list) and rel_ctx == []:
                     target = None
 
+                fallback_block_ctx = None
                 if target is None:
                     server_blocks = self._find_block_contexts(parsed_copy, "server")
                     if server_blocks:
-                        target = ASTEditor.get_child_ast_config(parsed_copy, server_blocks[0])
+                        fallback_block_ctx = server_blocks[0]
+                        target = ASTEditor.get_child_ast_config(parsed_copy, fallback_block_ctx)
 
-                # Guard: skip catch-all SSL-reject server blocks.
-                # These blocks use ssl_reject_handshake on; return 444; to silently
-                # drop unknown-host SSL connections. Overwriting return 444 with
-                # return 301 here would break that pattern.
                 if self._is_ssl_reject_server_block(target):
                     continue
 
-                # Build return directive args
                 return_args = [redirect_code, redirect_target]
 
-                # Context can point to directive list or to existing directive
                 if isinstance(target, list):
-                    # Additionally guard: if this list is inside an SSL-reject server,
-                    # skip it. Walk up the context to check the parent server block.
-                    if not self._context_is_ssl_reject(parsed_copy, rel_ctx):
-                        self._upsert_in_block(target, "return", return_args)
+                    block_ctx = rel_ctx if rel_ctx else fallback_block_ctx
+                    if block_ctx is None:
+                        continue
+                    if not self._context_is_ssl_reject(parsed_copy, block_ctx):
+                        patches.append({
+                            "action": "upsert",
+                            "exact_path": block_ctx,
+                            "directive": "return",
+                            "args": copy.deepcopy(return_args),
+                            "priority": 0,
+                        })
                 elif isinstance(target, dict):
                     if target.get("directive") == "return":
-                        # Never replace return 444 (SSL reject)
                         if target.get("args") != ["444"]:
-                            target["args"] = copy.deepcopy(return_args)
+                            patches.append({
+                                "action": "upsert",
+                                "exact_path": rel_ctx,
+                                "directive": "return",
+                                "args": copy.deepcopy(return_args),
+                                "priority": 0,
+                            })
                     elif isinstance(target.get("block"), list):
                         if not self._is_ssl_reject_server_block(target.get("block")):
-                            self._upsert_in_block(target["block"], "return", return_args)
+                            patches.append({
+                                "action": "upsert",
+                                "exact_path": rel_ctx + ["block"],
+                                "directive": "return",
+                                "args": copy.deepcopy(return_args),
+                                "priority": 0,
+                            })
 
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     @staticmethod
@@ -220,15 +235,6 @@ class Remediate411(BaseRemedy):
                 if Remediate411._is_ssl_reject_server_block(block):
                     return True
         return False
-
-    @staticmethod
-    def _upsert_in_block(block_list, directive, args):
-        """Update or insert directive within a block."""
-        for item in block_list:
-            if isinstance(item, dict) and item.get("directive") == directive:
-                item["args"] = copy.deepcopy(args)
-                return
-        block_list.append({"directive": directive, "args": copy.deepcopy(args)})
 
     def get_user_guidance(self) -> str:
         """Return step-by-step guidance for HTTP->HTTPS redirect."""
