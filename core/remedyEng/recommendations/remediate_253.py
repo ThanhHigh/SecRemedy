@@ -83,26 +83,30 @@ class Remediate253(BaseRemedy):
         
         return (True, "")
 
-    def remediate(self) -> None:
-        r"""
-        Apply remediation for Rule 2.5.3: Block access to hidden files.
-        
-        CRITICAL: Adds TWO location blocks:
-        1. Allow /\.well-known/acme-challenge/ (MUST come first for ACME validation)
-        2. Deny all /\. (hidden files)
-        
-        User inputs: [root_path, server_name (optional)]
-        """
-        self.child_ast_modified = {}
-        
-        # Validate user inputs first
-        is_valid, error_msg = self._validate_user_inputs()
-        if not is_valid:
-            print(f"  Validation error: {error_msg}")
-            return
-        
+    @staticmethod
+    def normalize_server_blocks_acme_order(parsed: list) -> None:
+        """Ensure ACME location precedes deny-hidden in every server block (batch-safe)."""
+
+        def walk(nodes):
+            if not isinstance(nodes, list):
+                return
+            for node in nodes:
+                if not isinstance(node, dict):
+                    continue
+                if node.get("directive") == "server":
+                    inner = node.get("block")
+                    if isinstance(inner, list):
+                        Remediate253._ensure_acme_before_deny(inner)
+                blk = node.get("block")
+                if isinstance(blk, list):
+                    walk(blk)
+
+        walk(parsed)
+
+    def _build_patches_253(self):
+        result = {}
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
-            return
+            return result
 
         root_path = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else ""
         server_name = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
@@ -116,17 +120,17 @@ class Remediate253(BaseRemedy):
 
             parsed_copy = copy.deepcopy(parsed)
             patches: list = []
-            reorder_targets: set[tuple] = set()
 
             for remediation in self.child_scan_result[file_path]:
                 if not isinstance(remediation, dict):
                     continue
-                if remediation.get("action") != "add_block":
+                action = remediation.get("action")
+                if action not in {"add", "add_block", "replace"}:
                     continue
                 if remediation.get("directive") != "location":
                     continue
 
-                rel_ctx = self._relative_context(remediation.get("context", []))
+                rel_ctx = self._relative_context(ASTEditor._extract_context_path(remediation))
                 target_contexts = []
                 if rel_ctx:
                     target_contexts = [rel_ctx]
@@ -137,6 +141,21 @@ class Remediate253(BaseRemedy):
                     continue
 
                 location_block = remediation.get("block", [])
+                if action == "replace":
+                    replace_args = remediation.get("args", [])
+                    if not isinstance(replace_args, list):
+                        replace_args = []
+                    replace_block = copy.deepcopy(location_block) if isinstance(location_block, list) else []
+                    patches.append({
+                        "action": "replace",
+                        "exact_path": rel_ctx,
+                        "directive": "location",
+                        "args": replace_args,
+                        "block": replace_block,
+                        "priority": 0,
+                    })
+                    continue
+
                 if not isinstance(location_block, list):
                     continue
 
@@ -144,8 +163,6 @@ class Remediate253(BaseRemedy):
                     target_list = ASTEditor.get_child_ast_config(parsed_copy, target_ctx)
                     if not isinstance(target_list, list):
                         continue
-
-                    reorder_targets.add(tuple(target_ctx))
 
                     has_nested_locations = any(
                         isinstance(location_node, dict) and location_node.get("directive") == "location"
@@ -166,11 +183,7 @@ class Remediate253(BaseRemedy):
                                 Remediate253._upsert_in_block(node_block, "root", [root_path])
 
                             if self._is_acme_location(node_copy):
-                                node_copy["block"] = [
-                                    item for item in node_copy.get("block", [])
-                                    if isinstance(item, dict)
-                                    and item.get("directive") not in {"allow", "deny"}
-                                ]
+                                node_copy["block"] = []
 
                             loc_args = node_copy.get("args", [])
                             idx = Remediate253._location_child_index(target_list, loc_args)
@@ -194,11 +207,8 @@ class Remediate253(BaseRemedy):
                     else:
                         acme_location = {
                             "directive": "location",
-                            "args": ["~", "/\\.well-known/acme-challenge/"],
-                            "block": [
-                                {"directive": "allow", "args": ["all"]},
-                                {"directive": "access_log", "args": ["on"]},
-                            ],
+                            "args": ["^~", "/.well-known/acme-challenge/"],
+                            "block": [],
                         }
                         deny_location = {
                             "directive": "location",
@@ -259,12 +269,38 @@ class Remediate253(BaseRemedy):
                             "priority": 2,
                         })
 
-            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
-            for ctx_tup in reorder_targets:
-                tl = ASTEditor.get_child_ast_config(parsed_copy, list(ctx_tup))
-                if isinstance(tl, list):
-                    Remediate253._ensure_acme_before_deny(tl)
+            if patches:
+                result[file_path] = [{**p, "_253_acme_order": True} for p in patches]
 
+        return result
+
+    def collect_patches(self):
+        is_valid, _ = self._validate_user_inputs()
+        if not is_valid:
+            return {}
+        return self._build_patches_253()
+
+    def remediate(self) -> None:
+        r"""
+        Apply remediation for Rule 2.5.3: Block access to hidden files.
+        
+        CRITICAL: Adds TWO location blocks:
+        1. Allow /\.well-known/acme-challenge/ (MUST come first for ACME validation)
+        2. Deny all /\. (hidden files)
+        
+        User inputs: [root_path, server_name (optional)]
+        """
+        self.child_ast_modified = {}
+
+        is_valid, error_msg = self._validate_user_inputs()
+        if not is_valid:
+            print(f"  Validation error: {error_msg}")
+            return
+
+        for file_path, patches in self._build_patches_253().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
+            Remediate253.normalize_server_blocks_acme_order(parsed_copy)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     @staticmethod

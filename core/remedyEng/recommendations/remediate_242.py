@@ -64,33 +64,18 @@ class Remediate242(BaseRemedy):
         
         return (True, "")
 
-    def remediate(self) -> None:
-        """
-        Apply remediation for Rule 2.4.2: Create default (catch-all) server block.
-        
-        This block rejects requests for unknown hostnames.
-        CRITICAL: Must be placed FIRST in http block (CIS requirement).
-        
-        Uses CLI flag: --strict-placement (optional, default: False)
-        - If True: use position 0 insertion
-        - If False: append to end (safe default)
-        
-        User input: [server_name]  (default: "_" for wildcard)
-        """
-        self.child_ast_modified = {}
-        
-        is_valid, error_msg = self._validate_user_inputs()
+    def collect_patches(self):
+        is_valid, _ = self._validate_user_inputs()
         if not is_valid:
-            print(f"  Validation error: {error_msg}")
-            return
-        
+            return {}
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
-            return
+            return {}
 
         server_name = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else "_"
         if not server_name:
             server_name = "_"
 
+        result = {}
         for file_path, file_data in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
@@ -99,6 +84,7 @@ class Remediate242(BaseRemedy):
                 continue
 
             parsed_copy = copy.deepcopy(parsed)
+            patches = []
 
             for remediation in self.child_scan_result[file_path]:
                 if not isinstance(remediation, dict):
@@ -112,7 +98,6 @@ class Remediate242(BaseRemedy):
                 rel_ctx = self._relative_context(context)
                 target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
 
-                # Empty relative context resolves to parsed root; avoid inserting at root.
                 if isinstance(target_list, list) and rel_ctx == []:
                     target_list = None
 
@@ -132,28 +117,75 @@ class Remediate242(BaseRemedy):
                     if not isinstance(target_list, list):
                         continue
 
-                # CASE 1: add directives into an existing block list (server or http inner block)
                 if action in {"add", "add_directive"} and directive in {"return", "ssl_reject_handshake"}:
                     args = remediation.get("args", [])
                     if isinstance(args, list):
-                        self._upsert_in_block(target_list, directive, args)
-                    self._upsert_in_block(target_list, "server_name", [server_name])
+                        patches.append({
+                            "action": "upsert",
+                            "exact_path": list(rel_ctx),
+                            "directive": directive,
+                            "args": copy.deepcopy(args),
+                            "priority": 0,
+                        })
+                    patches.append({
+                        "action": "upsert",
+                        "exact_path": list(rel_ctx),
+                        "directive": "server_name",
+                        "args": [server_name],
+                        "priority": 0,
+                    })
 
-                # CASE 2: add_block — full default server block
                 elif action == "add_block" and directive == "server":
                     default_server_block = self._build_default_server_block(server_name)
                     existing_default_idx = self._find_default_server_index(target_list)
                     if existing_default_idx >= 0:
-                        target_list[existing_default_idx] = copy.deepcopy(default_server_block)
+                        patches.append({
+                            "action": "replace",
+                            "exact_path": list(rel_ctx) + [existing_default_idx],
+                            "directive": "server",
+                            "args": [],
+                            "block": copy.deepcopy(default_server_block.get("block", [])),
+                            "priority": 0,
+                        })
                         continue
 
                     if self.strict_placement and position_hint == 0:
-                        ok = ASTEditor.insert_to_context(parsed_copy, rel_ctx, 0, default_server_block)
-                        if not ok:
-                            ASTEditor.append_to_context(parsed_copy, rel_ctx, default_server_block)
+                        patches.append({
+                            "action": "insert_at",
+                            "exact_path": list(rel_ctx),
+                            "index": 0,
+                            "block": copy.deepcopy(default_server_block),
+                            "priority": 0,
+                        })
                     else:
-                        ASTEditor.append_to_context(parsed_copy, rel_ctx, default_server_block)
+                        patches.append({
+                            "action": "add_block",
+                            "exact_path": list(rel_ctx),
+                            "directive": "server",
+                            "block": copy.deepcopy(default_server_block),
+                            "priority": 0,
+                        })
 
+            if patches:
+                result[file_path] = patches
+
+        return result
+
+    def remediate(self) -> None:
+        """
+        Apply remediation for Rule 2.4.2: default (catch-all) server block.
+        Uses --strict-placement for CIS-first insertion when enabled.
+        """
+        self.child_ast_modified = {}
+
+        is_valid, error_msg = self._validate_user_inputs()
+        if not is_valid:
+            print(f"  Validation error: {error_msg}")
+            return
+
+        for file_path, patches in self.collect_patches().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     @staticmethod

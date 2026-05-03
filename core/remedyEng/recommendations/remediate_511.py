@@ -176,33 +176,41 @@ class Remediate511(BaseRemedy):
         #         "parsed": parsed_copy
         #    }
         self.child_ast_modified = {}
-        
+
+        self.resolve_user_inputs()
+
         is_valid, error_msg = self._validate_user_inputs()
         if not is_valid:
             print(f"Warning: {error_msg}")
             return
-        
-        location_path = self.user_inputs[0].strip()
+
+        for file_path, patches in self._build_patches_511().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
+            self.child_ast_modified[file_path] = {"parsed": parsed_copy}
+
+    def _build_patches_511(self):
+        result = {}
         ip_string = self.user_inputs[1].strip()
         ips = self._parse_ips(ip_string)
-        
+
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
-            
+
             if not isinstance(remediations, dict) or "parsed" not in remediations:
                 continue
-            
+
             parsed_copy = copy.deepcopy(remediations["parsed"])
             file_violations = self.child_scan_result[file_path]
             if not isinstance(file_violations, list):
                 continue
-            
+
             patches = []
             for violation in file_violations:
                 if not isinstance(violation, dict):
                     continue
-                
+
                 action = violation.get("action", "")
                 directive = violation.get("directive", "")
                 raw_path = ASTEditor._extract_context_path(violation)
@@ -212,7 +220,6 @@ class Remediate511(BaseRemedy):
                 if not rel_ctx:
                     continue
 
-                # delete action: remove old allow directives
                 if action == "delete" and directive == "allow":
                     patches.append({
                         "action": "delete",
@@ -220,8 +227,7 @@ class Remediate511(BaseRemedy):
                         "directive": "allow",
                         "priority": 2,
                     })
-                
-                # add action: add new allow + deny all
+
                 elif action == "add":
                     for ip in ips:
                         patches.append({
@@ -231,7 +237,7 @@ class Remediate511(BaseRemedy):
                             "args": [ip],
                             "priority": 1,
                         })
-                    
+
                     patches.append({
                         "action": "add",
                         "exact_path": rel_ctx,
@@ -240,8 +246,17 @@ class Remediate511(BaseRemedy):
                         "priority": 0,
                     })
 
-            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
-            self.child_ast_modified[file_path] = {"parsed": parsed_copy}
+            if patches:
+                result[file_path] = patches
+
+        return result
+
+    def collect_patches(self):
+        self.resolve_user_inputs()
+        is_valid, _ = self._validate_user_inputs()
+        if not is_valid:
+            return {}
+        return self._build_patches_511()
 
     def get_user_guidance(self) -> str:
         """Return guidance for IP access control rule."""

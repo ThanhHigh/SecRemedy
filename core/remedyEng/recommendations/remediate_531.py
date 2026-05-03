@@ -22,6 +22,7 @@ Verify:
 Impact: Low. Ensures correct MIME types are configured in mime.types.
 """
 REMEDY_INPUT_REQUIRE = ["Add X-Content-Type-Options header? (yes/no):"]
+REMEDY_INPUT_DEFAULTS = ["yes"]
 
 
 class Remediate531(BaseRemedy):
@@ -31,6 +32,7 @@ class Remediate531(BaseRemedy):
         self.has_guide_detail = True
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
+        self.remedy_input_defaults = REMEDY_INPUT_DEFAULTS
 
     @staticmethod
     def _generate_sweep_patches(nodes: list, header_args: list) -> list:
@@ -38,6 +40,11 @@ class Remediate531(BaseRemedy):
         patches: list = []
         INJECTABLE_SCOPES = {"server", "location"}
         header_name = header_args[0] if header_args else ""
+        csp_baseline = [
+            "Content-Security-Policy",
+            "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
+            "always",
+        ]
 
         def _sweep(node_list, path_prefix):
             if not isinstance(node_list, list):
@@ -65,6 +72,43 @@ class Remediate531(BaseRemedy):
                             "exact_path": current_path,
                             "directive": "add_header",
                             "args": copy.deepcopy(header_args),
+                            "priority": 1,
+                        })
+
+                    # Repair invalid CSP header when present as empty/legacy value.
+                    has_csp = False
+                    for child_idx, item in enumerate(block):
+                        if not isinstance(item, dict) or item.get("directive") != "add_header":
+                            continue
+                        args = item.get("args", [])
+                        if not isinstance(args, list) or not args:
+                            continue
+                        if str(args[0]).lower() != "content-security-policy":
+                            continue
+                        has_csp = True
+                        csp_value = str(args[1]).lower() if len(args) >= 2 else ""
+                        is_valid = (
+                            len(args) >= 3
+                            and str(args[-1]).lower() == "always"
+                            and "default-src" in csp_value
+                            and "frame-ancestors" in csp_value
+                            and "unsafe-inline" not in csp_value
+                            and "unsafe-eval" not in csp_value
+                        )
+                        if not is_valid:
+                            patches.append({
+                                "action": "upsert",
+                                "exact_path": path_prefix + [idx, "block", child_idx],
+                                "directive": "add_header",
+                                "args": copy.deepcopy(csp_baseline),
+                                "priority": 1,
+                            })
+                    if not has_csp:
+                        patches.append({
+                            "action": "add",
+                            "exact_path": path_prefix + [idx, "block"],
+                            "directive": "add_header",
+                            "args": copy.deepcopy(csp_baseline),
                             "priority": 1,
                         })
 
@@ -161,23 +205,35 @@ class Remediate531(BaseRemedy):
         #     }
 
         self.child_ast_modified = {}
-        
+
+        self.resolve_user_inputs()
+
         if not self.user_inputs:
             return
-        
+
+        for file_path, patches in self._build_patches_531().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
+            self.child_ast_modified[file_path] = {"parsed": parsed_copy}
+
+    def _build_patches_531(self):
+        result = {}
+        if not self.user_inputs:
+            return result
+
         user_response = self.user_inputs[0].strip().lower()
         if user_response not in ["yes", "y", "true", "1"]:
-            return
-        
+            return result
+
         HEADER_ARGS = ["X-Content-Type-Options", '"nosniff"', "always"]
 
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
-            
+
             if not isinstance(remediations, dict) or "parsed" not in remediations:
                 continue
-            
+
             parsed_copy = copy.deepcopy(remediations["parsed"])
             file_violations = self.child_scan_result[file_path]
             if not isinstance(file_violations, list):
@@ -189,21 +245,20 @@ class Remediate531(BaseRemedy):
             ]
             if not header_violations:
                 continue
-            
+
             patches = []
-            
-            # Phase 1: Process violations from scan result
+
             for violation in header_violations:
                 action = violation.get("action", "")
                 args = violation.get("args", [])
-                
+
                 raw_path = ASTEditor._extract_context_path(violation)
                 exact_path = self._relative_context(raw_path) if raw_path else []
                 if not exact_path or not ASTEditor.path_is_valid(parsed_copy, exact_path):
                     continue
 
                 header_args = args if args else HEADER_ARGS
-                
+
                 if action == "add":
                     patches.append({
                         "action": "add",
@@ -223,13 +278,18 @@ class Remediate531(BaseRemedy):
 
             if header_violations and not patches:
                 continue
-            
-            # Phase 2: Sweep AST for missing headers (after valid scan-driven patches)
+
             sweep_patches = self._generate_sweep_patches(parsed_copy, HEADER_ARGS)
             patches.extend(sweep_patches)
 
-            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
-            self.child_ast_modified[file_path] = {"parsed": parsed_copy}
+            if patches:
+                result[file_path] = patches
+
+        return result
+
+    def collect_patches(self):
+        self.resolve_user_inputs()
+        return self._build_patches_531()
 
     @staticmethod
     def _inject_header_to_all_eligible_blocks(nodes: list, header_args: list) -> None:

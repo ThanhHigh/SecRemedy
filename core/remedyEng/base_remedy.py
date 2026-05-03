@@ -126,6 +126,18 @@ class BaseRemedy:
                 }
 
 
+    def collect_patches(self) -> Dict[str, List[dict]]:
+        """
+        Return patches keyed by file path (relative to each file's parsed root).
+
+        Used by non-interactive batch orchestration: patches from all rules are
+        concatenated and applied once per file against the baseline AST so later
+        rules do not overwrite earlier edits.
+
+        Override in each concrete remedy. Default: no patches.
+        """
+        return {}
+
     def remediate(self) -> None:
         """
         Main method to apply remediation. Override in child classes.

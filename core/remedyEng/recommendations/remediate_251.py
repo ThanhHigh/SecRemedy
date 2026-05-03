@@ -30,62 +30,39 @@ class Remediate251(BaseRemedy):
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
 
-    def remediate(self) -> None:
-        """
-        Apply remediation for Rule 2.5.1: Ensure server_tokens directive is set to off.
-        
-        Action: REPLACE - Sets server_tokens args to ["off"]
-        This has no user input - automatically fixes to "off"
-        """
-        self.child_ast_modified = {}
-
-        # Process each file that has violations
+    def collect_patches(self):
+        result = {}
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
-            
             if not isinstance(remediations, dict) or "parsed" not in remediations:
                 continue
-            
-            # Deep copy the parsed section for modification
             parsed_copy = copy.deepcopy(remediations["parsed"])
-            
-            # Get violations for this file
             file_violations = self.child_scan_result[file_path]
             if not isinstance(file_violations, list):
                 continue
-            
             patches = []
             for violation in file_violations:
                 if not isinstance(violation, dict):
                     continue
-
                 action = violation.get("action", "")
                 context = violation.get("context", [])
                 directive = violation.get("directive", "")
                 args = violation.get("args", [])
-
                 if directive != "server_tokens":
                     continue
-                
-                # Only process replace/modify actions - "add" is not relevant for server_tokens
                 if action not in {"replace", "modify", "modify_directive"}:
                     continue
-
-                # Convert context to relative path within this file
                 relative_context = self._relative_context(context)
                 target_contexts = [relative_context] if relative_context else self._find_directive_contexts(parsed_copy, "server_tokens")
-
                 for target_context in target_contexts:
                     if not target_context:
                         continue
-
                     target = ASTEditor.get_child_ast_config(parsed_copy, target_context)
                     if not isinstance(target, dict) and not isinstance(target, list):
                         continue
                     if isinstance(target, dict) and target.get("directive") != "server_tokens":
                         continue
-
                     patches.append(
                         {
                             "action": "upsert",
@@ -95,7 +72,21 @@ class Remediate251(BaseRemedy):
                             "priority": 0,
                         }
                     )
+            if patches:
+                result[file_path] = patches
+        return result
 
+    def remediate(self) -> None:
+        """
+        Apply remediation for Rule 2.5.1: Ensure server_tokens directive is set to off.
+        
+        Action: REPLACE - Sets server_tokens args to ["off"]
+        This has no user input - automatically fixes to "off"
+        """
+        self.child_ast_modified = {}
+
+        for file_path, patches in self.collect_patches().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             
             # Store modified config

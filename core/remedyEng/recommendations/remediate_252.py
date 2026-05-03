@@ -11,8 +11,8 @@ REMEDY_INPUT_REQUIRE = [
     "location_50x_root",
 ]
 REMEDY_INPUT_DEFAULTS = [
-    "/404.html",
-    "/50x.html",
+    "/custom_404.html",
+    "/custom_50x.html",
     "/var/www/html/errors",
 ]
 
@@ -152,7 +152,7 @@ class Remediate252(BaseRemedy):
                 
                 action = remediation.get("action", "")
                 directive = remediation.get("directive", "")
-                context = remediation.get("context", [])
+                context = ASTEditor._extract_context_path(remediation)
                 args = remediation.get("args", [])
                 
                 if action not in {"add", "add_directive"}:

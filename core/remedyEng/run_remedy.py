@@ -5,7 +5,7 @@ import subprocess
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 # Allow direct script execution: `python core/remedyEng/run_remedy.py`
 if __package__ in (None, ""):
@@ -367,19 +367,48 @@ def _load_batch_jobs(config_file: Path, project_root: Path) -> List[Dict[str, An
     return jobs
 
 
-def _run_batch_job(job: Dict[str, Any], project_root: Path, job_index: int, total_jobs: int) -> None:
+def _run_batch_job(
+    job: Dict[str, Any],
+    project_root: Path,
+    job_index: int,
+    total_jobs: int,
+    *,
+    cli_batch_patch_merge: Optional[bool] = None,
+) -> None:
     print(
         f"[batch] Job {job_index}/{total_jobs}: {job['ast_config']} + {job['scan_result']}")
+
+    if cli_batch_patch_merge is not None:
+        batch_merge = cli_batch_patch_merge
+        mode_source = "cli"
+    elif "batch_patch_merge" in job:
+        batch_merge = bool(job.get("batch_patch_merge"))
+        mode_source = "job_config"
+    else:
+        batch_merge = True
+        mode_source = "default"
+
+    print(
+        f"[batch] orchestration_mode={'merged_patches' if batch_merge else 'sequential'} source={mode_source}"
+    )
 
     remediator = Remediator(
         strict_placement=bool(job.get("strict_placement", False)),
         strict_json_validation=bool(job.get("json_schema_strict", False)),
+        batch_patch_merge=batch_merge,
     )
     if isinstance(job.get("remedy_inputs"), dict):
         remediator.batch_remedy_inputs = job["remedy_inputs"]
     remediator.get_input_ast(config_path=str(
         job["ast_config"]), scan_path=str(job["scan_result"]))
     remediator.ast_config = remediator.apply_remediations(interactive=False)
+    skipped = remediator.last_run_stats.get("skipped_invalid_inputs", [])
+    if skipped:
+        print(f"[batch] skipped_rules_invalid_inputs={len(skipped)}")
+        for item in skipped:
+            remedy_id = item.get("remedy_id", "<unknown>")
+            error = item.get("error", "")
+            print(f"[batch] skipped {remedy_id}: {error}")
 
     remediate_ast_path = Path(job["remediate_ast"])
     remediate_config_dir = Path(job["remediate_config"])
@@ -427,6 +456,22 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to batch job config JSON file for non-interactive remediation runs (optional)",
+    )
+    parser.add_argument(
+        "--batch-patches",
+        action="store_true",
+        help=(
+            "Batch jobs only: force merged patch orchestration "
+            "(apply combined rule patches once per file)."
+        ),
+    )
+    parser.add_argument(
+        "--sequential-patches",
+        action="store_true",
+        help=(
+            "Batch jobs only: force legacy sequential per-rule merge mode "
+            "(debug/backward-compat mode)."
+        ),
     )
     parser.add_argument(
         "--dev-debug",
@@ -478,9 +523,24 @@ if __name__ == "__main__":
     if args.config:
         batch_config_file = Path(args.config).expanduser().resolve()
     if batch_config_file.exists():
+        if args.batch_patches and args.sequential_patches:
+            raise ValueError("Cannot use --batch-patches and --sequential-patches together.")
+
+        cli_mode_override: Optional[bool] = None
+        if args.batch_patches:
+            cli_mode_override = True
+        elif args.sequential_patches:
+            cli_mode_override = False
+
         batch_jobs = _load_batch_jobs(batch_config_file, project_root)
         for index, job in enumerate(batch_jobs, start=1):
-            _run_batch_job(job, project_root, index, len(batch_jobs))
+            _run_batch_job(
+                job,
+                project_root,
+                index,
+                len(batch_jobs),
+                cli_batch_patch_merge=cli_mode_override,
+            )
         sys.exit(0)
 
     remediator = Remediator(

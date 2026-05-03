@@ -90,31 +90,13 @@ class Remediate411(BaseRemedy):
         
         return (True, "")
 
-    def remediate(self) -> None:
-        """
-        Apply remediation for Rule 4.1.1: Add HTTP->HTTPS redirects.
-
-        User inputs: [redirect_code, redirect_target]
-        Example: ["301", "https://$host$request_uri"]
-        
-        This adds a 'return' directive to redirect HTTP to HTTPS.
-        Note: Make sure the server block listens on port 80 (HTTP).
-        """
-        self.child_ast_modified = {}
-        
-        # Validate user inputs first
-        is_valid, error_msg = self._validate_user_inputs()
-        if not is_valid:
-            print(f"  Validation error: {error_msg}")
-            return
-        
+    def _build_patches_411(self):
+        result = {}
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
-            return
+            return result
 
         redirect_code = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else "301"
         redirect_target = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else "https://$host$request_uri"
-        
-        # Ensure defaults
         if not redirect_code:
             redirect_code = "301"
         if not redirect_target:
@@ -137,7 +119,8 @@ class Remediate411(BaseRemedy):
                 if remediation.get("directive") != "return":
                     continue
 
-                rel_ctx = self._relative_context(remediation.get("context", []))
+                raw_path = ASTEditor._extract_context_path(remediation)
+                rel_ctx = self._relative_context(raw_path)
                 target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
 
                 if isinstance(target, list) and rel_ctx == []:
@@ -187,6 +170,73 @@ class Remediate411(BaseRemedy):
                                 "priority": 0,
                             })
 
+            # Proactive sweep: every HTTP server block should have redirect return.
+            def _has_http_listen(server_block: list) -> bool:
+                listens = [n for n in server_block if isinstance(n, dict) and n.get("directive") == "listen"]
+                if not listens:
+                    return True
+                for l in listens:
+                    args = l.get("args", [])
+                    if "ssl" not in args:
+                        return True
+                return False
+
+            def _sweep_servers(nodes, prefix):
+                if not isinstance(nodes, list):
+                    return
+                for idx, node in enumerate(nodes):
+                    if not isinstance(node, dict):
+                        continue
+                    if node.get("directive") == "server" and isinstance(node.get("block"), list):
+                        server_ctx = prefix + [idx, "block"]
+                        server_block = node.get("block", [])
+                        if _has_http_listen(server_block) and not self._is_ssl_reject_server_block(server_block):
+                            patches.append({
+                                "action": "upsert",
+                                "exact_path": server_ctx,
+                                "directive": "return",
+                                "args": [redirect_code, redirect_target],
+                                "priority": 1,
+                            })
+                    block = node.get("block")
+                    if isinstance(block, list):
+                        _sweep_servers(block, prefix + [idx, "block"])
+
+            _sweep_servers(parsed_copy, [])
+
+            if patches:
+                result[file_path] = patches
+
+        return result
+
+    def collect_patches(self):
+        self.resolve_user_inputs()
+        is_valid, _ = self._validate_user_inputs()
+        if not is_valid:
+            return {}
+        return self._build_patches_411()
+
+    def remediate(self) -> None:
+        """
+        Apply remediation for Rule 4.1.1: Add HTTP->HTTPS redirects.
+
+        User inputs: [redirect_code, redirect_target]
+        Example: ["301", "https://$host$request_uri"]
+        
+        This adds a 'return' directive to redirect HTTP to HTTPS.
+        Note: Make sure the server block listens on port 80 (HTTP).
+        """
+        self.child_ast_modified = {}
+
+        self.resolve_user_inputs()
+
+        is_valid, error_msg = self._validate_user_inputs()
+        if not is_valid:
+            print(f"  Validation error: {error_msg}")
+            return
+
+        for file_path, patches in self._build_patches_411().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 

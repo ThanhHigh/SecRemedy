@@ -29,12 +29,10 @@ class Remediate254(BaseRemedy):
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
 
-    def remediate(self) -> None:
-        """Apply Rule 2.5.4 by adding hide_header directives in valid proxy contexts."""
-        self.child_ast_modified = {}
-
+    def collect_patches(self):
+        result = {}
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
-            return
+            return result
 
         for file_path, file_data in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
@@ -81,6 +79,16 @@ class Remediate254(BaseRemedy):
                         "priority": 0,
                     })
 
+            if patches:
+                result[file_path] = patches
+        return result
+
+    def remediate(self) -> None:
+        """Apply Rule 2.5.4 by adding hide_header directives in valid proxy contexts."""
+        self.child_ast_modified = {}
+
+        for file_path, patches in self.collect_patches().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 

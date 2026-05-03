@@ -105,26 +105,17 @@ class Remediate532(BaseRemedy):
         
         return self.default_csp
 
-    def remediate(self) -> None:
-        """
-        Apply remediation for Rule 5.3.2: Ensure CSP is enabled and properly configured.
-        
-        Action: ADD/REPLACE - Adds or replaces Content-Security-Policy header
-        User can choose between secure baseline or custom policy.
-        """
-        self.child_ast_modified = {}
-        
-        # Get the CSP policy to use
+    def _build_patches_532(self):
+        result = {}
         csp_policy = self._get_csp_policy()
-        
-        # Process each file that has violations
+
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
-            
+
             if not isinstance(remediations, dict) or "parsed" not in remediations:
                 continue
-            
+
             parsed_copy = copy.deepcopy(remediations["parsed"])
 
             file_violations = self.child_scan_result[file_path]
@@ -172,6 +163,28 @@ class Remediate532(BaseRemedy):
             sweep_patches = Remediate532._generate_sweep_patches(parsed_copy, header_args)
             patches.extend(sweep_patches)
 
+            if patches:
+                result[file_path] = patches
+
+        return result
+
+    def collect_patches(self):
+        self.resolve_user_inputs()
+        return self._build_patches_532()
+
+    def remediate(self) -> None:
+        """
+        Apply remediation for Rule 5.3.2: Ensure CSP is enabled and properly configured.
+        
+        Action: ADD/REPLACE - Adds or replaces Content-Security-Policy header
+        User can choose between secure baseline or custom policy.
+        """
+        self.child_ast_modified = {}
+
+        self.resolve_user_inputs()
+
+        for file_path, patches in self._build_patches_532().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 

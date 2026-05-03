@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
@@ -55,7 +56,12 @@ class Remediator:
         RecomID.CIS_5_3_2: Remediate532,
     }
 
-    def __init__(self, strict_placement: bool = False, strict_json_validation: bool = False) -> None:
+    def __init__(
+        self,
+        strict_placement: bool = False,
+        strict_json_validation: bool = False,
+        batch_patch_merge: bool = False,
+    ) -> None:
         self.ast_config = {}
         self.ast_scan = {}
         self.ast_baseline = {}
@@ -63,6 +69,8 @@ class Remediator:
         self.batch_remedy_inputs: Dict[str, List[Any]] = {}
         self.strict_placement = strict_placement
         self.strict_json_validation = strict_json_validation
+        self.batch_patch_merge = batch_patch_merge
+        self.last_run_stats: Dict[str, Any] = {"skipped_invalid_inputs": []}
 
     def display_header(self) -> None:
         """Display a header for the remediation process."""
@@ -147,6 +155,9 @@ class Remediator:
 
         is_valid, error_msg = remedy._validate_user_inputs()
         if not is_valid:
+            self.last_run_stats.setdefault("skipped_invalid_inputs", []).append(
+                {"remedy_id": remedy.id, "error": error_msg}
+            )
             TerminalUI.get_instance().display_validation_warning(
                 f"Skipping {remedy.id} due to invalid batch inputs: {error_msg}"
             )
@@ -209,6 +220,113 @@ class Remediator:
                 )
             return False
 
+    def _apply_remediations_batch_patches(self) -> dict:
+        """Gather patches per rule on baseline AST, merge lists per file, apply once."""
+        self.ast_baseline = copy.deepcopy(self.ast_config)
+        self.applied_history = []
+        aggregated: Dict[str, List[dict]] = defaultdict(list)
+
+        for remedy_cls in self.REMEDIATION_REGISTRY.values():
+            remedy = remedy_cls()
+
+            if debug_enabled():
+                debug_verbose(
+                    "ORCHESTRATION",
+                    f"[batch] collect patches {remedy.id} ({remedy_cls.__name__})",
+                )
+
+            if not self._prepare_remedy(remedy, self.ast_baseline):
+                if debug_enabled():
+                    debug_info("ORCHESTRATION", f"[batch] skip {remedy.id}: no violations")
+                continue
+
+            if not self._prepare_user_inputs(remedy, interactive=False):
+                continue
+
+            patches_by_file = remedy.collect_patches()
+            if not patches_by_file:
+                if debug_enabled():
+                    debug_info("ORCHESTRATION", f"[batch] skip {remedy.id}: empty collect_patches")
+                continue
+
+            contributed = False
+            for fp, plist in patches_by_file.items():
+                if not isinstance(plist, list) or not plist:
+                    continue
+                for raw_patch in plist:
+                    tagged = copy.deepcopy(raw_patch)
+                    tagged["_rule_id"] = remedy.id
+                    aggregated[fp].append(tagged)
+                contributed = True
+
+            if debug_enabled():
+                debug_verbose(
+                    "PATCH_PLAN",
+                    f"[batch] rule {remedy.id} patch counts by file",
+                    {fp: len(patches_by_file.get(fp, [])) for fp in patches_by_file},
+                )
+
+            if contributed:
+                self.applied_history.append(
+                    {
+                        "remedy_id": remedy.id,
+                        "remedy_class": remedy_cls.__name__,
+                        "user_inputs": list(remedy.user_inputs),
+                        "approved_files": sorted(patches_by_file.keys()),
+                        "batch_patches": True,
+                    }
+                )
+
+        merged_changes: Dict[str, Any] = {}
+        validator = BaseRemedy()
+        baseline_full = self.ast_baseline
+
+        if debug_enabled():
+            total_patch_count = sum(len(v) for v in aggregated.values())
+            debug_verbose(
+                "PATCH_APPLY",
+                f"[batch] merged apply: files={len(aggregated)} total_patches={total_patch_count}",
+            )
+
+        for fp, all_patches in aggregated.items():
+            idx = ASTEditor._find_file_in_config(baseline_full, fp)
+            if idx < 0:
+                continue
+            cfg_entries = baseline_full.get("config")
+            if not isinstance(cfg_entries, list) or idx >= len(cfg_entries):
+                continue
+            baseline_parsed = cfg_entries[idx].get("parsed")
+            if not isinstance(baseline_parsed, list):
+                continue
+
+            merged_parsed = ASTEditor.apply_reverse_path_patches(
+                copy.deepcopy(baseline_parsed),
+                all_patches,
+            )
+            if any(isinstance(p, dict) and p.get("_253_acme_order") for p in all_patches):
+                Remediate253.normalize_server_blocks_acme_order(merged_parsed)
+
+            ok, errs = validator._validate_ast_mutation(baseline_parsed, merged_parsed)
+            if not ok:
+                if debug_enabled():
+                    debug_verbose(
+                        "ORCHESTRATION",
+                        f"[batch] AST validation failed for {fp}",
+                        {"errors": errs},
+                    )
+                TerminalUI.get_instance().display_validation_warning(
+                    f"[batch] Skipping merge for {fp}: {'; '.join(errs)}"
+                )
+                continue
+            merged_changes[fp] = {"parsed": merged_parsed}
+
+        modified_ast_config = self.merge_remediation(
+            copy.deepcopy(self.ast_baseline),
+            merged_changes,
+        )
+        self.ast_config = modified_ast_config
+        return modified_ast_config
+
     def apply_remediations(self, interactive: bool = True) -> dict:
         """
         Orchestrate the full remediation flow for all applicable rules.
@@ -223,10 +341,28 @@ class Remediator:
            e. Display diff and get final decision
            f. If approved: Merge modified AST back into full ast_config
         3. Return: Updated ast_config with all approved remediations
-        
+
+        When ``interactive=False`` and ``self.batch_patch_merge`` is True, runs
+        `_apply_remediations_batch_patches` instead (single merged patch apply per file).
+
         Returns:
             Modified ast_config dictionary
         """
+        self.last_run_stats = {"skipped_invalid_inputs": []}
+        if debug_enabled():
+            debug_verbose(
+                "ORCHESTRATION",
+                "apply_remediations entry",
+                {
+                    "interactive": interactive,
+                    "batch_patch_merge": self.batch_patch_merge,
+                    "flow": "batch_patches" if (not interactive and self.batch_patch_merge) else "sequential",
+                },
+            )
+
+        if not interactive and self.batch_patch_merge:
+            return self._apply_remediations_batch_patches()
+
         self.ast_baseline = copy.deepcopy(self.ast_config)
         self.applied_history = []
         modified_ast_config = copy.deepcopy(self.ast_baseline)

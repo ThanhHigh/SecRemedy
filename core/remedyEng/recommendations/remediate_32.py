@@ -48,6 +48,87 @@ class Remediate32(BaseRemedy):
         
         return (True, "")
 
+    def _build_patches_32(self):
+        result = {}
+        if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
+            return result
+
+        scoped_spec = self.user_inputs[0] if len(self.user_inputs) > 0 else ""
+        log_not_found_value = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
+        scope_map = self._parse_scope_map(scoped_spec)
+
+        for file_path, file_data in self.child_ast_config.items():
+            if file_path not in self.child_scan_result:
+                continue
+            parsed = file_data.get("parsed") if isinstance(file_data, dict) else None
+            if not isinstance(parsed, list):
+                continue
+
+            parsed_copy = copy.deepcopy(parsed)
+            patches = []
+
+            for remediation in self.child_scan_result[file_path]:
+                if not isinstance(remediation, dict):
+                    continue
+                if remediation.get("directive") != "access_log":
+                    continue
+
+                raw_ctx = remediation.get("context")
+                if raw_ctx:
+                    rel_ctx = self._relative_context(raw_ctx)
+                else:
+                    rel_ctx = ASTEditor._extract_context_path(remediation)
+                if not rel_ctx:
+                    continue
+
+                action = remediation.get("action", "")
+                scope = self._infer_scope(rel_ctx)
+                user_args = self._access_log_args_for_scope(scope_map, scope)
+                args = user_args if user_args else remediation.get("args", [])
+
+                if not isinstance(args, list) or not args:
+                    continue
+
+                if action in {"delete", "modify", "modify_directive", "replace"}:
+                    patches.append({
+                        "action": "upsert",
+                        "exact_path": rel_ctx,
+                        "directive": "access_log",
+                        "args": args,
+                        "priority": 0,
+                    })
+
+                    if log_not_found_value in {"on", "off"}:
+                        parent_ctx = rel_ctx[:-1] if len(rel_ctx) >= 1 else []
+                        patches.append({
+                            "action": "upsert",
+                            "exact_path": parent_ctx,
+                            "directive": "log_not_found",
+                            "args": [log_not_found_value],
+                            "priority": 1,
+                        })
+
+                elif action in {"add", "add_directive"}:
+                    patches.append({
+                        "action": "add",
+                        "exact_path": rel_ctx,
+                        "directive": "access_log",
+                        "args": args,
+                        "priority": 0,
+                    })
+
+            if patches:
+                result[file_path] = patches
+
+        return result
+
+    def collect_patches(self):
+        self.resolve_user_inputs()
+        is_valid, _ = self._validate_user_inputs()
+        if not is_valid:
+            return {}
+        return self._build_patches_32()
+
     def remediate(self) -> None:
         """
         Apply remediation for Rule 3.2 (access logging enabled).
@@ -131,81 +212,16 @@ class Remediate32(BaseRemedy):
 
         #     self.child_ast_modified[file_path] = {"parsed": parsed_copy}
         self.child_ast_modified = {}
-        
+
+        self.resolve_user_inputs()
+
         is_valid, error_msg = self._validate_user_inputs()
         if not is_valid:
             print(f"  Validation error: {error_msg}")
             return
-        
-        if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
-            return
 
-        scoped_spec = self.user_inputs[0] if len(self.user_inputs) > 0 else ""
-        log_not_found_value = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
-        scope_map = self._parse_scope_map(scoped_spec)
-
-        for file_path, file_data in self.child_ast_config.items():
-            if file_path not in self.child_scan_result:
-                continue
-            parsed = file_data.get("parsed") if isinstance(file_data, dict) else None
-            if not isinstance(parsed, list):
-                continue
-
-            parsed_copy = copy.deepcopy(parsed)
-            patches = []
-            
-            for remediation in self.child_scan_result[file_path]:
-                if not isinstance(remediation, dict):
-                    continue
-                if remediation.get("directive") != "access_log":
-                    continue
-
-                raw_ctx = remediation.get("context")
-                if raw_ctx:
-                    rel_ctx = self._relative_context(raw_ctx)
-                else:
-                    rel_ctx = ASTEditor._extract_context_path(remediation)
-                if not rel_ctx:
-                    continue
-
-                action = remediation.get("action", "")
-                scope = self._infer_scope(rel_ctx)
-                user_args = self._access_log_args_for_scope(scope_map, scope)
-                args = user_args if user_args else remediation.get("args", [])
-                
-                if not isinstance(args, list) or not args:
-                    continue
-
-                # delete/modify/replace: upsert the access_log
-                if action in {"delete", "modify", "modify_directive", "replace"}:
-                    patches.append({
-                        "action": "upsert",
-                        "exact_path": rel_ctx,
-                        "directive": "access_log",
-                        "args": args,
-                        "priority": 0,
-                    })
-                    
-                    if log_not_found_value in {"on", "off"}:
-                        parent_ctx = rel_ctx[:-1] if len(rel_ctx) >= 1 else []
-                        patches.append({
-                            "action": "upsert",
-                            "exact_path": parent_ctx,
-                            "directive": "log_not_found",
-                            "args": [log_not_found_value],
-                            "priority": 1,
-                        })
-                
-                # add/add_directive: add access_log to block
-                elif action in {"add", "add_directive"}:
-                    patches.append({
-                        "action": "add",
-                        "exact_path": rel_ctx,
-                        "directive": "access_log",
-                        "args": args,
-                        "priority": 0,
-                    })
-
+        for file_path, patches in self._build_patches_32().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 

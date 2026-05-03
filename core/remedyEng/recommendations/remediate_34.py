@@ -142,23 +142,10 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
         """
         return guidance.strip()
 
-    def remediate(self) -> None:
-        """
-        Apply remediation for Rule 3.4: Forward source IP headers to upstream.
-
-        Adds proxy_set_header directives for X-Forwarded-For, X-Real-IP, X-Forwarded-Proto.
-        Optional: user_inputs[0] for proxy_pass value (auto-detected if already in config)
-        """
-        self.child_ast_modified = {}
-        
-        # Validate user inputs first
-        is_valid, error_msg = self._validate_user_inputs()
-        if not is_valid:
-            print(f"  Validation error: {error_msg}")
-            return
-        
+    def _build_patches_34(self):
+        result = {}
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
-            return
+            return result
 
         proxy_pass_value = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else ""
 
@@ -177,8 +164,8 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
 
                 action = remediation.get("action")
                 directive_name = remediation.get("directive")
-                context = remediation.get("context", [])
-                rel_ctx = self._relative_context(context)
+                raw_path = ASTEditor._extract_context_path(remediation)
+                rel_ctx = self._relative_context(raw_path)
                 if not rel_ctx:
                     continue
 
@@ -206,5 +193,67 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
                         "priority": 1,
                     })
 
+            # Proactive sweep: ensure all proxy_pass locations carry required headers.
+            def _sweep(nodes, prefix):
+                if not isinstance(nodes, list):
+                    return
+                for idx, node in enumerate(nodes):
+                    if not isinstance(node, dict):
+                        continue
+                    block = node.get("block")
+                    if isinstance(block, list):
+                        has_proxy_pass = any(
+                            isinstance(c, dict) and c.get("directive") == "proxy_pass" for c in block
+                        )
+                        if has_proxy_pass:
+                            loc_ctx = prefix + [idx, "block"]
+                            patches.append({
+                                "action": "upsert",
+                                "exact_path": loc_ctx,
+                                "directive": "proxy_set_header",
+                                "args": ["X-Forwarded-For", "$proxy_add_x_forwarded_for"],
+                                "priority": 1,
+                            })
+                            patches.append({
+                                "action": "upsert",
+                                "exact_path": loc_ctx,
+                                "directive": "proxy_set_header",
+                                "args": ["X-Real-IP", "$remote_addr"],
+                                "priority": 1,
+                            })
+                        _sweep(block, prefix + [idx, "block"])
+
+            _sweep(parsed_copy, [])
+
+            if patches:
+                result[file_path] = patches
+
+        return result
+
+    def collect_patches(self):
+        self.resolve_user_inputs()
+        is_valid, _ = self._validate_user_inputs()
+        if not is_valid:
+            return {}
+        return self._build_patches_34()
+
+    def remediate(self) -> None:
+        """
+        Apply remediation for Rule 3.4: Forward source IP headers to upstream.
+
+        Adds proxy_set_header directives for X-Forwarded-For, X-Real-IP, X-Forwarded-Proto.
+        Optional: user_inputs[0] for proxy_pass value (auto-detected if already in config)
+        """
+        self.child_ast_modified = {}
+
+        self.resolve_user_inputs()
+
+        is_valid, error_msg = self._validate_user_inputs()
+        if not is_valid:
+            print(f"  Validation error: {error_msg}")
+            return
+
+        for file_path, patches in self._build_patches_34().items():
+            parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}

@@ -499,7 +499,12 @@ class ASTEditor:
 
     @staticmethod
     def _patch_dedupe_key(patch: Dict[str, Any]) -> tuple:
-        """Stable key for conflict resolution: same path may host multiple sibling directives."""
+        """Stable key for conflict resolution: same path may host multiple sibling directives.
+
+        When ``_rule_id`` is set (multi-rule batch merge), the key is scoped per rule so
+        distinct CIS rules never drop each other's patches solely because they target the
+        same structural tuple.
+        """
         ep = tuple(patch.get("exact_path") or ())
         directive = str(patch.get("directive") or "")
         args = patch.get("args")
@@ -512,7 +517,11 @@ class ASTEditor:
             block_sig = ""
         else:
             block_sig = str(block_val)
-        return (ep, directive, args_key, action, block_sig)
+        base = (ep, directive, args_key, action, block_sig)
+        rid = patch.get("_rule_id")
+        if isinstance(rid, str) and rid:
+            return (rid, base)
+        return base
 
     @staticmethod
     def _path_sort_key(path: List[Union[str, int]]) -> tuple:
@@ -727,6 +736,27 @@ class ASTEditor:
                 debug_info("PATCH_APPLY", f"APPEND failed at {exact_path}", {"action": "append", "exact_path": exact_path})
             return False
 
+        if action == "insert_at":
+            insert_list = ASTEditor.get_child_ast_config(data, exact_path)
+            try:
+                insert_index = int(patch.get("index", 0))
+            except (TypeError, ValueError):
+                insert_index = 0
+            node = patch.get("block")
+            if isinstance(node, dict) and node.get("directive"):
+                inner = copy.deepcopy(node)
+            else:
+                inner = ASTEditor._build_patch_node(patch)
+            if isinstance(insert_list, list) and isinstance(inner, dict) and inner.get("directive"):
+                idx = max(0, min(insert_index, len(insert_list)))
+                insert_list.insert(idx, inner)
+                if debug_enabled():
+                    debug_info("PATCH_APPLY", f"INSERT_AT succeeded at {exact_path} idx={idx}", patch)
+                return True
+            if debug_enabled():
+                debug_info("PATCH_APPLY", f"INSERT_AT failed at {exact_path}", patch)
+            return False
+
         if action == "insert_after":
             if isinstance(parent, list) and isinstance(target_key, int):
                 insert_index = min(target_key + 1, len(parent))
@@ -741,8 +771,21 @@ class ASTEditor:
         return False
 
     @staticmethod
-    def apply_reverse_path_patches(ast_data: Any, patches: Any) -> Any:
-        """Apply patch list with reverse-path ordering and same-path conflict resolution."""
+    def apply_reverse_path_patches(
+        ast_data: Any,
+        patches: Any,
+        *,
+        dedupe: bool = True,
+    ) -> Any:
+        """Apply patch list with reverse-path ordering.
+
+        When dedupe=True (default), patches sharing the same _patch_dedupe_key collapse
+        and only the highest (priority, _order) is kept (single-rule remediation).
+
+        When dedupe=False, every normalized patch is applied — required when merging
+        patch lists from multiple CIS rules against one baseline AST, since distinct
+        remediations can legitimately reuse the same key (e.g. sibling directives).
+        """
         if not isinstance(ast_data, list) or not isinstance(patches, list):
             return copy.deepcopy(ast_data)
 
@@ -769,22 +812,27 @@ class ASTEditor:
 
         if debug_enabled():
             debug_verbose("PATCH_PLAN", f"Normalized patches count: {len(normalized_patches)}")
-        selected: Dict[tuple, Dict[str, Any]] = {}
-        for patch in normalized_patches:
-            key = ASTEditor._patch_dedupe_key(patch)
-            current = selected.get(key)
-            if current is None:
-                selected[key] = patch
-                continue
+        if dedupe:
+            selected: Dict[tuple, Dict[str, Any]] = {}
+            for patch in normalized_patches:
+                key = ASTEditor._patch_dedupe_key(patch)
+                current = selected.get(key)
+                if current is None:
+                    selected[key] = patch
+                    continue
 
-            current_rank = (current.get("priority", 0), current.get("_order", -1))
-            new_rank = (patch.get("priority", 0), patch.get("_order", -1))
-            if new_rank >= current_rank:
-                selected[key] = patch
+                current_rank = (current.get("priority", 0), current.get("_order", -1))
+                new_rank = (patch.get("priority", 0), patch.get("_order", -1))
+                if new_rank >= current_rank:
+                    selected[key] = patch
+
+            apply_candidates = list(selected.values())
+        else:
+            apply_candidates = normalized_patches
 
         working = copy.deepcopy(ast_data)
         ordered_patches = sorted(
-            selected.values(),
+            apply_candidates,
             key=lambda item: (ASTEditor._path_sort_key(item["exact_path"]), item.get("priority", 0), item.get("_order", 0)),
             reverse=True,
         )
