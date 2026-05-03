@@ -831,15 +831,48 @@ class ASTEditor:
             apply_candidates = normalized_patches
 
         working = copy.deepcopy(ast_data)
+
+        # Phase 1: Identify replace patches that would overwrite deeper patches.
+        # These must apply FIRST so deeper patches can modify the replaced result.
+        def _is_prefix_of(shorter, longer):
+            """Check if shorter path is a strict prefix of longer path."""
+            if len(shorter) >= len(longer):
+                return False
+            return list(longer[:len(shorter)]) == list(shorter)
+
+        all_paths = [tuple(p["exact_path"]) for p in apply_candidates]
+        shallow_replaces = []
+        remaining = []
+        for p in apply_candidates:
+            path = tuple(p["exact_path"])
+            # Only promote structural server/http block replaces to phase 1.
+            # Location-level replaces should use normal deepest-first ordering.
+            is_structural = p.get("directive") in {"server", "http", ""}
+            if (p.get("action") == "replace" and is_structural
+                    and any(_is_prefix_of(path, other) for other in all_paths)):
+                shallow_replaces.append(p)
+            else:
+                remaining.append(p)
+
+        # Apply shallow replaces first (shallowest first)
+        if shallow_replaces:
+            shallow_replaces.sort(
+                key=lambda item: (ASTEditor._path_sort_key(item["exact_path"]), item.get("priority", 0)),
+            )
+            for patch in shallow_replaces:
+                if debug_enabled():
+                    debug_trace("PATCH_APPLY", "Applying shallow replace (phase 1)", patch)
+                ASTEditor._apply_patch(working, patch)
+
+        # Phase 2: All other patches in standard reverse-path order
         ordered_patches = sorted(
-            apply_candidates,
+            remaining,
             key=lambda item: (ASTEditor._path_sort_key(item["exact_path"]), item.get("priority", 0), item.get("_order", 0)),
             reverse=True,
         )
 
         if debug_enabled():
-            debug_verbose("PATCH_PLAN", f"Selected patches count: {len(ordered_patches)}; ordering will be applied in reverse-path order")
-            # list keys briefly
+            debug_verbose("PATCH_PLAN", f"Selected patches count: {len(ordered_patches)} + {len(shallow_replaces)} shallow replaces; ordering will be applied in reverse-path order")
             try:
                 keys = [p.get("exact_path") for p in ordered_patches]
                 debug_trace("PATCH_PLAN", f"Ordered exact_paths: {keys}")

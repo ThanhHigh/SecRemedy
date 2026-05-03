@@ -33,6 +33,7 @@ class BaseRemedy:
     child_ast_config: Any = {} #File-grouped AST configs: {file_path: {parsed: [...]}}
     child_ast_modified: Any = {} #File-grouped modified configs: {file_path: {parsed: [...]}}
     file_approval_status: Dict[str, bool] = {}
+    _full_ast_config: Any = None  # Full AST config for cross-file sweeps
 
 
     def __init__(self, recommendation: Recommendation | None = None) -> None:
@@ -48,6 +49,7 @@ class BaseRemedy:
         self.child_ast_config = {}
         self.child_ast_modified = {}
         self.file_approval_status = {}
+        self._full_ast_config = None
 
         if recommendation is not None:
             self.id = recommendation.id.value

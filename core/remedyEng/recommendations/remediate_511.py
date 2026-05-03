@@ -189,7 +189,7 @@ class Remediate511(BaseRemedy):
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
-    def _build_patches_511(self):
+    def _build_patches_511(self, all_ast_config=None):
         result = {}
         ip_string = self.user_inputs[1].strip()
         ips = self._parse_ips(ip_string)
@@ -249,6 +249,62 @@ class Remediate511(BaseRemedy):
             if patches:
                 result[file_path] = patches
 
+        # Global sweep: delete standalone `allow all` in ACME-style locations
+        # across ALL config files. Rule 2.5.3 creates these, but 5.1.1 considers
+        # them violations (allow without paired deny for IP restriction).
+        def _find_allow_all_patches(nodes, prefix):
+            """Find `allow all` directives in location blocks that lack deny."""
+            sweep_patches = []
+            if not isinstance(nodes, list):
+                return sweep_patches
+            for idx, node in enumerate(nodes):
+                if not isinstance(node, dict):
+                    continue
+                block = node.get("block")
+                if isinstance(block, list):
+                    if node.get("directive") == "location":
+                        for bidx, bnode in enumerate(block):
+                            if (isinstance(bnode, dict)
+                                    and bnode.get("directive") == "allow"
+                                    and bnode.get("args") == ["all"]):
+                                # Check if this location has a matching deny
+                                has_deny_all = any(
+                                    isinstance(b, dict)
+                                    and b.get("directive") == "deny"
+                                    and b.get("args") == ["all"]
+                                    for b in block
+                                )
+                                if not has_deny_all:
+                                    sweep_patches.append({
+                                        "action": "delete",
+                                        "exact_path": prefix + [idx, "block", bidx],
+                                        "directive": "allow",
+                                        "priority": 2,
+                                    })
+                    sweep_patches.extend(
+                        _find_allow_all_patches(block, prefix + [idx, "block"])
+                    )
+            return sweep_patches
+
+        sweep_source = all_ast_config if isinstance(all_ast_config, dict) else None
+        config_list = sweep_source.get("config", []) if sweep_source else []
+        if not isinstance(config_list, list):
+            config_list = []
+
+        for cfg_entry in config_list:
+            if not isinstance(cfg_entry, dict):
+                continue
+            fp = cfg_entry.get("file", "")
+            parsed = cfg_entry.get("parsed")
+            if not isinstance(parsed, list):
+                continue
+
+            sweep_patches = _find_allow_all_patches(parsed, [])
+            if sweep_patches:
+                if fp not in result:
+                    result[fp] = []
+                result[fp].extend(sweep_patches)
+
         return result
 
     def collect_patches(self):
@@ -256,7 +312,7 @@ class Remediate511(BaseRemedy):
         is_valid, _ = self._validate_user_inputs()
         if not is_valid:
             return {}
-        return self._build_patches_511()
+        return self._build_patches_511(all_ast_config=self._full_ast_config)
 
     def get_user_guidance(self) -> str:
         """Return guidance for IP access control rule."""

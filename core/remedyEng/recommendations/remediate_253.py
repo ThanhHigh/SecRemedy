@@ -145,15 +145,55 @@ class Remediate253(BaseRemedy):
                     replace_args = remediation.get("args", [])
                     if not isinstance(replace_args, list):
                         replace_args = []
-                    replace_block = copy.deepcopy(location_block) if isinstance(location_block, list) else []
-                    patches.append({
-                        "action": "replace",
-                        "exact_path": rel_ctx,
-                        "directive": "location",
-                        "args": replace_args,
-                        "block": replace_block,
-                        "priority": 0,
-                    })
+                    # Scanner expects deny-hidden to contain only deny all
+                    replace_block = [{"directive": "deny", "args": ["all"]}]
+
+                    # Check if target actually exists at the specified path
+                    target_node = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+                    if isinstance(target_node, dict) and target_node.get("directive") == "location":
+                        # Target exists - replace it
+                        patches.append({
+                            "action": "replace",
+                            "exact_path": rel_ctx,
+                            "directive": "location",
+                            "args": replace_args if replace_args else target_node.get("args", ["~", "/\\."]),
+                            "block": copy.deepcopy(replace_block),
+                            "priority": 0,
+                        })
+                    else:
+                        # Target doesn't exist - add ACME + deny locations to
+                        # the parent server block instead
+                        parent_ctx = rel_ctx[:-1] if rel_ctx else []
+                        if not parent_ctx:
+                            for tc in target_contexts:
+                                parent_ctx = tc
+                                break
+                        if parent_ctx:
+                            parent_list = ASTEditor.get_child_ast_config(parsed_copy, parent_ctx)
+                            # Add ACME location (empty block)
+                            acme_args = ["^~", "/.well-known/acme-challenge/"]
+                            acme_idx = Remediate253._location_child_index(
+                                parent_list if isinstance(parent_list, list) else [], acme_args
+                            )
+                            if acme_idx is None:
+                                patches.append({
+                                    "action": "add_block",
+                                    "exact_path": parent_ctx,
+                                    "block": {"directive": "location", "args": acme_args, "block": []},
+                                    "priority": 0,
+                                })
+                            # Add deny-hidden location
+                            deny_args = replace_args if replace_args else ["~", "/\\."]
+                            deny_idx = Remediate253._location_child_index(
+                                parent_list if isinstance(parent_list, list) else [], deny_args
+                            )
+                            if deny_idx is None:
+                                patches.append({
+                                    "action": "add_block",
+                                    "exact_path": parent_ctx,
+                                    "block": {"directive": "location", "args": deny_args, "block": copy.deepcopy(replace_block)},
+                                    "priority": 0,
+                                })
                     continue
 
                 if not isinstance(location_block, list):
@@ -176,11 +216,8 @@ class Remediate253(BaseRemedy):
 
                             node_copy = copy.deepcopy(location_node)
                             if root_path and self._is_deny_hidden_location(node_copy):
-                                node_block = node_copy.get("block")
-                                if not isinstance(node_block, list):
-                                    node_copy["block"] = []
-                                    node_block = node_copy["block"]
-                                Remediate253._upsert_in_block(node_block, "root", [root_path])
+                                # Scanner expects deny-hidden to contain only deny all
+                                node_copy["block"] = [{"directive": "deny", "args": ["all"]}]
 
                             if self._is_acme_location(node_copy):
                                 node_copy["block"] = []
@@ -213,14 +250,9 @@ class Remediate253(BaseRemedy):
                         deny_location = {
                             "directive": "location",
                             "args": copy.deepcopy(remediation.get("args", ["~", "/\\."])),
-                            "block": copy.deepcopy(location_block),
+                            # Scanner expects deny-hidden to contain only deny all
+                            "block": [{"directive": "deny", "args": ["all"]}],
                         }
-                        if root_path:
-                            deny_block = deny_location.get("block")
-                            if not isinstance(deny_block, list):
-                                deny_location["block"] = []
-                                deny_block = deny_location["block"]
-                            Remediate253._upsert_in_block(deny_block, "root", [root_path])
 
                         acme_idx = Remediate253._location_child_index(target_list, acme_location["args"])
                         if acme_idx is not None:
@@ -315,8 +347,9 @@ class Remediate253(BaseRemedy):
         args = node.get("args", [])
         if len(args) >= 2:
             arg_str = args[1].strip('"\'')
-            # Look for either literal or regex pattern for acme challenge path
-            return args[0].strip('"\'') == "~" and (".well-known/acme-challenge" in arg_str or r"\.well-known/acme-challenge" in arg_str)
+            modifier = args[0].strip('"\'')
+            # Match both regex (~) and prefix (^~) modifiers for acme challenge path
+            return modifier in {"~", "^~"} and (".well-known/acme-challenge" in arg_str or r"\.well-known/acme-challenge" in arg_str)
         return False
 
     @staticmethod

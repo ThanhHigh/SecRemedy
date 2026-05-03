@@ -142,13 +142,14 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
         """
         return guidance.strip()
 
-    def _build_patches_34(self):
+    def _build_patches_34(self, all_ast_config=None):
         result = {}
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
             return result
 
         proxy_pass_value = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else ""
 
+        # Process scan-violated files first
         for file_path, file_data in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
@@ -193,40 +194,60 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
                         "priority": 1,
                     })
 
-            # Proactive sweep: ensure all proxy_pass locations carry required headers.
-            def _sweep(nodes, prefix):
-                if not isinstance(nodes, list):
-                    return
-                for idx, node in enumerate(nodes):
-                    if not isinstance(node, dict):
-                        continue
-                    block = node.get("block")
-                    if isinstance(block, list):
-                        has_proxy_pass = any(
-                            isinstance(c, dict) and c.get("directive") == "proxy_pass" for c in block
-                        )
-                        if has_proxy_pass:
-                            loc_ctx = prefix + [idx, "block"]
-                            patches.append({
-                                "action": "upsert",
-                                "exact_path": loc_ctx,
-                                "directive": "proxy_set_header",
-                                "args": ["X-Forwarded-For", "$proxy_add_x_forwarded_for"],
-                                "priority": 1,
-                            })
-                            patches.append({
-                                "action": "upsert",
-                                "exact_path": loc_ctx,
-                                "directive": "proxy_set_header",
-                                "args": ["X-Real-IP", "$remote_addr"],
-                                "priority": 1,
-                            })
-                        _sweep(block, prefix + [idx, "block"])
-
-            _sweep(parsed_copy, [])
-
             if patches:
                 result[file_path] = patches
+
+        # Proactive sweep across ALL config files: ensure every proxy_pass location
+        # carries required X-Forwarded-For and X-Real-IP headers.
+        def _sweep(nodes, prefix):
+            sweep_patches = []
+            if not isinstance(nodes, list):
+                return sweep_patches
+            for idx, node in enumerate(nodes):
+                if not isinstance(node, dict):
+                    continue
+                block = node.get("block")
+                if isinstance(block, list):
+                    has_proxy_pass = any(
+                        isinstance(c, dict) and c.get("directive") == "proxy_pass" for c in block
+                    )
+                    if has_proxy_pass:
+                        loc_ctx = prefix + [idx, "block"]
+                        sweep_patches.append({
+                            "action": "upsert",
+                            "exact_path": loc_ctx,
+                            "directive": "proxy_set_header",
+                            "args": ["X-Forwarded-For", "$proxy_add_x_forwarded_for"],
+                            "priority": 1,
+                        })
+                        sweep_patches.append({
+                            "action": "upsert",
+                            "exact_path": loc_ctx,
+                            "directive": "proxy_set_header",
+                            "args": ["X-Real-IP", "$remote_addr"],
+                            "priority": 1,
+                        })
+                    sweep_patches.extend(_sweep(block, prefix + [idx, "block"]))
+            return sweep_patches
+
+        sweep_source = all_ast_config if isinstance(all_ast_config, dict) else None
+        config_list = sweep_source.get("config", []) if sweep_source else []
+        if not isinstance(config_list, list):
+            config_list = []
+
+        for cfg_entry in config_list:
+            if not isinstance(cfg_entry, dict):
+                continue
+            fp = cfg_entry.get("file", "")
+            parsed = cfg_entry.get("parsed")
+            if not isinstance(parsed, list):
+                continue
+
+            sweep_patches = _sweep(parsed, [])
+            if sweep_patches:
+                if fp not in result:
+                    result[fp] = []
+                result[fp].extend(sweep_patches)
 
         return result
 
@@ -235,7 +256,7 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
         is_valid, _ = self._validate_user_inputs()
         if not is_valid:
             return {}
-        return self._build_patches_34()
+        return self._build_patches_34(all_ast_config=self._full_ast_config)
 
     def remediate(self) -> None:
         """

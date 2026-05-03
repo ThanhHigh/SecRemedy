@@ -240,6 +240,9 @@ class Remediator:
                     debug_info("ORCHESTRATION", f"[batch] skip {remedy.id}: no violations")
                 continue
 
+            # Provide full AST so rules can sweep ALL config files (not just violated ones)
+            remedy._full_ast_config = self.ast_baseline
+
             if not self._prepare_user_inputs(remedy, interactive=False):
                 continue
 

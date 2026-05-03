@@ -90,7 +90,7 @@ class Remediate411(BaseRemedy):
         
         return (True, "")
 
-    def _build_patches_411(self):
+    def _build_patches_411(self, all_ast_config=None):
         result = {}
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
             return result
@@ -102,6 +102,7 @@ class Remediate411(BaseRemedy):
         if not redirect_target:
             redirect_target = "https://$host$request_uri"
 
+        # Process scan-violated files first
         for file_path, file_data in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
@@ -153,9 +154,10 @@ class Remediate411(BaseRemedy):
                 elif isinstance(target, dict):
                     if target.get("directive") == "return":
                         if target.get("args") != ["444"]:
+                            parent_ctx = rel_ctx[:-1] if rel_ctx else []
                             patches.append({
                                 "action": "upsert",
-                                "exact_path": rel_ctx,
+                                "exact_path": parent_ctx if parent_ctx else rel_ctx,
                                 "directive": "return",
                                 "args": copy.deepcopy(return_args),
                                 "priority": 0,
@@ -170,42 +172,63 @@ class Remediate411(BaseRemedy):
                                 "priority": 0,
                             })
 
-            # Proactive sweep: every HTTP server block should have redirect return.
-            def _has_http_listen(server_block: list) -> bool:
-                listens = [n for n in server_block if isinstance(n, dict) and n.get("directive") == "listen"]
-                if not listens:
-                    return True
-                for l in listens:
-                    args = l.get("args", [])
-                    if "ssl" not in args:
-                        return True
-                return False
-
-            def _sweep_servers(nodes, prefix):
-                if not isinstance(nodes, list):
-                    return
-                for idx, node in enumerate(nodes):
-                    if not isinstance(node, dict):
-                        continue
-                    if node.get("directive") == "server" and isinstance(node.get("block"), list):
-                        server_ctx = prefix + [idx, "block"]
-                        server_block = node.get("block", [])
-                        if _has_http_listen(server_block) and not self._is_ssl_reject_server_block(server_block):
-                            patches.append({
-                                "action": "upsert",
-                                "exact_path": server_ctx,
-                                "directive": "return",
-                                "args": [redirect_code, redirect_target],
-                                "priority": 1,
-                            })
-                    block = node.get("block")
-                    if isinstance(block, list):
-                        _sweep_servers(block, prefix + [idx, "block"])
-
-            _sweep_servers(parsed_copy, [])
-
             if patches:
                 result[file_path] = patches
+
+        # Proactive sweep: every HTTP server block across ALL config files
+        # should have a redirect return directive.
+        def _has_http_listen(server_block: list) -> bool:
+            listens = [n for n in server_block if isinstance(n, dict) and n.get("directive") == "listen"]
+            if not listens:
+                return True
+            for l in listens:
+                args = l.get("args", [])
+                if "ssl" not in args:
+                    return True
+            return False
+
+        def _sweep_servers(nodes, prefix):
+            sweep_patches = []
+            if not isinstance(nodes, list):
+                return sweep_patches
+            for idx, node in enumerate(nodes):
+                if not isinstance(node, dict):
+                    continue
+                if node.get("directive") == "server" and isinstance(node.get("block"), list):
+                    server_ctx = prefix + [idx, "block"]
+                    server_block = node.get("block", [])
+                    if _has_http_listen(server_block) and not self._is_ssl_reject_server_block(server_block):
+                        sweep_patches.append({
+                            "action": "upsert",
+                            "exact_path": server_ctx,
+                            "directive": "return",
+                            "args": [redirect_code, redirect_target],
+                            "priority": 1,
+                        })
+                block = node.get("block")
+                if isinstance(block, list):
+                    sweep_patches.extend(_sweep_servers(block, prefix + [idx, "block"]))
+            return sweep_patches
+
+        # Sweep ALL config files from the full AST config (not just scan-violated ones)
+        sweep_source = all_ast_config if isinstance(all_ast_config, dict) else None
+        config_list = sweep_source.get("config", []) if sweep_source else []
+        if not isinstance(config_list, list):
+            config_list = []
+
+        for cfg_entry in config_list:
+            if not isinstance(cfg_entry, dict):
+                continue
+            fp = cfg_entry.get("file", "")
+            parsed = cfg_entry.get("parsed")
+            if not isinstance(parsed, list):
+                continue
+
+            sweep_patches = _sweep_servers(parsed, [])
+            if sweep_patches:
+                if fp not in result:
+                    result[fp] = []
+                result[fp].extend(sweep_patches)
 
         return result
 
@@ -214,7 +237,7 @@ class Remediate411(BaseRemedy):
         is_valid, _ = self._validate_user_inputs()
         if not is_valid:
             return {}
-        return self._build_patches_411()
+        return self._build_patches_411(all_ast_config=self._full_ast_config)
 
     def remediate(self) -> None:
         """

@@ -249,6 +249,119 @@ class Remediate252(BaseRemedy):
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
+    def _build_patches_252(self):
+        """Build patches for batch merged-patch mode."""
+        result = {}
+        if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
+            return result
+
+        err_40x = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else ""
+        err_50x = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
+        root_50x = self.user_inputs[2].strip() if len(self.user_inputs) > 2 else ""
+
+        default_root = "/var/www/html/errors"
+        if getattr(self, "remedy_input_defaults", None) and len(self.remedy_input_defaults) > 2:
+            default_root = self.remedy_input_defaults[2]
+
+        for file_path, file_data in self.child_ast_config.items():
+            if file_path not in self.child_scan_result:
+                continue
+            file_violations = self.child_scan_result[file_path]
+            if not isinstance(file_violations, list) or not file_violations:
+                continue
+            parsed = file_data.get("parsed") if isinstance(file_data, dict) else None
+            if not isinstance(parsed, list):
+                continue
+
+            parsed_copy = copy.deepcopy(parsed)
+            patches = []
+
+            for remediation in file_violations:
+                if not isinstance(remediation, dict):
+                    continue
+
+                action = remediation.get("action", "")
+                directive = remediation.get("directive", "")
+                context = ASTEditor._extract_context_path(remediation)
+                args = remediation.get("args", [])
+
+                if action not in {"add", "add_directive"}:
+                    continue
+
+                rel_ctx = self._relative_context(context)
+                if not rel_ctx:
+                    if directive == "error_page":
+                        http_blocks = self._find_block_contexts(parsed_copy, "http")
+                        if http_blocks:
+                            rel_ctx = http_blocks[0]
+                    elif directive == "location":
+                        server_blocks = self._find_block_contexts(parsed_copy, "server")
+                        if server_blocks:
+                            rel_ctx = server_blocks[0]
+
+                if not rel_ctx:
+                    continue
+
+                if directive == "error_page":
+                    final_args = copy.deepcopy(args)
+                    if args and args[0] == "404" and err_40x:
+                        final_args = ["404", err_40x]
+                    elif args and args[0] == "500" and err_50x:
+                        final_args = ["500", "502", "503", "504", err_50x]
+
+                    patches.append({
+                        "action": "upsert",
+                        "exact_path": rel_ctx,
+                        "directive": "error_page",
+                        "args": final_args,
+                        "priority": 0,
+                    })
+
+            # Proactive sweep: ensure every server block has error_page directives.
+            def _sweep_servers(nodes, prefix):
+                if not isinstance(nodes, list):
+                    return
+                for idx, node in enumerate(nodes):
+                    if not isinstance(node, dict):
+                        continue
+                    if node.get("directive") == "server" and isinstance(node.get("block"), list):
+                        server_ctx = prefix + [idx, "block"]
+
+                        if err_40x:
+                            patches.append({
+                                "action": "upsert",
+                                "exact_path": server_ctx,
+                                "directive": "error_page",
+                                "args": ["404", err_40x],
+                                "priority": 1,
+                            })
+                        if err_50x:
+                            patches.append({
+                                "action": "upsert",
+                                "exact_path": server_ctx,
+                                "directive": "error_page",
+                                "args": ["500", "502", "503", "504", err_50x],
+                                "priority": 1,
+                            })
+                    block = node.get("block")
+                    if isinstance(block, list):
+                        _sweep_servers(block, prefix + [idx, "block"])
+
+            _sweep_servers(parsed_copy, [])
+
+            if patches:
+                result[file_path] = patches
+
+        return result
+
+    def collect_patches(self):
+        """Return patches for batch merged-patch mode."""
+        self.resolve_user_inputs()
+        is_valid, _ = self._validate_user_inputs()
+        if not is_valid:
+            return {}
+        return self._build_patches_252()
+
     @staticmethod
     def _find_location_path_for_uri(parsed: list, uri: str) -> list | None:
         """Return relative path indices to a location node with args ['=', uri], or None."""
