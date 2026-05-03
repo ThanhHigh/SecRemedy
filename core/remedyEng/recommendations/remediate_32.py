@@ -56,9 +56,82 @@ class Remediate32(BaseRemedy):
         - user_inputs[0]: scoped access_log spec, ex: "global:/var/log/nginx/access.log combined,per_server:/var/log/nginx/srv.log combined"
         - user_inputs[1]: log_not_found control (on/off), optional
         """
+        # self.child_ast_modified = {}
+        
+        # # Validate user inputs first
+        # is_valid, error_msg = self._validate_user_inputs()
+        # if not is_valid:
+        #     print(f"  Validation error: {error_msg}")
+        #     return
+        
+        # if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
+        #     return
+
+        # scoped_spec = self.user_inputs[0] if len(self.user_inputs) > 0 else ""
+        # log_not_found_value = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
+        # scope_map = self._parse_scope_map(scoped_spec)
+
+        # for file_path, file_data in self.child_ast_config.items():
+        #     if file_path not in self.child_scan_result:
+        #         continue
+        #     parsed = file_data.get("parsed") if isinstance(file_data, dict) else None
+        #     if not isinstance(parsed, list):
+        #         continue
+
+        #     parsed_copy = copy.deepcopy(parsed)
+        #     for remediation in self.child_scan_result[file_path]:
+        #         if not isinstance(remediation, dict):
+        #             continue
+        #         if remediation.get("directive") != "access_log":
+        #             continue
+
+        #         context = remediation.get("context", [])
+        #         rel_ctx = self._relative_context(context)
+        #         if not rel_ctx:
+        #             continue
+
+        #         target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+        #         if not isinstance(target, (list, dict)):
+        #             continue
+
+        #         scope = self._infer_scope(rel_ctx)
+        #         user_args = self._access_log_args_for_scope(scope_map, scope)
+        #         args = user_args if user_args else remediation.get("args", [])
+        #         if not isinstance(args, list) or not args:
+        #             continue
+
+        #         action = remediation.get("action")
+
+        #         # delete/modify/replace: update the offending access_log directive in place.
+        #         if action in {"delete", "modify_directive", "replace"}:
+        #             if isinstance(target, dict) and target.get("directive") == "access_log":
+        #                 target["args"] = copy.deepcopy(args)
+
+        #                 # Optional log_not_found control at same block level.
+        #                 if log_not_found_value in {"on", "off"}:
+        #                     self._upsert_sibling_directive(
+        #                         parsed_copy,
+        #                         rel_ctx,
+        #                         "log_not_found",
+        #                         [log_not_found_value],
+        #                     )
+
+        #             elif isinstance(target, list):
+        #                 self._upsert_in_block(target, "access_log", args)
+        #                 if log_not_found_value in {"on", "off"}:
+        #                     self._upsert_in_block(target, "log_not_found", [log_not_found_value])
+
+        #         # add/add_directive: add access_log into target directive list.
+        #         elif action in {"add", "add_directive"}:
+        #             target_list = target if isinstance(target, list) else target.get("block") if isinstance(target, dict) else None
+        #             if isinstance(target_list, list):
+        #                 self._upsert_in_block(target_list, "access_log", args)
+        #                 if log_not_found_value in {"on", "off"}:
+        #                     self._upsert_in_block(target_list, "log_not_found", [log_not_found_value])
+
+        #     self.child_ast_modified[file_path] = {"parsed": parsed_copy}
         self.child_ast_modified = {}
         
-        # Validate user inputs first
         is_valid, error_msg = self._validate_user_inputs()
         if not is_valid:
             print(f"  Validation error: {error_msg}")
@@ -79,56 +152,61 @@ class Remediate32(BaseRemedy):
                 continue
 
             parsed_copy = copy.deepcopy(parsed)
+            patches = []
+            
             for remediation in self.child_scan_result[file_path]:
                 if not isinstance(remediation, dict):
                     continue
                 if remediation.get("directive") != "access_log":
                     continue
 
-                context = remediation.get("context", [])
-                rel_ctx = self._relative_context(context)
+                raw_ctx = remediation.get("context")
+                if raw_ctx:
+                    rel_ctx = self._relative_context(raw_ctx)
+                else:
+                    rel_ctx = ASTEditor._extract_context_path(remediation)
                 if not rel_ctx:
                     continue
 
-                target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
-                if not isinstance(target, (list, dict)):
-                    continue
-
+                action = remediation.get("action", "")
                 scope = self._infer_scope(rel_ctx)
                 user_args = self._access_log_args_for_scope(scope_map, scope)
                 args = user_args if user_args else remediation.get("args", [])
+                
                 if not isinstance(args, list) or not args:
                     continue
 
-                action = remediation.get("action")
-
-                # delete/modify/replace: update the offending access_log directive in place.
-                if action in {"delete", "modify_directive", "replace"}:
-                    if isinstance(target, dict) and target.get("directive") == "access_log":
-                        target["args"] = copy.deepcopy(args)
-
-                        # Optional log_not_found control at same block level.
-                        if log_not_found_value in {"on", "off"}:
-                            self._upsert_sibling_directive(
-                                parsed_copy,
-                                rel_ctx,
-                                "log_not_found",
-                                [log_not_found_value],
-                            )
-
-                    elif isinstance(target, list):
-                        self._upsert_in_block(target, "access_log", args)
-                        if log_not_found_value in {"on", "off"}:
-                            self._upsert_in_block(target, "log_not_found", [log_not_found_value])
-
-                # add/add_directive: add access_log into target directive list.
+                # delete/modify/replace: upsert the access_log
+                if action in {"delete", "modify", "modify_directive", "replace"}:
+                    patches.append({
+                        "action": "upsert",
+                        "exact_path": rel_ctx,
+                        "directive": "access_log",
+                        "args": args,
+                        "priority": 0,
+                    })
+                    
+                    if log_not_found_value in {"on", "off"}:
+                        parent_ctx = rel_ctx[:-1] if len(rel_ctx) >= 1 else []
+                        patches.append({
+                            "action": "upsert",
+                            "exact_path": parent_ctx,
+                            "directive": "log_not_found",
+                            "args": [log_not_found_value],
+                            "priority": 1,
+                        })
+                
+                # add/add_directive: add access_log to block
                 elif action in {"add", "add_directive"}:
-                    target_list = target if isinstance(target, list) else target.get("block") if isinstance(target, dict) else None
-                    if isinstance(target_list, list):
-                        self._upsert_in_block(target_list, "access_log", args)
-                        if log_not_found_value in {"on", "off"}:
-                            self._upsert_in_block(target_list, "log_not_found", [log_not_found_value])
+                    patches.append({
+                        "action": "add",
+                        "exact_path": rel_ctx,
+                        "directive": "access_log",
+                        "args": args,
+                        "priority": 0,
+                    })
 
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     @staticmethod

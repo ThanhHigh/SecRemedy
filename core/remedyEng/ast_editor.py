@@ -337,6 +337,27 @@ class ASTEditor:
         return -1
 
     @staticmethod
+    def path_is_valid(data: Any, path: List[Union[str, int]]) -> bool:
+        """Return True if path exists in AST, or ends at valid append index (index == len(list))."""
+        if not isinstance(path, list) or not path:
+            return False
+        current = data
+        for index, key in enumerate(path):
+            if isinstance(key, int):
+                if not isinstance(current, list):
+                    return False
+                if key > len(current):
+                    return False
+                if key == len(current):
+                    return index == len(path) - 1
+                current = current[key]
+            else:
+                if not isinstance(current, dict) or key not in current:
+                    return False
+                current = current[key]
+        return True
+
+    @staticmethod
     def get_child_ast_config(data: Any, context: List[Union[str, int]]) -> Any:
         """
         Navigate to a specific location in the AST using a context path.
@@ -477,6 +498,23 @@ class ASTEditor:
         return node
 
     @staticmethod
+    def _patch_dedupe_key(patch: Dict[str, Any]) -> tuple:
+        """Stable key for conflict resolution: same path may host multiple sibling directives."""
+        ep = tuple(patch.get("exact_path") or ())
+        directive = str(patch.get("directive") or "")
+        args = patch.get("args")
+        args_key = tuple(args) if isinstance(args, list) else ()
+        action = str(patch.get("action") or "")
+        block_val = patch.get("block")
+        if isinstance(block_val, (dict, list)):
+            block_sig = json.dumps(block_val, sort_keys=True)
+        elif block_val is None:
+            block_sig = ""
+        else:
+            block_sig = str(block_val)
+        return (ep, directive, args_key, action, block_sig)
+
+    @staticmethod
     def _path_sort_key(path: List[Union[str, int]]) -> tuple:
         signature = []
         for item in path:
@@ -494,6 +532,47 @@ class ASTEditor:
         replacement = {"directive": directive, "args": copy.deepcopy(args) if isinstance(args, list) else []}
         if isinstance(block, list):
             replacement["block"] = copy.deepcopy(block)
+
+        # nginx may repeat allow lines; each trust network needs its own directive node.
+        if directive == "allow":
+            block_list.append(replacement)
+            return True
+
+        # Multiple error_page lines differ by status-code prefix; same prefix updates in place.
+        if directive == "error_page" and isinstance(args, list) and len(args) >= 2:
+            key = tuple(args[:-1])
+            for item in block_list:
+                if not isinstance(item, dict) or item.get("directive") != "error_page":
+                    continue
+                cur_args = item.get("args") or []
+                if isinstance(cur_args, list) and len(cur_args) >= 2 and tuple(cur_args[:-1]) == key:
+                    item.clear()
+                    item.update(replacement)
+                    return True
+            block_list.append(replacement)
+            return True
+
+        if directive == "deny" and isinstance(args, list) and args == ["all"]:
+            for i in range(len(block_list) - 1, -1, -1):
+                item = block_list[i]
+                if isinstance(item, dict) and item.get("directive") == "deny" and item.get("args") == ["all"]:
+                    block_list.pop(i)
+            block_list.append(replacement)
+            return True
+
+        # Match add_header by header name (args[0]); do not clobber other add_header lines.
+        if directive == "add_header" and isinstance(args, list) and len(args) > 0:
+            header_key = args[0]
+            for item in block_list:
+                if not isinstance(item, dict) or item.get("directive") != "add_header":
+                    continue
+                iargs = item.get("args") or []
+                if len(iargs) > 0 and iargs[0] == header_key:
+                    item.clear()
+                    item.update(replacement)
+                    return True
+            block_list.append(replacement)
+            return True
 
         for item in block_list:
             if isinstance(item, dict) and item.get("directive") == directive:
@@ -568,6 +647,14 @@ class ASTEditor:
             return False
 
         if action in {"upsert", "add", "add_directive"}:
+            if (
+                isinstance(parent, list)
+                and isinstance(target_key, int)
+                and target_key == len(parent)
+                and target is None
+            ):
+                return ASTEditor._upsert_in_list(parent, directive, args, block)
+
             if isinstance(target, list):
                 return ASTEditor._upsert_in_list(target, directive, args, block)
 
@@ -582,6 +669,25 @@ class ASTEditor:
 
             if debug_enabled():
                 debug_info("PATCH_APPLY", f"UPSERT/ADD failed at {exact_path}", {"action": action, "exact_path": exact_path})
+            return False
+
+        if action == "add_block":
+            insert_list = ASTEditor.get_child_ast_config(data, exact_path)
+            if isinstance(insert_list, list):
+                inner = patch.get("block")
+                if isinstance(inner, dict) and inner.get("directive"):
+                    insert_list.append(copy.deepcopy(inner))
+                    if debug_enabled():
+                        debug_info("PATCH_APPLY", f"ADD_BLOCK succeeded at {exact_path}", {"action": "add_block", "exact_path": exact_path})
+                    return True
+                node = ASTEditor._build_patch_node(patch)
+                if node.get("directive"):
+                    insert_list.append(node)
+                    if debug_enabled():
+                        debug_info("PATCH_APPLY", f"ADD_BLOCK succeeded at {exact_path}", {"action": "add_block", "exact_path": exact_path})
+                    return True
+            if debug_enabled():
+                debug_info("PATCH_APPLY", f"ADD_BLOCK failed at {exact_path}", {"action": "add_block", "exact_path": exact_path})
             return False
 
         if action == "append":
@@ -639,7 +745,7 @@ class ASTEditor:
             debug_verbose("PATCH_PLAN", f"Normalized patches count: {len(normalized_patches)}")
         selected: Dict[tuple, Dict[str, Any]] = {}
         for patch in normalized_patches:
-            key = tuple(patch["exact_path"])
+            key = ASTEditor._patch_dedupe_key(patch)
             current = selected.get(key)
             if current is None:
                 selected[key] = patch

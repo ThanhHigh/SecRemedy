@@ -28,11 +28,95 @@ class Remediate252(BaseRemedy):
 
     def remediate(self) -> None:
         """Apply remediation for Rule 2.5.2 by adding/updating custom error_page directives."""
+        # self.child_ast_modified = {}
+
+        # self.resolve_user_inputs()
+        
+        # # Validate user inputs first
+        # is_valid, error_msg = self._validate_user_inputs()
+        # if not is_valid:
+        #     print(f"  Validation error: {error_msg}")
+        #     return
+        
+        # if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
+        #     return
+
+        # err_40x = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else ""
+        # err_50x = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
+        # root_50x = self.user_inputs[2].strip() if len(self.user_inputs) > 2 else ""
+
+        # for file_path, file_data in self.child_ast_config.items():
+        #     if file_path not in self.child_scan_result:
+        #         continue
+        #     parsed = file_data.get("parsed") if isinstance(file_data, dict) else None
+        #     if not isinstance(parsed, list):
+        #         continue
+
+        #     parsed_copy = copy.deepcopy(parsed)
+        #     for remediation in self.child_scan_result[file_path]:
+        #         if not isinstance(remediation, dict):
+        #             continue
+        #         if remediation.get("action") not in {"add", "add_directive"}:
+        #             continue
+        #         if remediation.get("directive") != "error_page":
+        #             continue
+
+        #         rel_ctx = self._relative_context(remediation.get("context", []))
+        #         target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+
+        #         # Empty relative context maps to parsed root list; do not insert there.
+        #         if isinstance(target_list, list) and rel_ctx == []:
+        #             target_list = None
+
+        #         # Context can point to a directive object; if so, try mutating its block list.
+        #         if not isinstance(target_list, list) and isinstance(rel_ctx, list):
+        #             block_ctx = rel_ctx + ["block"]
+        #             block_target = ASTEditor.get_child_ast_config(parsed_copy, block_ctx)
+        #             if isinstance(block_target, list):
+        #                 rel_ctx = block_ctx
+        #                 target_list = block_target
+
+        #         # Fallback to logical nginx scopes. Never inject error_page at AST root.
+        #         if not isinstance(target_list, list):
+        #             http_blocks = self._find_block_contexts(parsed_copy, "http")
+        #             if http_blocks:
+        #                 rel_ctx = http_blocks[0]
+        #                 target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+        #         if not isinstance(target_list, list):
+        #             server_blocks = self._find_block_contexts(parsed_copy, "server")
+        #             if server_blocks:
+        #                 rel_ctx = server_blocks[0]
+        #                 target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+        #         if not isinstance(target_list, list):
+        #             continue
+
+        #         args = remediation.get("args", [])
+        #         if not isinstance(args, list) or not args:
+        #             continue
+
+        #         # Optional user override by category.
+        #         if args and args[0] == "404" and err_40x:
+        #             args = ["404", err_40x]
+        #         elif args and args[0] == "500" and err_50x:
+        #             args = ["500", "502", "503", "504", err_50x]
+
+        #         self._upsert_error_page(target_list, args)
+
+        #         # Optional location block for custom 50x page root.
+        #         # Place location in a server block only; location is not valid in http/root.
+        #         if root_50x:
+        #             target_50x = err_50x if err_50x else "/custom_50x.html"
+        #             server_blocks = self._find_block_contexts(parsed_copy, "server")
+        #             if server_blocks:
+        #                 server_target = ASTEditor.get_child_ast_config(parsed_copy, server_blocks[0])
+        #                 if isinstance(server_target, list):
+        #                     self._upsert_location_50x(server_target, target_50x, root_50x)
+
+        #     self.child_ast_modified[file_path] = {"parsed": parsed_copy}
         self.child_ast_modified = {}
 
         self.resolve_user_inputs()
         
-        # Validate user inputs first
         is_valid, error_msg = self._validate_user_inputs()
         if not is_valid:
             print(f"  Validation error: {error_msg}")
@@ -45,74 +129,146 @@ class Remediate252(BaseRemedy):
         err_50x = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
         root_50x = self.user_inputs[2].strip() if len(self.user_inputs) > 2 else ""
 
+        default_root = "/var/www/html/errors"
+        if getattr(self, "remedy_input_defaults", None) and len(self.remedy_input_defaults) > 2:
+            default_root = self.remedy_input_defaults[2]
+
         for file_path, file_data in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
+                continue
+            file_violations = self.child_scan_result[file_path]
+            if not isinstance(file_violations, list) or not file_violations:
                 continue
             parsed = file_data.get("parsed") if isinstance(file_data, dict) else None
             if not isinstance(parsed, list):
                 continue
 
             parsed_copy = copy.deepcopy(parsed)
-            for remediation in self.child_scan_result[file_path]:
+            patches = []
+            
+            for remediation in file_violations:
                 if not isinstance(remediation, dict):
                     continue
-                if remediation.get("action") not in {"add", "add_directive"}:
-                    continue
-                if remediation.get("directive") != "error_page":
-                    continue
-
-                rel_ctx = self._relative_context(remediation.get("context", []))
-                target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
-
-                # Empty relative context maps to parsed root list; do not insert there.
-                if isinstance(target_list, list) and rel_ctx == []:
-                    target_list = None
-
-                # Context can point to a directive object; if so, try mutating its block list.
-                if not isinstance(target_list, list) and isinstance(rel_ctx, list):
-                    block_ctx = rel_ctx + ["block"]
-                    block_target = ASTEditor.get_child_ast_config(parsed_copy, block_ctx)
-                    if isinstance(block_target, list):
-                        rel_ctx = block_ctx
-                        target_list = block_target
-
-                # Fallback to logical nginx scopes. Never inject error_page at AST root.
-                if not isinstance(target_list, list):
-                    http_blocks = self._find_block_contexts(parsed_copy, "http")
-                    if http_blocks:
-                        rel_ctx = http_blocks[0]
-                        target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
-                if not isinstance(target_list, list):
-                    server_blocks = self._find_block_contexts(parsed_copy, "server")
-                    if server_blocks:
-                        rel_ctx = server_blocks[0]
-                        target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
-                if not isinstance(target_list, list):
-                    continue
-
+                
+                action = remediation.get("action", "")
+                directive = remediation.get("directive", "")
+                context = remediation.get("context", [])
                 args = remediation.get("args", [])
-                if not isinstance(args, list) or not args:
+                
+                if action not in {"add", "add_directive"}:
+                    continue
+                
+                rel_ctx = self._relative_context(context)
+                if not rel_ctx:
+                    if directive == "error_page":
+                        http_blocks = self._find_block_contexts(parsed_copy, "http")
+                        if http_blocks:
+                            rel_ctx = http_blocks[0]
+                    elif directive == "location":
+                        server_blocks = self._find_block_contexts(parsed_copy, "server")
+                        if server_blocks:
+                            rel_ctx = server_blocks[0]
+                
+                if not rel_ctx:
                     continue
 
-                # Optional user override by category.
-                if args and args[0] == "404" and err_40x:
-                    args = ["404", err_40x]
-                elif args and args[0] == "500" and err_50x:
-                    args = ["500", "502", "503", "504", err_50x]
+                # error_page directive: add or upsert
+                if directive == "error_page":
+                    final_args = copy.deepcopy(args)
+                    if args and args[0] == "404" and err_40x:
+                        final_args = ["404", err_40x]
+                    elif args and args[0] == "500" and err_50x:
+                        final_args = ["500", "502", "503", "504", err_50x]
+                    
+                    patches.append({
+                        "action": "upsert",
+                        "exact_path": rel_ctx,
+                        "directive": "error_page",
+                        "args": final_args,
+                        "priority": 0,
+                    })
+                
+                # location block for 50x: create or update (root falls back to guide default when empty)
+                elif directive == "location" and err_50x:
+                    root_path = root_50x if root_50x else default_root
+                    loc_block = {
+                        "directive": "location",
+                        "args": ["=", err_50x],
+                        "block": [
+                            {"directive": "root", "args": [root_path]},
+                            {"directive": "internal", "args": []},
+                        ]
+                    }
+                    patches.append({
+                        "action": "add_block",
+                        "exact_path": rel_ctx,
+                        "directive": "location",
+                        "block": loc_block,
+                        "priority": 0,
+                    })
 
-                self._upsert_error_page(target_list, args)
-
-                # Optional location block for custom 50x page root.
-                # Place location in a server block only; location is not valid in http/root.
-                if root_50x:
-                    target_50x = err_50x if err_50x else "/custom_50x.html"
+            # 50x location wrapper: scanner often emits only error_page; add or update location = URI for err_50x.
+            if err_50x:
+                root_path = root_50x if root_50x else default_root
+                loc_path = Remediate252._find_location_path_for_uri(parsed_copy, err_50x)
+                if loc_path is None:
                     server_blocks = self._find_block_contexts(parsed_copy, "server")
                     if server_blocks:
-                        server_target = ASTEditor.get_child_ast_config(parsed_copy, server_blocks[0])
-                        if isinstance(server_target, list):
-                            self._upsert_location_50x(server_target, target_50x, root_50x)
+                        rel_loc = server_blocks[0]
+                        loc_block = {
+                            "directive": "location",
+                            "args": ["=", err_50x],
+                            "block": [
+                                {"directive": "root", "args": [root_path]},
+                                {"directive": "internal", "args": []},
+                            ]
+                        }
+                        patches.append({
+                            "action": "add_block",
+                            "exact_path": rel_loc,
+                            "directive": "location",
+                            "block": loc_block,
+                            "priority": 0,
+                        })
+                else:
+                    loc_node = ASTEditor.get_child_ast_config(parsed_copy, loc_path)
+                    if isinstance(loc_node, dict):
+                        inner = loc_node.get("block")
+                        if isinstance(inner, list):
+                            for ri, child in enumerate(inner):
+                                if isinstance(child, dict) and child.get("directive") == "root":
+                                    patches.append({
+                                        "action": "upsert",
+                                        "exact_path": loc_path + ["block", ri],
+                                        "directive": "root",
+                                        "args": [root_path],
+                                        "priority": 0,
+                                    })
+                                    break
 
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
+
+    @staticmethod
+    def _find_location_path_for_uri(parsed: list, uri: str) -> list | None:
+        """Return relative path indices to a location node with args ['=', uri], or None."""
+
+        def walk(nodes: list, prefix: list) -> list | None:
+            if not isinstance(nodes, list):
+                return None
+            for idx, node in enumerate(nodes):
+                if not isinstance(node, dict):
+                    continue
+                if node.get("directive") == "location" and node.get("args") == ["=", uri]:
+                    return prefix + [idx]
+                blk = node.get("block")
+                if isinstance(blk, list):
+                    hit = walk(blk, prefix + [idx, "block"])
+                    if hit is not None:
+                        return hit
+            return None
+
+        return walk(parsed, [])
 
     @staticmethod
     def _upsert_error_page(block_list, args):

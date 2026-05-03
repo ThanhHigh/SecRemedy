@@ -32,6 +32,48 @@ class Remediate531(BaseRemedy):
         self.remedy_guide_detail = REMEDY_FIX_EXAMPLE
         self.remedy_input_require = REMEDY_INPUT_REQUIRE
 
+    @staticmethod
+    def _generate_sweep_patches(nodes: list, header_args: list) -> list:
+        """Generate patches for all server/location blocks missing X-Content-Type-Options."""
+        patches: list = []
+        INJECTABLE_SCOPES = {"server", "location"}
+        header_name = header_args[0] if header_args else ""
+
+        def _sweep(node_list, path_prefix):
+            if not isinstance(node_list, list):
+                return
+            for idx, node in enumerate(node_list):
+                if not isinstance(node, dict):
+                    continue
+                directive = node.get("directive", "")
+                block = node.get("block")
+
+                if directive in INJECTABLE_SCOPES and isinstance(block, list):
+                    has_header = any(
+                        isinstance(item, dict)
+                        and item.get("directive") == "add_header"
+                        and isinstance(item.get("args"), list)
+                        and len(item["args"]) > 0
+                        and item["args"][0] == header_name
+                        for item in block
+                    )
+
+                    if not has_header:
+                        current_path = path_prefix + [idx, "block"]
+                        patches.append({
+                            "action": "add",
+                            "exact_path": current_path,
+                            "directive": "add_header",
+                            "args": copy.deepcopy(header_args),
+                            "priority": 1,
+                        })
+
+                if isinstance(block, list):
+                    _sweep(block, path_prefix + [idx, "block"])
+
+        _sweep(nodes, [])
+        return patches
+
     def remediate(self) -> None:
         """
         Apply remediation for Rule 5.3.1: Ensure X-Content-Type-Options header is configured.
@@ -46,20 +88,89 @@ class Remediate531(BaseRemedy):
                    remedies (e.g. 2.4.2 catch-all server, 2.5.3 location blocks) that were
                    not present when the original scan was taken.
         """
+        # self.child_ast_modified = {}
+        
+        # # Check user confirmation
+        # if not self.user_inputs:
+        #     return
+        
+        # user_response = self.user_inputs[0].strip().lower()
+        # if user_response not in ["yes", "y", "true", "1"]:
+        #     # User declined
+        #     return
+        
+        # HEADER_ARGS = ["X-Content-Type-Options", '"nosniff"', "always"]
+
+        # # Process each file that has violations
+        # for file_path, remediations in self.child_ast_config.items():
+        #     if file_path not in self.child_scan_result:
+        #         continue
+            
+        #     if not isinstance(remediations, dict) or "parsed" not in remediations:
+        #         continue
+            
+        #     # Deep copy the parsed section for modification
+        #     parsed_copy = copy.deepcopy(remediations["parsed"])
+            
+        #     # Get violations for this file
+        #     file_violations = self.child_scan_result[file_path]
+        #     if not isinstance(file_violations, list):
+        #         continue
+            
+        #     # -- Phase 1: Process violations from scan result --
+        #     for violation in file_violations:
+        #         if not isinstance(violation, dict):
+        #             continue
+                
+        #         action = violation.get("action", "")
+        #         directive = violation.get("directive", "")
+        #         args = violation.get("args", [])
+        #         header_args = args if args else HEADER_ARGS
+                
+        #         # For rule 5.3.1, handle both "add" and "replace" actions
+        #         if directive != "add_header":
+        #             continue
+                
+        #         exact_path = self._relative_context(violation.get("exact_path", []))
+        #         if not exact_path:
+        #             continue
+
+        #         if action == "add":
+        #             # For add: exact_path points to the block list
+        #             parent_path = exact_path[:-1] if len(exact_path) > 1 else []
+        #             parent = ASTEditor.get_child_ast_config(parsed_copy, parent_path) if parent_path else parsed_copy
+                    
+        #             if isinstance(parent, list):
+        #                 self._upsert_in_block(parent, "add_header", header_args)
+        #             elif isinstance(parent, dict) and isinstance(parent.get("block"), list):
+        #                 self._upsert_in_block(parent["block"], "add_header", header_args)
+                
+        #         elif action == "replace":
+        #             # For replace: exact_path points directly to the directive to replace
+        #             target = ASTEditor.get_child_ast_config(parsed_copy, exact_path)
+        #             if target and isinstance(target, dict) and target.get("directive") == "add_header":
+        #                 target["args"] = copy.deepcopy(header_args)
+            
+        #     # -- Phase 2: Sweep entire AST for any server/location missing the header --
+        #     # Covers blocks added by earlier remedies not present in original scan.
+        #     self._inject_header_to_all_eligible_blocks(parsed_copy, HEADER_ARGS)
+
+        #     # Store modified config
+        #     self.child_ast_modified[file_path] = {
+        #         "parsed": parsed_copy
+        #     }
+
         self.child_ast_modified = {}
         
-        # Check user confirmation
         if not self.user_inputs:
             return
         
         user_response = self.user_inputs[0].strip().lower()
         if user_response not in ["yes", "y", "true", "1"]:
-            # User declined
             return
         
         HEADER_ARGS = ["X-Content-Type-Options", '"nosniff"', "always"]
 
-        # Process each file that has violations
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
@@ -67,56 +178,58 @@ class Remediate531(BaseRemedy):
             if not isinstance(remediations, dict) or "parsed" not in remediations:
                 continue
             
-            # Deep copy the parsed section for modification
             parsed_copy = copy.deepcopy(remediations["parsed"])
-            
-            # Get violations for this file
             file_violations = self.child_scan_result[file_path]
             if not isinstance(file_violations, list):
                 continue
+
+            header_violations = [
+                v for v in file_violations
+                if isinstance(v, dict) and v.get("directive") == "add_header"
+            ]
+            if not header_violations:
+                continue
             
-            # -- Phase 1: Process violations from scan result --
-            for violation in file_violations:
-                if not isinstance(violation, dict):
-                    continue
-                
+            patches = []
+            
+            # Phase 1: Process violations from scan result
+            for violation in header_violations:
                 action = violation.get("action", "")
-                directive = violation.get("directive", "")
                 args = violation.get("args", [])
+                
+                raw_path = ASTEditor._extract_context_path(violation)
+                exact_path = self._relative_context(raw_path) if raw_path else []
+                if not exact_path or not ASTEditor.path_is_valid(parsed_copy, exact_path):
+                    continue
+
                 header_args = args if args else HEADER_ARGS
                 
-                # For rule 5.3.1, handle both "add" and "replace" actions
-                if directive != "add_header":
-                    continue
-                
-                exact_path = self._relative_context(violation.get("exact_path", []))
-                if not exact_path:
-                    continue
-
                 if action == "add":
-                    # For add: exact_path points to the block list
-                    parent_path = exact_path[:-1] if len(exact_path) > 1 else []
-                    parent = ASTEditor.get_child_ast_config(parsed_copy, parent_path) if parent_path else parsed_copy
-                    
-                    if isinstance(parent, list):
-                        self._upsert_in_block(parent, "add_header", header_args)
-                    elif isinstance(parent, dict) and isinstance(parent.get("block"), list):
-                        self._upsert_in_block(parent["block"], "add_header", header_args)
-                
+                    patches.append({
+                        "action": "add",
+                        "exact_path": exact_path,
+                        "directive": "add_header",
+                        "args": header_args,
+                        "priority": 0,
+                    })
                 elif action == "replace":
-                    # For replace: exact_path points directly to the directive to replace
-                    target = ASTEditor.get_child_ast_config(parsed_copy, exact_path)
-                    if target and isinstance(target, dict) and target.get("directive") == "add_header":
-                        target["args"] = copy.deepcopy(header_args)
-            
-            # -- Phase 2: Sweep entire AST for any server/location missing the header --
-            # Covers blocks added by earlier remedies not present in original scan.
-            self._inject_header_to_all_eligible_blocks(parsed_copy, HEADER_ARGS)
+                    patches.append({
+                        "action": "upsert",
+                        "exact_path": exact_path,
+                        "directive": "add_header",
+                        "args": header_args,
+                        "priority": 0,
+                    })
 
-            # Store modified config
-            self.child_ast_modified[file_path] = {
-                "parsed": parsed_copy
-            }
+            if header_violations and not patches:
+                continue
+            
+            # Phase 2: Sweep AST for missing headers (after valid scan-driven patches)
+            sweep_patches = self._generate_sweep_patches(parsed_copy, HEADER_ARGS)
+            patches.extend(sweep_patches)
+
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
+            self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     @staticmethod
     def _inject_header_to_all_eligible_blocks(nodes: list, header_args: list) -> None:

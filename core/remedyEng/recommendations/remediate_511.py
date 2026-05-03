@@ -102,9 +102,81 @@ class Remediate511(BaseRemedy):
         Action: ADD/MODIFY - Adds allow and deny directives to location blocks
         User specifies location path and trusted IPs.
         """
+        # self.child_ast_modified = {}
+        
+        # # Validate user inputs
+        # is_valid, error_msg = self._validate_user_inputs()
+        # if not is_valid:
+        #     print(f"Warning: {error_msg}")
+        #     return
+        
+        # location_path = self.user_inputs[0].strip()
+        # ip_string = self.user_inputs[1].strip()
+        # ips = self._parse_ips(ip_string)
+        
+        # # Process each file that has violations
+        # for file_path, remediations in self.child_ast_config.items():
+        #     if file_path not in self.child_scan_result:
+        #         continue
+            
+        #     if not isinstance(remediations, dict) or "parsed" not in remediations:
+        #         continue
+            
+        #     # Deep copy the parsed section for modification
+        #     parsed_copy = copy.deepcopy(remediations["parsed"])
+            
+        #     # Get violations for this file
+        #     file_violations = self.child_scan_result[file_path]
+        #     if not isinstance(file_violations, list):
+        #         continue
+            
+        #     # Apply each violation fix
+        #     for violation in file_violations:
+        #         if not isinstance(violation, dict):
+        #             continue
+                
+        #         action = violation.get("action", "")
+        #         directive = violation.get("directive", "")
+        #         exact_path = violation.get("exact_path", [])
+
+        #         rel_ctx = self._relative_context(exact_path)
+        #         if not rel_ctx:
+        #             continue
+
+        #         target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
+
+        #         if action == "delete":
+        #             if isinstance(target, dict) and target.get("directive") == "allow":
+        #                 ASTEditor.remove_by_context(parsed_copy, rel_ctx)
+        #             continue
+
+        #         if action != "add":
+        #             continue
+
+        #         target_block = target if isinstance(target, list) else target.get("block") if isinstance(target, dict) else None
+
+        #         if isinstance(target_block, list):
+        #             # Add allow directives for each IP
+        #             for ip in ips:
+        #                 allow_directive = {
+        #                     "directive": "allow",
+        #                     "args": [ip]
+        #                 }
+        #                 target_block.append(allow_directive)
+                    
+        #             # Add final deny all directive
+        #             deny_directive = {
+        #                 "directive": "deny",
+        #                 "args": ["all"]
+        #             }
+        #             target_block.append(deny_directive)
+            
+        #     # Store modified config
+        #     self.child_ast_modified[file_path] = {
+        #         "parsed": parsed_copy
+        #    }
         self.child_ast_modified = {}
         
-        # Validate user inputs
         is_valid, error_msg = self._validate_user_inputs()
         if not is_valid:
             print(f"Warning: {error_msg}")
@@ -114,7 +186,6 @@ class Remediate511(BaseRemedy):
         ip_string = self.user_inputs[1].strip()
         ips = self._parse_ips(ip_string)
         
-        # Process each file that has violations
         for file_path, remediations in self.child_ast_config.items():
             if file_path not in self.child_scan_result:
                 continue
@@ -122,59 +193,55 @@ class Remediate511(BaseRemedy):
             if not isinstance(remediations, dict) or "parsed" not in remediations:
                 continue
             
-            # Deep copy the parsed section for modification
             parsed_copy = copy.deepcopy(remediations["parsed"])
-            
-            # Get violations for this file
             file_violations = self.child_scan_result[file_path]
             if not isinstance(file_violations, list):
                 continue
             
-            # Apply each violation fix
+            patches = []
             for violation in file_violations:
                 if not isinstance(violation, dict):
                     continue
                 
                 action = violation.get("action", "")
                 directive = violation.get("directive", "")
-                exact_path = violation.get("exact_path", [])
-
-                rel_ctx = self._relative_context(exact_path)
+                raw_path = ASTEditor._extract_context_path(violation)
+                if not raw_path:
+                    raw_path = violation.get("context") or []
+                rel_ctx = self._relative_context(raw_path)
                 if not rel_ctx:
                     continue
 
-                target = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
-
-                if action == "delete":
-                    if isinstance(target, dict) and target.get("directive") == "allow":
-                        ASTEditor.remove_by_context(parsed_copy, rel_ctx)
-                    continue
-
-                if action != "add":
-                    continue
-
-                target_block = target if isinstance(target, list) else target.get("block") if isinstance(target, dict) else None
-
-                if isinstance(target_block, list):
-                    # Add allow directives for each IP
+                # delete action: remove old allow directives
+                if action == "delete" and directive == "allow":
+                    patches.append({
+                        "action": "delete",
+                        "exact_path": rel_ctx,
+                        "directive": "allow",
+                        "priority": 2,
+                    })
+                
+                # add action: add new allow + deny all
+                elif action == "add":
                     for ip in ips:
-                        allow_directive = {
+                        patches.append({
+                            "action": "add",
+                            "exact_path": rel_ctx,
                             "directive": "allow",
-                            "args": [ip]
-                        }
-                        target_block.append(allow_directive)
+                            "args": [ip],
+                            "priority": 1,
+                        })
                     
-                    # Add final deny all directive
-                    deny_directive = {
+                    patches.append({
+                        "action": "add",
+                        "exact_path": rel_ctx,
                         "directive": "deny",
-                        "args": ["all"]
-                    }
-                    target_block.append(deny_directive)
-            
-            # Store modified config
-            self.child_ast_modified[file_path] = {
-                "parsed": parsed_copy
-            }
+                        "args": ["all"],
+                        "priority": 0,
+                    })
+
+            parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
+            self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
     def get_user_guidance(self) -> str:
         """Return guidance for IP access control rule."""
