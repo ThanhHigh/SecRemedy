@@ -129,7 +129,7 @@ RECOMMENDATION_REGISTRY: Dict[RecomID, Recommendation] = {
     ),
     RecomID.CIS_5_3_2: Recommendation(
         id=RecomID.CIS_5_3_2,
-        title="Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý (Thủ công)",
+        title="Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý",
         description="Content Security Policy (CSP) là HTTP header cho phép định nghĩa nguồn tài nguyên được duyệt. Giúp ngăn chặn tấn công XSS và tiêm dữ liệu. Chỉ thị frame-ancestors giúp chống Clickjacking.",
         audit_procedure="1. Chạy lệnh 'nginx -T 2>/dev/null | grep -i \"Content-Security-Policy\"'. 2. Kiểm tra xem header có chứa 'default-src' và 'frame-ancestors' không. Tránh dùng 'unsafe-inline' hoặc 'unsafe-eval'.",
         impact="Cấu hình CSP sai sẽ chặn tài nguyên hợp lệ và làm hỏng ứng dụng. Nên dùng chế độ Content-Security-Policy-Report-Only trước khi áp dụng thật.",
