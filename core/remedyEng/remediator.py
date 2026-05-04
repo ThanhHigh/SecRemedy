@@ -330,23 +330,241 @@ class Remediator:
         self.ast_config = modified_ast_config
         return modified_ast_config
 
+    def _apply_remediations_interactive_batch_merge(self) -> dict:
+        """
+        Interactive approval flow with batch patch merge (not sequential).
+        
+        Flow:
+        1. Loop through remedies with per-rule TUI approval (same UX as before)
+        2. For each approved rule: collect patches (not full trees)
+        3. After all rules approved: aggregate patches per file
+        4. Apply all patches once from baseline (batch logic)
+        5. Show final merged diff + get approval
+        6. Return final AST
+        
+        This fixes the "later rule stomps earlier" bug by merging all approved
+        rules' patches at once, not sequentially.
+        """
+        self.ast_baseline = copy.deepcopy(self.ast_config)
+        self.applied_history = []
+        ui = TerminalUI.get_instance()
+        
+        # Phase 1: Per-rule approval loop (same UX as before)
+        approved_rules_patches: Dict[str, Dict[str, List[dict]]] = {}  # rule_id -> {file -> patches}
+        
+        for remedy_cls in self.REMEDIATION_REGISTRY.values():
+            remedy = remedy_cls()
+
+            if debug_enabled():
+                debug_verbose("ORCHESTRATION", f"[interactive] Starting remedy {remedy.id} ({remedy_cls.__name__})")
+
+            # Detect violations on baseline
+            if not self._prepare_remedy(remedy, self.ast_baseline):
+                if debug_enabled():
+                    debug_info("ORCHESTRATION", f"[interactive] Skipping remedy {remedy.id}: no violations")
+                print(f"No violations found for Rule {remedy.id}. Skipping.")
+                continue
+
+            # Show remedy info
+            ui.display_remedy_info(remedy)
+
+            # Pre-approval
+            pre_decision = ui.display_remedy_decision(pre_diff=True)
+            if not pre_decision:
+                ui.display_remedy_rejected(remedy)
+                continue
+
+            # User inputs
+            if not self._prepare_user_inputs(remedy, interactive=True):
+                ui.display_remedy_rejected(remedy)
+                continue
+            
+            # Apply remedy to child AST (for diff display)
+            if not self._run_remedy_with_debug(remedy):
+                ui.display_validation_warning(
+                    f"Rule {remedy.id} failed during remediate() execution."
+                )
+                ui.display_remedy_rejected(remedy)
+                continue
+            remedy.child_ast_modified = self._filter_validated_changes(remedy)
+
+            # Per-file approval loop (show diffs, collect approvals)
+            approved_changes = {}
+            accepted_count = 0
+            rejected_count = 0
+            unchanged_count = 0
+            fallback_count = 0
+            
+            for file_path in remedy.get_affected_files():
+                payload = remedy.build_file_diff_payload(file_path)
+
+                if payload["mode"] == "ast":
+                    fallback_count += 1
+
+                ui.display_remedy_file_diff(
+                    remedy_id=remedy.id,
+                    file_path=file_path,
+                    violation_count=payload["violation_count"],
+                    mode=payload["mode"],
+                    diff_text=payload["diff_text"],
+                )
+
+                if not payload["diff_text"]:
+                    remedy.file_approval_status[file_path] = False
+                    unchanged_count += 1
+                    continue
+
+                file_decision = ui.display_file_diff_decision()
+                remedy.file_approval_status[file_path] = file_decision
+
+                if file_decision:
+                    accepted_count += 1
+                    approved_changes[file_path] = remedy.child_ast_modified[file_path]
+                else:
+                    rejected_count += 1
+
+            ui.display_remedy_summary(
+                remedy_id=remedy.id,
+                accepted=accepted_count,
+                rejected=rejected_count,
+                unchanged=unchanged_count,
+                fallback=fallback_count,
+            )
+
+            if debug_enabled():
+                debug_verbose("ORCHESTRATION", f"[interactive] Remedy {remedy.id} summary: accepted={accepted_count} rejected={rejected_count} unchanged={unchanged_count} fallback={fallback_count}")
+
+            if not approved_changes:
+                ui.display_remedy_rejected(remedy)
+                continue
+
+            # Phase 2: Collect patches from approved rule (instead of storing full trees)
+            # Provide full AST so rules can compute patches on all config files
+            remedy._full_ast_config = self.ast_baseline
+            patches_by_file = remedy.collect_patches()
+            
+            if not patches_by_file:
+                if debug_enabled():
+                    debug_info("ORCHESTRATION", f"[interactive] {remedy.id} has no patches from collect_patches()")
+                continue
+            
+            approved_rules_patches[remedy.id] = patches_by_file
+            
+            self.applied_history.append(
+                {
+                    "remedy_id": remedy.id,
+                    "remedy_class": remedy_cls.__name__,
+                    "user_inputs": list(remedy.user_inputs),
+                    "approved_files": sorted(list(approved_changes.keys())),
+                    "interactive_batch_merge": True,
+                }
+            )
+
+        # Phase 3: Aggregate patches per file (all approved rules)
+        if not approved_rules_patches:
+            if debug_enabled():
+                debug_info("ORCHESTRATION", "[interactive] No rules approved patches, returning baseline")
+            return self.ast_baseline
+        
+        aggregated: Dict[str, List[dict]] = defaultdict(list)
+        for rule_id, patches_by_file in approved_rules_patches.items():
+            for fp, plist in patches_by_file.items():
+                if not isinstance(plist, list) or not plist:
+                    continue
+                for raw_patch in plist:
+                    tagged = copy.deepcopy(raw_patch)
+                    tagged["_rule_id"] = rule_id
+                    aggregated[fp].append(tagged)
+        
+        if debug_enabled():
+            debug_verbose(
+                "PATCH_PLAN",
+                "[interactive] aggregated patches by file",
+                {fp: len(plist) for fp, plist in aggregated.items()},
+            )
+
+        # Phase 4: Apply all patches once from baseline per file
+        merged_changes: Dict[str, Any] = {}
+        validator = BaseRemedy()
+        baseline_full = self.ast_baseline
+
+        for fp, all_patches in aggregated.items():
+            idx = ASTEditor._find_file_in_config(baseline_full, fp)
+            if idx < 0:
+                continue
+            cfg_entries = baseline_full.get("config")
+            if not isinstance(cfg_entries, list) or idx >= len(cfg_entries):
+                continue
+            baseline_parsed = cfg_entries[idx].get("parsed")
+            if not isinstance(baseline_parsed, list):
+                continue
+
+            merged_parsed = ASTEditor.apply_reverse_path_patches(
+                copy.deepcopy(baseline_parsed),
+                all_patches,
+            )
+            
+            # Handle Rule 2.5.3 ACME order post-processing
+            if any(isinstance(p, dict) and p.get("_253_acme_order") for p in all_patches):
+                Remediate253.normalize_server_blocks_acme_order(merged_parsed)
+
+            ok, errs = validator._validate_ast_mutation(baseline_parsed, merged_parsed)
+            if not ok:
+                if debug_enabled():
+                    debug_verbose(
+                        "ORCHESTRATION",
+                        f"[interactive] AST validation failed for {fp}",
+                        {"errors": errs},
+                    )
+                ui.display_validation_warning(
+                    f"AST validation failed for {fp}: {'; '.join(errs)}. Skipping this file."
+                )
+                continue
+            
+            merged_changes[fp] = {"parsed": merged_parsed}
+
+        if not merged_changes:
+            if debug_enabled():
+                debug_info("ORCHESTRATION", "[interactive] No files passed validation after merge")
+            return self.ast_baseline
+
+        # Phase 5: Final merged diff display + approval
+        if debug_enabled():
+            debug_verbose(
+                "DIFF",
+                "[interactive] showing final merged diff",
+                {"files_changed": len(merged_changes)},
+            )
+        
+        ui.display_final_merged_diff_approval(merged_changes, baseline_full)
+        final_decision = ui.get_final_approval()
+        
+        if not final_decision:
+            if debug_enabled():
+                debug_info("ORCHESTRATION", "[interactive] User rejected final merged diff")
+            print("Remediation cancelled by user.")
+            return self.ast_baseline
+
+        # Phase 6: Apply merged changes to final AST
+        modified_ast_config = self.merge_remediation(
+            copy.deepcopy(self.ast_baseline),
+            merged_changes,
+        )
+        self.ast_config = modified_ast_config
+        
+        if debug_enabled():
+            debug_info("ORCHESTRATION", "[interactive] batch merge completed successfully")
+        
+        return modified_ast_config
+
     def apply_remediations(self, interactive: bool = True) -> dict:
         """
         Orchestrate the full remediation flow for all applicable rules.
         
         Flow:
-        1. Instantiate each remedy from REMEDIATION_REGISTRY
-        2. For each remedy:
-           a. Display remedy info via TerminalUI
-           b. Collect user inputs if required
-           c. Get decision from user (pre-interaction)
-           d. If approved: Call remedy.remediate() to apply fixes
-           e. Display diff and get final decision
-           f. If approved: Merge modified AST back into full ast_config
-        3. Return: Updated ast_config with all approved remediations
-
-        When ``interactive=False`` and ``self.batch_patch_merge`` is True, runs
-        `_apply_remediations_batch_patches` instead (single merged patch apply per file).
+        - Interactive=True: Per-rule TUI approval + batch patch merge (no sequential stomp)
+        - Interactive=False + batch_patch_merge=True: Batch patches (non-interactive)
+        - Interactive=False + batch_patch_merge=False: Legacy sequential merge (deprecated)
 
         Returns:
             Modified ast_config dictionary
@@ -359,115 +577,60 @@ class Remediator:
                 {
                     "interactive": interactive,
                     "batch_patch_merge": self.batch_patch_merge,
-                    "flow": "batch_patches" if (not interactive and self.batch_patch_merge) else "sequential",
                 },
             )
 
-        if not interactive and self.batch_patch_merge:
+        # Interactive mode: per-rule approval + batch patch merge (fixes sequential stomp)
+        if interactive:
+            return self._apply_remediations_interactive_batch_merge()
+        
+        # Non-interactive batch mode (if enabled)
+        if self.batch_patch_merge:
             return self._apply_remediations_batch_patches()
-
+        
+        # Legacy sequential mode (deprecated, kept for backward compat)
+        if debug_enabled():
+            debug_info("ORCHESTRATION", "Using legacy sequential merge (not recommended)")
+        
         self.ast_baseline = copy.deepcopy(self.ast_config)
         self.applied_history = []
         modified_ast_config = copy.deepcopy(self.ast_baseline)
-        ui = TerminalUI.get_instance()
         
         for remedy_cls in self.REMEDIATION_REGISTRY.values():
             remedy = remedy_cls()
 
-            if debug_enabled():
-                debug_verbose("ORCHESTRATION", f"Starting remedy {remedy.id} ({remedy_cls.__name__})")
-
             if not self._prepare_remedy(remedy, self.ast_baseline):
-                if interactive:
-                    print(f"No violations found for Rule {remedy.id}. Skipping.")
-                if debug_enabled():
-                    debug_info("ORCHESTRATION", f"Skipping remedy {remedy.id}: no violations")
                 continue
 
-            if interactive:
-                ui.display_remedy_info(remedy)
-
-            pre_decision = True if not interactive else ui.display_remedy_decision(pre_diff=True)
+            pre_decision = True
             if not pre_decision:
-                if interactive:
-                    ui.display_remedy_rejected(remedy)
                 continue
 
-            if not self._prepare_user_inputs(remedy, interactive):
-                if interactive:
-                    ui.display_remedy_rejected(remedy)
+            if not self._prepare_user_inputs(remedy, interactive=False):
                 continue
             
-            # Apply remediation
             if not self._run_remedy_with_debug(remedy):
-                if interactive:
-                    ui.display_validation_warning(
-                        f"Rule {remedy.id} failed during remediate() execution."
-                    )
-                    ui.display_remedy_rejected(remedy)
                 continue
+            
             remedy.child_ast_modified = self._filter_validated_changes(remedy)
-
             approved_changes = {}
-            accepted_count = 0
-            rejected_count = 0
-            unchanged_count = 0
-            fallback_count = 0
+            
             for file_path in remedy.get_affected_files():
                 payload = remedy.build_file_diff_payload(file_path)
-
-                if payload["mode"] == "ast":
-                    fallback_count += 1
-
-                if interactive:
-                    ui.display_remedy_file_diff(
-                        remedy_id=remedy.id,
-                        file_path=file_path,
-                        violation_count=payload["violation_count"],
-                        mode=payload["mode"],
-                        diff_text=payload["diff_text"],
-                    )
-
-                if not payload["diff_text"]:
-                    remedy.file_approval_status[file_path] = False
-                    unchanged_count += 1
-                    continue
-
-                file_decision = True if not interactive else ui.display_file_diff_decision()
-                remedy.file_approval_status[file_path] = file_decision
-
-                if file_decision:
-                    accepted_count += 1
+                if payload["diff_text"]:
                     approved_changes[file_path] = remedy.child_ast_modified[file_path]
-                else:
-                    rejected_count += 1
-
-            if interactive:
-                ui.display_remedy_summary(
-                    remedy_id=remedy.id,
-                    accepted=accepted_count,
-                    rejected=rejected_count,
-                    unchanged=unchanged_count,
-                    fallback=fallback_count,
-                )
-
-            if debug_enabled():
-                debug_verbose("ORCHESTRATION", f"Remedy {remedy.id} summary: accepted={accepted_count} rejected={rejected_count} unchanged={unchanged_count} fallback={fallback_count}")
 
             if not approved_changes:
-                if interactive:
-                    ui.display_remedy_rejected(remedy)
                 continue
 
             modified_ast_config = self.merge_remediation(modified_ast_config, approved_changes)
-
             self.applied_history.append(
                 {
                     "remedy_id": remedy.id,
                     "remedy_class": remedy_cls.__name__,
                     "user_inputs": list(remedy.user_inputs),
                     "approved_files": sorted(list(approved_changes.keys())),
-                    "touched_files": sorted(list(remedy.get_affected_files())),
+                    "legacy_sequential": True,
                 }
             )
         

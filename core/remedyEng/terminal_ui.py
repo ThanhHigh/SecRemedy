@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, List
 
 from core.remedyEng.debug_print import debug_print
+from core.remedyEng.ast_editor import ASTEditor
 
 parser = argparse.ArgumentParser()
 
@@ -336,4 +337,62 @@ class TerminalUI:
             if retry not in {"y", "yes"}:
                 self.display_validation_warning(f"Skipping {remedy.id} due to invalid inputs.")
                 return False
+
+    def display_final_merged_diff_approval(self, merged_changes: dict, baseline_full: dict) -> None:
+        """Display final merged diff (all rules combined) before commit."""
+        print("\n" + "=" * 60)
+        print("FINAL MERGED REMEDIATION DIFF".center(60))
+        print("=" * 60)
+        
+        if not merged_changes:
+            print("No changes to apply.")
+            print("=" * 60)
+            return
+        
+        print(f"Summary: {len(merged_changes)} file(s) will be modified\n")
+        
+        for file_path in sorted(merged_changes.keys()):
+            print(f"\n>>> File: {file_path}")
+            print("-" * 60)
+            
+            # Generate unified diff for this file
+            from core.remedyEng.diff_generator import generate_unified_diff
+            
+            idx = None
+            for i, cfg in enumerate(baseline_full.get("config", [])):
+                norm_cfg_file = cfg.get("file", "").lower().replace("./", "")
+                norm_target = file_path.lower().replace("./", "")
+                if norm_cfg_file == norm_target or norm_cfg_file.endswith("/" + norm_target):
+                    idx = i
+                    break
+            
+            if idx is None:
+                print(f"Warning: baseline file not found for {file_path}")
+                continue
+            
+            baseline_parsed = baseline_full.get("config", [])[idx].get("parsed", [])
+            modified_parsed = merged_changes[file_path].get("parsed", [])
+            
+            before_text = ASTEditor.ast_to_config_text(baseline_parsed)
+            after_text = ASTEditor.ast_to_config_text(modified_parsed)
+            
+            diff_text = generate_unified_diff(before_text, after_text, file_path)
+            if diff_text:
+                print(diff_text)
+            else:
+                print("(No diff text available)")
+        
+        print("\n" + "=" * 60)
+
+    def get_final_approval(self) -> bool:
+        """Ask user for final approval before applying all merged changes."""
+        print("\nApply all merged remediation changes? (y/n)")
+        while True:
+            response = input().strip().lower()
+            if response in {"y", "yes"}:
+                return True
+            if response in {"n", "no"}:
+                return False
+            print("Invalid input. Enter y or n.")
+
 
