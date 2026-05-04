@@ -7,22 +7,44 @@ class Detector531(BaseRecom):
     def __init__(self):
         super().__init__(RecomID.CIS_5_3_1)
 
+    def _should_skip_block(self, node: Dict[str, Any]) -> bool:
+        if not isinstance(node, dict):
+            return False
+        if node.get("directive") != "server":
+            return False
+
+        block = node.get("block", [])
+        has_server_name_catchall = False
+        has_https_redirect = False
+
+        for child in block:
+            if not isinstance(child, dict):
+                continue
+            dir_name = child.get("directive")
+            args = child.get("args", [])
+
+            if dir_name == "server_name" and "_" in args:
+                has_server_name_catchall = True
+
+            if dir_name == "return":
+                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0].startswith("https://"):
+                    has_https_redirect = True
+
+        return has_server_name_catchall or has_https_redirect
+
     def _get_directives_at_level(self, dirs: List[Dict[str, Any]], exact_path: List[Any], config_list: List[Dict[str, Any]]):
         for i, d in enumerate(dirs):
+            if self._should_skip_block(d):
+                continue
+                
             d_path = exact_path + [i]
             f_idx = d_path[1]
             yield d, f_idx, d_path
 
             if d.get("directive") == "include":
                 inc_list = d.get("includes", [])
-                # If parser didn't provide includes, try to guess from args (for mock tests)
-                # if not inc_list and d.get("args"):
-                #     inc_arg = d["args"][0].split('/')[-1].replace('*', '')
-                #     for idx, c in enumerate(config_list):
-                #         c_file = c.get("file", "")
-                #         if inc_arg and c_file.endswith(inc_arg):
-                #             if idx not in inc_list:
-                #                 inc_list.append(idx)
 
                 for inc_idx in inc_list:
                     if inc_idx < len(config_list):

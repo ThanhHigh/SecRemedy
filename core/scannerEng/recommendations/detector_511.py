@@ -7,6 +7,33 @@ class Detector511(BaseRecom):
         super().__init__(RecomID.CIS_5_1_1)
         self.strict_private = strict_private
 
+    def _should_skip_block(self, node: Dict[str, Any]) -> bool:
+        if not isinstance(node, dict):
+            return False
+        if node.get("directive") != "server":
+            return False
+
+        block = node.get("block", [])
+        has_server_name_catchall = False
+        has_https_redirect = False
+
+        for child in block:
+            if not isinstance(child, dict):
+                continue
+            dir_name = child.get("directive")
+            args = child.get("args", [])
+
+            if dir_name == "server_name" and "_" in args:
+                has_server_name_catchall = True
+
+            if dir_name == "return":
+                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0].startswith("https://"):
+                    has_https_redirect = True
+
+        return has_server_name_catchall or has_https_redirect
+
     def _check_block(self, directives_list: List[Dict[str, Any]], logical_context: List[str], exact_path_to_list: List[Any], filepath: str) -> List[Dict[str, Any]]:
         uncompliances = []
         remediations = []
@@ -15,6 +42,9 @@ class Detector511(BaseRecom):
         deny_all_indices = []
         
         for idx, directive in enumerate(directives_list):
+            if self._should_skip_block(directive):
+                continue
+
             d_name = directive.get("directive")
             d_args = directive.get("args", [])
             

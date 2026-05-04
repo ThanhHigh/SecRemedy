@@ -7,6 +7,33 @@ class Detector532(BaseRecom):
     def __init__(self):
         super().__init__(RecomID.CIS_5_3_2)
 
+    def _should_skip_block(self, node: Dict[str, Any]) -> bool:
+        if not isinstance(node, dict):
+            return False
+        if node.get("directive") != "server":
+            return False
+
+        block = node.get("block", [])
+        has_server_name_catchall = False
+        has_https_redirect = False
+
+        for child in block:
+            if not isinstance(child, dict):
+                continue
+            dir_name = child.get("directive")
+            args = child.get("args", [])
+
+            if dir_name == "server_name" and "_" in args:
+                has_server_name_catchall = True
+
+            if dir_name == "return":
+                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0].startswith("https://"):
+                    has_https_redirect = True
+
+        return has_server_name_catchall or has_https_redirect
+
     def _check_csp(self, directive: dict) -> bool:
         args = directive.get("args", [])
         if not args or len(args) < 2:
@@ -126,6 +153,9 @@ class Detector532(BaseRecom):
                 }
         
         for i, d in enumerate(directives):
+            if self._should_skip_block(d):
+                continue
+                
             path = base_exact_path + [i]
             dir_name = d.get("directive", "")
             

@@ -40,7 +40,7 @@ Detector kế thừa `BaseRecom`, sử dụng hàm `traverse_directive` để du
 Kiểm tra các thông tin siêu dữ liệu (metadata) của class `Detector532` để đảm bảo định danh và mô tả chính xác theo chuẩn CIS.
 
 - **ID (1 test case):** Kiểm tra ID của detector phải là `"5.3.2"`.
-- **Tiêu đề (1 test case):** Đảm bảo tiêu đề phản ánh đúng yêu cầu (`"Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý (Thủ công)"`).
+- **Tiêu đề (1 test case):** Đảm bảo tiêu đề phản ánh đúng yêu cầu (`"Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý"`).
 - **Thuộc tính bắt buộc (1 test case):** Đảm bảo class có đầy đủ thuộc tính như `description`, `audit_procedure`, `impact`, `remediation` để hiển thị Dashboard.
 
 ### 2. Kiểm thử hàm `scan()`: Toàn bộ đường ống (Full Pipeline Integration) - 42 Test Cases

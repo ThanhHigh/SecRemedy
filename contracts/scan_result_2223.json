@@ -1,52 +1,16 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 0,
-  "created_at": "2026-05-02T01:51:51Z",
+  "compliance_score": 17,
+  "created_at": "2026-05-04T13:09:47Z",
   "recommendations": [
     {
       "id": "2.4.1",
       "title": "Đảm bảo NGINX chỉ lắng nghe kết nối mạng trên các cổng được ủy quyền",
       "description": "NGINX chỉ nên được cấu hình để lắng nghe trên các cổng và giao thức được ủy quyền. Việc này giúp giảm thiểu bề mặt tấn công và kiểm soát chặt chẽ các giao thức có thể truy cập.",
       "impact": "Giảm rủi ro truy cập trái phép. Lưu ý: vô hiệu hóa UDP 443 sẽ làm hỏng HTTP/3, buộc client lùi về HTTP/2 hoặc HTTP/1.1 (TCP).",
-      "status": "fail",
-      "uncompliances": [
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "delete",
-              "directive": "listen",
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block",
-                0
-              ]
-            },
-            {
-              "action": "delete",
-              "directive": "listen",
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block",
-                1
-              ]
-            }
-          ]
-        }
-      ]
+      "status": "pass",
+      "uncompliances": []
     },
     {
       "id": "2.4.2",
@@ -55,91 +19,6 @@
       "impact": "Các client truy cập trực tiếp bằng địa chỉ IP hoặc qua CNAME chưa cấu hình sẽ bị từ chối. Cần đảm bảo tất cả tên miền hợp lệ đều được định nghĩa rõ trong các block server riêng.",
       "status": "fail",
       "uncompliances": [
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "replace",
-              "directive": "server",
-              "args": [],
-              "block": [
-                {
-                  "directive": "listen",
-                  "args": [
-                    "80",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "[::]:80",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "443",
-                    "ssl",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "[::]:443",
-                    "ssl",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "443",
-                    "quic",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "listen",
-                  "args": [
-                    "[::]:443",
-                    "quic",
-                    "default_server"
-                  ]
-                },
-                {
-                  "directive": "ssl_reject_handshake",
-                  "args": [
-                    "on"
-                  ]
-                },
-                {
-                  "directive": "server_name",
-                  "args": [
-                    "_"
-                  ]
-                },
-                {
-                  "directive": "return",
-                  "args": [
-                    "444"
-                  ]
-                }
-              ],
-              "logical_context": [
-                "http"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0
-              ]
-            }
-          ]
-        },
         {
           "file": "/etc/nginx/nginx.conf",
           "remediations": [
@@ -234,32 +113,8 @@
       "title": "Đảm bảo chỉ thị server_tokens được đặt thành 'off'",
       "description": "Chỉ thị server_tokens hiển thị số phiên bản NGINX và hệ điều hành trên trang lỗi và HTTP header. Việc hiển thị thông tin này giúp kẻ tấn công dễ dàng dò quét và nhắm mục tiêu vào các lỗ hổng đã biết.",
       "impact": "Không ảnh hưởng chức năng. Ẩn thông tin phiên bản làm chậm kẻ tấn công và hạn chế các rủi ro từ việc quét lỗ hổng tự động.",
-      "status": "fail",
-      "uncompliances": [
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "replace",
-              "directive": "server_tokens",
-              "args": [
-                "off"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block",
-                4
-              ]
-            }
-          ]
-        }
-      ]
+      "status": "pass",
+      "uncompliances": []
     },
     {
       "id": "2.5.2",
@@ -268,100 +123,6 @@
       "impact": "Cần thêm thời gian quản trị để tạo và bảo trì trang lỗi. Đảm bảo các trang này đơn giản và không tạo ra lỗ hổng mới.",
       "status": "fail",
       "uncompliances": [
-        {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "404",
-                "/custom_404.html"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "500",
-                "502",
-                "503",
-                "504",
-                "/custom_50x.html"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "404",
-                "/custom_404.html"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "500",
-                "502",
-                "503",
-                "504",
-                "/custom_50x.html"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block"
-              ]
-            }
-          ]
-        },
         {
           "file": "/etc/nginx/conf.d/fail2.conf",
           "remediations": [
@@ -503,117 +264,6 @@
       "impact": "Chặn tất cả file ẩn sẽ làm hỏng xác thực Let's Encrypt/Certbot. Đảm bảo quy tắc ngoại lệ cho '.well-known/acme-challenge' được đặt trước quy tắc từ chối.",
       "status": "fail",
       "uncompliances": [
-        {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "location",
-              "args": [
-                "/"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block"
-              ],
-              "block": [
-                {
-                  "directive": "location",
-                  "args": [
-                    "^~",
-                    "/.well-known/acme-challenge/"
-                  ],
-                  "block": [
-                    {
-                      "directive": "allow",
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "args": [
-                    "~",
-                    "/\\."
-                  ],
-                  "block": [
-                    {
-                      "directive": "deny",
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "location",
-              "args": [
-                "/"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block"
-              ],
-              "block": [
-                {
-                  "directive": "location",
-                  "args": [
-                    "^~",
-                    "/.well-known/acme-challenge/"
-                  ],
-                  "block": [
-                    {
-                      "directive": "allow",
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "args": [
-                    "~",
-                    "/\\."
-                  ],
-                  "block": [
-                    {
-                      "directive": "deny",
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
         {
           "file": "/etc/nginx/conf.d/fail2.conf",
           "remediations": [
@@ -1005,57 +655,6 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "replace",
-              "directive": "return",
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                10,
-                "block",
-                3
-              ]
-            }
-          ]
-        },
-        {
-          "file": "/etc/nginx/conf.d/fail1.conf",
-          "remediations": [
-            {
-              "action": "replace",
-              "directive": "return",
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                0,
-                "block",
-                3
-              ]
-            }
-          ]
-        },
-        {
           "file": "/etc/nginx/conf.d/fail3.conf",
           "remediations": [
             {
@@ -1237,7 +836,7 @@
     },
     {
       "id": "5.3.2",
-      "title": "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý (Thủ công)",
+      "title": "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý",
       "description": "Content Security Policy (CSP) là HTTP header cho phép định nghĩa nguồn tài nguyên được duyệt. Giúp ngăn chặn tấn công XSS và tiêm dữ liệu. Chỉ thị frame-ancestors giúp chống Clickjacking.",
       "impact": "Cấu hình CSP sai sẽ chặn tài nguyên hợp lệ và làm hỏng ứng dụng. Nên dùng chế độ Content-Security-Policy-Report-Only trước khi áp dụng thật.",
       "status": "fail",

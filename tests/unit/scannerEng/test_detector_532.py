@@ -52,7 +52,7 @@ def test_metadata_id(detector):
 
 def test_metadata_title(detector):
     """Test 2: Tiêu đề phải đúng"""
-    assert detector.title == "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý (Thủ công)"
+    assert detector.title == "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý"
 
 
 def test_metadata_attributes(detector):

@@ -7,6 +7,33 @@ class Detector242(BaseRecom):
     def __init__(self):
         super().__init__(RecomID.CIS_2_4_2)
 
+    def _should_skip_block(self, node: Dict[str, Any]) -> bool:
+        if not isinstance(node, dict):
+            return False
+        if node.get("directive") != "server":
+            return False
+        
+        block = node.get("block", [])
+        has_server_name_catchall = False
+        has_https_redirect = False
+        
+        for child in block:
+            if not isinstance(child, dict):
+                continue
+            dir_name = child.get("directive")
+            args = child.get("args", [])
+            
+            if dir_name == "server_name" and "_" in args:
+                has_server_name_catchall = True
+            
+            if dir_name == "return":
+                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0].startswith("https://"):
+                    has_https_redirect = True
+                    
+        return has_server_name_catchall or has_https_redirect
+
     def _check_return(self, block: List[Dict[str, Any]], in_if: bool = False) -> bool:
         for d in block:
             if d.get("directive") == "return":
@@ -83,6 +110,9 @@ class Detector242(BaseRecom):
 
                     for http_dir_idx, http_dir in enumerate(http_block):
                         if http_dir.get("directive") == "server":
+                            if self._should_skip_block(http_dir):
+                                continue
+
                             server_block = http_dir.get("block", [])
                             protocols_with_default = set()
                             has_valid_return = self._check_return(server_block)
@@ -134,6 +164,9 @@ class Detector242(BaseRecom):
                                 })
 
                 elif directive.get("directive") == "server":
+                    if self._should_skip_block(directive):
+                        continue
+
                     server_block = directive.get("block", [])
                     protocols_with_default = set()
                     has_valid_return = self._check_return(server_block)

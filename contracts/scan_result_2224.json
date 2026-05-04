@@ -2,7 +2,7 @@
   "scan_id": 1,
   "server_ip": "0.0.0.0",
   "compliance_score": 25,
-  "created_at": "2026-05-02T01:51:51Z",
+  "created_at": "2026-05-04T13:09:47Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -179,45 +179,6 @@
                 "config",
                 2,
                 "parsed",
-                1,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "500",
-                "502",
-                "503",
-                "504",
-                "/custom_50x.html"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                1,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "404",
-                "/custom_404.html"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
                 2,
                 "block"
               ]
@@ -271,55 +232,6 @@
                 2,
                 "parsed",
                 0,
-                "block"
-              ],
-              "block": [
-                {
-                  "directive": "location",
-                  "args": [
-                    "^~",
-                    "/.well-known/acme-challenge/"
-                  ],
-                  "block": [
-                    {
-                      "directive": "allow",
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "directive": "location",
-                  "args": [
-                    "~",
-                    "/\\."
-                  ],
-                  "block": [
-                    {
-                      "directive": "deny",
-                      "args": [
-                        "all"
-                      ]
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "location",
-              "args": [
-                "/"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                1,
                 "block"
               ],
               "block": [
@@ -785,95 +697,6 @@
           ]
         },
         {
-          "file": "/etc/nginx/sites-enabled/example.com.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "X-Content-Type-Options",
-                "\"nosniff\"",
-                "always"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                1,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "X-Content-Type-Options",
-                "\"nosniff\"",
-                "always"
-              ],
-              "logical_context": [
-                "http",
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                2,
-                "block",
-                4,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "X-Content-Type-Options",
-                "\"nosniff\"",
-                "always"
-              ],
-              "logical_context": [
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                1,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "X-Content-Type-Options",
-                "\"nosniff\"",
-                "always"
-              ],
-              "logical_context": [
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                2,
-                "block",
-                4,
-                "block"
-              ]
-            }
-          ]
-        },
-        {
           "file": "/etc/nginx/nginxconfig.io/letsencrypt.conf",
           "remediations": [
             {
@@ -937,12 +760,62 @@
               ]
             }
           ]
+        },
+        {
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                2,
+                "block",
+                4,
+                "block"
+              ]
+            },
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "X-Content-Type-Options",
+                "\"nosniff\"",
+                "always"
+              ],
+              "logical_context": [
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                2,
+                "block",
+                4,
+                "block"
+              ]
+            }
+          ]
         }
       ]
     },
     {
       "id": "5.3.2",
-      "title": "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý (Thủ công)",
+      "title": "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý",
       "description": "Content Security Policy (CSP) là HTTP header cho phép định nghĩa nguồn tài nguyên được duyệt. Giúp ngăn chặn tấn công XSS và tiêm dữ liệu. Chỉ thị frame-ancestors giúp chống Clickjacking.",
       "impact": "Cấu hình CSP sai sẽ chặn tài nguyên hợp lệ và làm hỏng ứng dụng. Nên dùng chế độ Content-Security-Policy-Report-Only trước khi áp dụng thật.",
       "status": "fail",
@@ -974,54 +847,6 @@
           ]
         },
         {
-          "file": "/etc/nginx/sites-enabled/example.com.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "Content-Security-Policy",
-                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
-                "always"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                1,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "Content-Security-Policy",
-                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
-                "always"
-              ],
-              "logical_context": [
-                "http",
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                2,
-                "parsed",
-                2,
-                "block",
-                4,
-                "block"
-              ]
-            }
-          ]
-        },
-        {
           "file": "/etc/nginx/nginxconfig.io/letsencrypt.conf",
           "remediations": [
             {
@@ -1042,6 +867,34 @@
                 6,
                 "parsed",
                 0,
+                "block"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "/etc/nginx/sites-enabled/example.com.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "add_header",
+              "args": [
+                "Content-Security-Policy",
+                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
+                "always"
+              ],
+              "logical_context": [
+                "http",
+                "server",
+                "location"
+              ],
+              "exact_path": [
+                "config",
+                2,
+                "parsed",
+                2,
+                "block",
+                4,
                 "block"
               ]
             }

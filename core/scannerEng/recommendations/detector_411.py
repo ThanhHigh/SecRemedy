@@ -6,6 +6,33 @@ class Detector411(BaseRecom):
     def __init__(self):
         super().__init__(RecomID.CIS_4_1_1)
 
+    def _should_skip_block(self, node: Dict[str, Any]) -> bool:
+        if not isinstance(node, dict):
+            return False
+        if node.get("directive") != "server":
+            return False
+
+        block = node.get("block", [])
+        has_server_name_catchall = False
+        has_https_redirect = False
+
+        for child in block:
+            if not isinstance(child, dict):
+                continue
+            dir_name = child.get("directive")
+            args = child.get("args", [])
+
+            if dir_name == "server_name" and "_" in args:
+                has_server_name_catchall = True
+
+            if dir_name == "return":
+                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0].startswith("https://"):
+                    has_https_redirect = True
+
+        return has_server_name_catchall or has_https_redirect
+
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         uncompliances = []
 
@@ -23,6 +50,9 @@ class Detector411(BaseRecom):
 
     def _check_node(self, node: List[Dict[str, Any]], exact_path: List[Any], logical_context: List[str], uncompliances: List[Any], filepath: str):
         for i, directive in enumerate(node):
+            if self._should_skip_block(directive):
+                continue
+
             dir_name = directive.get("directive")
             current_path = exact_path + [i]
             

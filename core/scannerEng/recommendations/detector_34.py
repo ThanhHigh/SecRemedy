@@ -129,10 +129,37 @@ class Detector34(BaseRecom):
                         self._traverse(inc_ast, inc_filepath, inc_exact_path, logical_context,
                                        curr_proxy, curr_fastcgi, curr_grpc, uncompliances)
             elif "block" in node:
+                if self._should_skip_block(node):
+                    continue
                 new_logical = logical_context + [directive]
                 new_exact = exact_path + [idx, "block"]
                 self._traverse(node["block"], filepath, new_exact, new_logical,
                                curr_proxy, curr_fastcgi, curr_grpc, uncompliances)
+
+    def _should_skip_block(self, node: Dict[str, Any]) -> bool:
+        if node.get("directive") != "server":
+            return False
+        
+        block = node.get("block", [])
+        has_server_name_catchall = False
+        has_https_redirect = False
+        
+        for child in block:
+            if not isinstance(child, dict):
+                continue
+            dir_name = child.get("directive")
+            args = child.get("args", [])
+            
+            if dir_name == "server_name" and "_" in args:
+                has_server_name_catchall = True
+            
+            if dir_name == "return":
+                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0].startswith("https://"):
+                    has_https_redirect = True
+                    
+        return has_server_name_catchall or has_https_redirect
 
     def _check_headers(self, filepath: str, exact_path: List[Any], logical_context: List[str],
                        current_headers: Dict[str, bool], directive_name: str,

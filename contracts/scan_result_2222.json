@@ -1,8 +1,8 @@
 {
   "scan_id": 1,
   "server_ip": "0.0.0.0",
-  "compliance_score": 42,
-  "created_at": "2026-05-02T01:51:51Z",
+  "compliance_score": 33,
+  "created_at": "2026-05-04T13:09:47Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -17,8 +17,96 @@
       "title": "Đảm bảo các yêu cầu đến tên máy chủ không xác định bị từ chối",
       "description": "NGINX định tuyến yêu cầu dựa trên Host header. Nếu không có block server mặc định (catch-all) để từ chối các host không xác định, máy chủ sẽ phản hồi cho các tên miền bất kỳ trỏ tới IP của bạn, dẫn đến nguy cơ rò rỉ ứng dụng nội bộ hoặc tấn công Host Header.",
       "impact": "Các client truy cập trực tiếp bằng địa chỉ IP hoặc qua CNAME chưa cấu hình sẽ bị từ chối. Cần đảm bảo tất cả tên miền hợp lệ đều được định nghĩa rõ trong các block server riêng.",
-      "status": "pass",
-      "uncompliances": []
+      "status": "fail",
+      "uncompliances": [
+        {
+          "file": "/etc/nginx/nginx.conf",
+          "remediations": [
+            {
+              "action": "add",
+              "directive": "server",
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": [
+                    "on"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "args": [
+                    "_"
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "args": [
+                    "444"
+                  ]
+                }
+              ],
+              "logical_context": [
+                "http"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                11
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "2.5.1",
@@ -35,35 +123,6 @@
       "impact": "Cần thêm thời gian quản trị để tạo và bảo trì trang lỗi. Đảm bảo các trang này đơn giản và không tạo ra lỗ hổng mới.",
       "status": "fail",
       "uncompliances": [
-        {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "error_page",
-              "args": [
-                "500",
-                "502",
-                "503",
-                "504",
-                "/custom_50x.html"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                9,
-                "block"
-              ]
-            }
-          ]
-        },
         {
           "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
@@ -647,33 +706,6 @@
       "status": "fail",
       "uncompliances": [
         {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "replace",
-              "directive": "return",
-              "args": [
-                "301",
-                "https://$host$request_uri"
-              ],
-              "logical_context": [
-                "http",
-                "server"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                9,
-                "block",
-                9
-              ]
-            }
-          ]
-        },
-        {
           "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
             {
@@ -782,61 +814,6 @@
       "impact": "Có thể làm hỏng các ứng dụng cũ nếu khai báo sai Content-Type (ví dụ: trả về script dưới dạng text/plain).",
       "status": "fail",
       "uncompliances": [
-        {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "X-Content-Type-Options",
-                "\"nosniff\"",
-                "always"
-              ],
-              "logical_context": [
-                "http",
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                9,
-                "block",
-                7,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "X-Content-Type-Options",
-                "\"nosniff\"",
-                "always"
-              ],
-              "logical_context": [
-                "http",
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                9,
-                "block",
-                8,
-                "block"
-              ]
-            }
-          ]
-        },
         {
           "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
@@ -1446,66 +1423,11 @@
     },
     {
       "id": "5.3.2",
-      "title": "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý (Thủ công)",
+      "title": "Đảm bảo Content Security Policy (CSP) được bật và cấu hình hợp lý",
       "description": "Content Security Policy (CSP) là HTTP header cho phép định nghĩa nguồn tài nguyên được duyệt. Giúp ngăn chặn tấn công XSS và tiêm dữ liệu. Chỉ thị frame-ancestors giúp chống Clickjacking.",
       "impact": "Cấu hình CSP sai sẽ chặn tài nguyên hợp lệ và làm hỏng ứng dụng. Nên dùng chế độ Content-Security-Policy-Report-Only trước khi áp dụng thật.",
       "status": "fail",
       "uncompliances": [
-        {
-          "file": "/etc/nginx/nginx.conf",
-          "remediations": [
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "Content-Security-Policy",
-                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
-                "always"
-              ],
-              "logical_context": [
-                "http",
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                9,
-                "block",
-                7,
-                "block"
-              ]
-            },
-            {
-              "action": "add",
-              "directive": "add_header",
-              "args": [
-                "Content-Security-Policy",
-                "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
-                "always"
-              ],
-              "logical_context": [
-                "http",
-                "server",
-                "location"
-              ],
-              "exact_path": [
-                "config",
-                0,
-                "parsed",
-                5,
-                "block",
-                9,
-                "block",
-                8,
-                "block"
-              ]
-            }
-          ]
-        },
         {
           "file": "/etc/nginx/conf.d/admin.emarket.me.conf",
           "remediations": [
