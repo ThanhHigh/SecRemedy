@@ -115,7 +115,8 @@ class Remediate411(BaseRemedy):
             for remediation in self.child_scan_result[file_path]:
                 if not isinstance(remediation, dict):
                     continue
-                if remediation.get("action") not in {"add", "add_directive", "modify_directive", "replace"}:
+                action = ASTEditor._normalize_action(remediation.get("action", ""))
+                if action not in {"add", "add_directive", "modify_directive", "replace"}:
                     continue
                 if remediation.get("directive") != "return":
                     continue
@@ -127,50 +128,57 @@ class Remediate411(BaseRemedy):
                 if isinstance(target, list) and rel_ctx == []:
                     target = None
 
-                fallback_block_ctx = None
-                if target is None:
+                server_ctx = None
+                server_block = None
+                for trim_len in range(0, len(rel_ctx) + 1):
+                    candidate_ctx = rel_ctx[:-trim_len] if trim_len else rel_ctx
+                    candidate = ASTEditor.get_child_ast_config(parsed_copy, candidate_ctx)
+                    if isinstance(candidate, dict) and candidate.get("directive") == "server" and isinstance(candidate.get("block"), list):
+                        server_ctx = candidate_ctx + ["block"]
+                        server_block = candidate.get("block")
+                        break
+
+                if server_block is None:
                     server_blocks = self._find_block_contexts(parsed_copy, "server")
                     if server_blocks:
-                        fallback_block_ctx = server_blocks[0]
-                        target = ASTEditor.get_child_ast_config(parsed_copy, fallback_block_ctx)
+                        server_ctx = server_blocks[0]
+                        server_block = ASTEditor.get_child_ast_config(parsed_copy, server_ctx)
 
-                if self._is_ssl_reject_server_block(target):
+                if not isinstance(server_block, list) or not isinstance(server_ctx, list):
                     continue
 
                 return_args = [redirect_code, redirect_target]
+                patch_action = "replace" if action in {"replace", "modify", "modify_directive"} else "add"
 
-                if isinstance(target, list):
-                    block_ctx = rel_ctx if rel_ctx else fallback_block_ctx
-                    if block_ctx is None:
+                invalid_return_idx = None
+                has_valid_return = False
+                for idx, item in enumerate(server_block):
+                    if not isinstance(item, dict) or item.get("directive") != "return":
                         continue
-                    if not self._context_is_ssl_reject(parsed_copy, block_ctx):
-                        patches.append({
-                            "action": "upsert",
-                            "exact_path": block_ctx,
-                            "directive": "return",
-                            "args": copy.deepcopy(return_args),
-                            "priority": 0,
-                        })
-                elif isinstance(target, dict):
-                    if target.get("directive") == "return":
-                        if target.get("args") != ["444"]:
-                            parent_ctx = rel_ctx[:-1] if rel_ctx else []
-                            patches.append({
-                                "action": "upsert",
-                                "exact_path": parent_ctx if parent_ctx else rel_ctx,
-                                "directive": "return",
-                                "args": copy.deepcopy(return_args),
-                                "priority": 0,
-                            })
-                    elif isinstance(target.get("block"), list):
-                        if not self._is_ssl_reject_server_block(target.get("block")):
-                            patches.append({
-                                "action": "upsert",
-                                "exact_path": rel_ctx + ["block"],
-                                "directive": "return",
-                                "args": copy.deepcopy(return_args),
-                                "priority": 0,
-                            })
+                    if self._is_valid_return(item):
+                        has_valid_return = True
+                        break
+                    if invalid_return_idx is None:
+                        invalid_return_idx = idx
+
+                if has_valid_return:
+                    continue
+                if invalid_return_idx is not None:
+                    patches.append({
+                        "action": "replace",
+                        "exact_path": server_ctx + [invalid_return_idx],
+                        "directive": "return",
+                        "args": copy.deepcopy(return_args),
+                        "priority": 0,
+                    })
+                else:
+                    patches.append({
+                        "action": patch_action,
+                        "exact_path": server_ctx,
+                        "directive": "return",
+                        "args": copy.deepcopy(return_args),
+                        "priority": 0,
+                    })
 
             if patches:
                 result[file_path] = patches
@@ -197,14 +205,36 @@ class Remediate411(BaseRemedy):
                 if node.get("directive") == "server" and isinstance(node.get("block"), list):
                     server_ctx = prefix + [idx, "block"]
                     server_block = node.get("block", [])
-                    if _has_http_listen(server_block) and not self._is_ssl_reject_server_block(server_block):
-                        sweep_patches.append({
-                            "action": "upsert",
-                            "exact_path": server_ctx,
-                            "directive": "return",
-                            "args": [redirect_code, redirect_target],
-                            "priority": 1,
-                        })
+                    if _has_http_listen(server_block):
+                        invalid_return_idx = None
+                        has_valid_return = False
+                        for child_idx, child in enumerate(server_block):
+                            if not isinstance(child, dict) or child.get("directive") != "return":
+                                continue
+                            if self._is_valid_return(child):
+                                has_valid_return = True
+                                break
+                            if invalid_return_idx is None:
+                                invalid_return_idx = child_idx
+
+                        if has_valid_return:
+                            continue
+                        if invalid_return_idx is not None:
+                            sweep_patches.append({
+                                "action": "replace",
+                                "exact_path": server_ctx + [invalid_return_idx],
+                                "directive": "return",
+                                "args": [redirect_code, redirect_target],
+                                "priority": 1,
+                            })
+                        else:
+                            sweep_patches.append({
+                                "action": "add",
+                                "exact_path": server_ctx,
+                                "directive": "return",
+                                "args": [redirect_code, redirect_target],
+                                "priority": 1,
+                            })
                 block = node.get("block")
                 if isinstance(block, list):
                     sweep_patches.extend(_sweep_servers(block, prefix + [idx, "block"]))
@@ -262,6 +292,17 @@ class Remediate411(BaseRemedy):
             parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
+
+    def _is_valid_return(self, ret_node) -> bool:
+        args = ret_node.get("args", [])
+        if len(args) >= 2:
+            code = args[0]
+            url = args[1]
+            if code in ["301", "302", "308"]:
+                url_clean = url.strip('"').strip("'")
+                if url_clean.startswith("https://") or url_clean.startswith("$"):
+                    return True
+        return False
 
     @staticmethod
     def _is_ssl_reject_server_block(block) -> bool:

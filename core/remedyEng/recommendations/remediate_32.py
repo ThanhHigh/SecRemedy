@@ -89,7 +89,14 @@ class Remediate32(BaseRemedy):
                 if not isinstance(args, list) or not args:
                     continue
 
-                if action in {"delete", "modify", "modify_directive", "replace"}:
+                if action == "delete":
+                    # Scanner says delete harmful access_log off directive
+                    patches.append({
+                        "action": "delete",
+                        "exact_path": rel_ctx,
+                        "priority": 0,
+                    })
+                elif action in {"modify", "modify_directive", "replace"}:
                     patches.append({
                         "action": "upsert",
                         "exact_path": rel_ctx,

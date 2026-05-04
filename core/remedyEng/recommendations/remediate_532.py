@@ -93,75 +93,77 @@ class Remediate532(BaseRemedy):
         
         use_baseline = self.user_inputs[0].strip().lower()
         custom_csp = self.user_inputs[1].strip() if len(self.user_inputs) > 1 else ""
+
+        required_directives = ("default-src", "frame-ancestors", "form-action")
+
+        def _is_secure(policy: str) -> bool:
+            normalized = policy.lower()
+            return all(directive in normalized for directive in required_directives) and "unsafe-inline" not in normalized and "unsafe-eval" not in normalized
         
         # If user provided custom CSP, use it
         if custom_csp:
-            return custom_csp
+            if _is_secure(custom_csp):
+                return custom_csp
+            return self.default_csp
         
         # Otherwise use baseline (default behavior if user didn't explicitly reject it)
         if use_baseline in ["no", "n", "false", "0"]:
-            # User explicitly rejected baseline and provided no custom - use minimal policy
-            return "default-src 'self';"
+            # User explicitly rejected baseline and provided no custom - still enforce CIS minimum.
+            return self.default_csp
         
         return self.default_csp
 
-    def _build_patches_532(self):
+    def _build_patches_532(self, all_ast_config=None):
         result = {}
         csp_policy = self._get_csp_policy()
+        header_args = ["Content-Security-Policy", f'"{csp_policy}"', "always"]
 
-        for file_path, remediations in self.child_ast_config.items():
-            if file_path not in self.child_scan_result:
+        ast_source = all_ast_config if isinstance(all_ast_config, dict) and all_ast_config.get("config") else None
+        if ast_source is None:
+            ast_source = {"config": [{"file": file_path, "parsed": data.get("parsed")} for file_path, data in self.child_ast_config.items()]}
+
+        config_list = ast_source.get("config", []) if isinstance(ast_source, dict) else []
+        if not isinstance(config_list, list):
+            config_list = []
+
+        for config_entry in config_list:
+            if not isinstance(config_entry, dict):
+                continue
+            file_path = config_entry.get("file", "")
+            parsed = config_entry.get("parsed")
+            if not file_path or not isinstance(parsed, list):
                 continue
 
-            if not isinstance(remediations, dict) or "parsed" not in remediations:
-                continue
+            parsed_copy = copy.deepcopy(parsed)
+            patches = Remediate532._generate_sweep_patches(parsed_copy, header_args)
 
-            parsed_copy = copy.deepcopy(remediations["parsed"])
+            file_violations = self.child_scan_result.get(file_path, [])
+            if isinstance(file_violations, list):
+                for violation in file_violations:
+                    if not isinstance(violation, dict) or violation.get("directive") != "add_header":
+                        continue
+                    raw_path = ASTEditor._extract_context_path(violation)
+                    exact_path = self._relative_context(raw_path) if raw_path else []
+                    if not exact_path or not ASTEditor.path_is_valid(parsed_copy, exact_path):
+                        continue
 
-            file_violations = self.child_scan_result[file_path]
-            if not isinstance(file_violations, list):
-                continue
-
-            header_args = ["Content-Security-Policy", f'"{csp_policy}"', "always"]
-
-            header_violations = [
-                v for v in file_violations
-                if isinstance(v, dict) and v.get("directive") == "add_header"
-            ]
-            if not header_violations:
-                continue
-
-            patches = []
-
-            for violation in header_violations:
-                action = violation.get("action", "")
-                raw_path = ASTEditor._extract_context_path(violation)
-                exact_path = self._relative_context(raw_path) if raw_path else []
-                if not exact_path or not ASTEditor.path_is_valid(parsed_copy, exact_path):
-                    continue
-
-                if action == "add":
-                    patches.append({
-                        "action": "add",
-                        "exact_path": exact_path,
-                        "directive": "add_header",
-                        "args": copy.deepcopy(header_args),
-                        "priority": 0,
-                    })
-                elif action == "replace":
-                    patches.append({
-                        "action": "upsert",
-                        "exact_path": exact_path,
-                        "directive": "add_header",
-                        "args": copy.deepcopy(header_args),
-                        "priority": 0,
-                    })
-
-            if header_violations and not patches:
-                continue
-
-            sweep_patches = Remediate532._generate_sweep_patches(parsed_copy, header_args)
-            patches.extend(sweep_patches)
+                    action = violation.get("action", "")
+                    if action == "replace":
+                        patches.append({
+                            "action": "replace",
+                            "exact_path": exact_path,
+                            "directive": "add_header",
+                            "args": copy.deepcopy(header_args),
+                            "priority": 0,
+                        })
+                    else:
+                        patches.append({
+                            "action": "add",
+                            "exact_path": exact_path,
+                            "directive": "add_header",
+                            "args": copy.deepcopy(header_args),
+                            "priority": 0,
+                        })
 
             if patches:
                 result[file_path] = patches
@@ -170,7 +172,7 @@ class Remediate532(BaseRemedy):
 
     def collect_patches(self):
         self.resolve_user_inputs()
-        return self._build_patches_532()
+        return self._build_patches_532(all_ast_config=self._full_ast_config)
 
     def remediate(self) -> None:
         """

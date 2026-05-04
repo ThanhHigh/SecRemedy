@@ -301,6 +301,7 @@ def _find_candidate_remedies(applied_history: List[dict], error_paths: List[str]
 
 
 def _persist_ast_output(ast_config: Dict[str, Any], output_path: Path) -> None:
+    ExportManager.normalize_ast_config(ast_config)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(ast_config, f, indent=2)

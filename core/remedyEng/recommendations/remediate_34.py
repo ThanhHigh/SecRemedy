@@ -142,7 +142,7 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
         """
         return guidance.strip()
 
-    def _build_patches_34(self, all_ast_config=None):
+    def _build_patches_34(self, all_ast_config=None, enable_proactive_sweep=False):
         result = {}
         if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
             return result
@@ -199,6 +199,10 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
 
         # Proactive sweep across ALL config files: ensure every proxy_pass location
         # carries required X-Forwarded-For and X-Real-IP headers.
+        # Only run if enable_proactive_sweep=True (optional feature)
+        if not enable_proactive_sweep:
+            return result
+        
         def _sweep(nodes, prefix):
             sweep_patches = []
             if not isinstance(nodes, list):
@@ -256,7 +260,8 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
         is_valid, _ = self._validate_user_inputs()
         if not is_valid:
             return {}
-        return self._build_patches_34(all_ast_config=self._full_ast_config)
+        # Proactive sweep disabled by default (set enable_proactive_sweep=True to enable)
+        return self._build_patches_34(all_ast_config=self._full_ast_config, enable_proactive_sweep=False)
 
     def remediate(self) -> None:
         """
@@ -274,7 +279,10 @@ PROMPT: Enter upstream address (http://..., https://..., or unix:...) or press
             print(f"  Validation error: {error_msg}")
             return
 
-        for file_path, patches in self._build_patches_34().items():
+        # Use collect_patches which respects proactive sweep flag
+        for file_path, patches in self.collect_patches().items():
+            if file_path not in self.child_ast_config:
+                continue
             parsed_copy = copy.deepcopy(self.child_ast_config[file_path]["parsed"])
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}

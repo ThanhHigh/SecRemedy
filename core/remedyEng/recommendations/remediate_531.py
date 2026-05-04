@@ -36,15 +36,10 @@ class Remediate531(BaseRemedy):
 
     @staticmethod
     def _generate_sweep_patches(nodes: list, header_args: list) -> list:
-        """Generate patches for all server/location blocks missing X-Content-Type-Options."""
+        """Generate patches for leaf server/location blocks missing X-Content-Type-Options."""
         patches: list = []
         INJECTABLE_SCOPES = {"server", "location"}
         header_name = header_args[0] if header_args else ""
-        csp_baseline = [
-            "Content-Security-Policy",
-            "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
-            "always",
-        ]
 
         def _sweep(node_list, path_prefix):
             if not isinstance(node_list, list):
@@ -72,43 +67,6 @@ class Remediate531(BaseRemedy):
                             "exact_path": current_path,
                             "directive": "add_header",
                             "args": copy.deepcopy(header_args),
-                            "priority": 1,
-                        })
-
-                    # Repair invalid CSP header when present as empty/legacy value.
-                    has_csp = False
-                    for child_idx, item in enumerate(block):
-                        if not isinstance(item, dict) or item.get("directive") != "add_header":
-                            continue
-                        args = item.get("args", [])
-                        if not isinstance(args, list) or not args:
-                            continue
-                        if str(args[0]).lower() != "content-security-policy":
-                            continue
-                        has_csp = True
-                        csp_value = str(args[1]).lower() if len(args) >= 2 else ""
-                        is_valid = (
-                            len(args) >= 3
-                            and str(args[-1]).lower() == "always"
-                            and "default-src" in csp_value
-                            and "frame-ancestors" in csp_value
-                            and "unsafe-inline" not in csp_value
-                            and "unsafe-eval" not in csp_value
-                        )
-                        if not is_valid:
-                            patches.append({
-                                "action": "upsert",
-                                "exact_path": path_prefix + [idx, "block", child_idx],
-                                "directive": "add_header",
-                                "args": copy.deepcopy(csp_baseline),
-                                "priority": 1,
-                            })
-                    if not has_csp:
-                        patches.append({
-                            "action": "add",
-                            "exact_path": path_prefix + [idx, "block"],
-                            "directive": "add_header",
-                            "args": copy.deepcopy(csp_baseline),
                             "priority": 1,
                         })
 
@@ -216,7 +174,7 @@ class Remediate531(BaseRemedy):
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
-    def _build_patches_531(self):
+    def _build_patches_531(self, all_ast_config=None):
         result = {}
         if not self.user_inputs:
             return result
@@ -227,60 +185,51 @@ class Remediate531(BaseRemedy):
 
         HEADER_ARGS = ["X-Content-Type-Options", '"nosniff"', "always"]
 
-        for file_path, remediations in self.child_ast_config.items():
-            if file_path not in self.child_scan_result:
+        ast_source = all_ast_config if isinstance(all_ast_config, dict) and all_ast_config.get("config") else None
+        if ast_source is None:
+            ast_source = {"config": [{"file": file_path, "parsed": data.get("parsed")} for file_path, data in self.child_ast_config.items()]}
+
+        config_list = ast_source.get("config", []) if isinstance(ast_source, dict) else []
+        if not isinstance(config_list, list):
+            config_list = []
+
+        for config_entry in config_list:
+            if not isinstance(config_entry, dict):
+                continue
+            file_path = config_entry.get("file", "")
+            parsed = config_entry.get("parsed")
+            if not file_path or not isinstance(parsed, list):
                 continue
 
-            if not isinstance(remediations, dict) or "parsed" not in remediations:
-                continue
+            parsed_copy = copy.deepcopy(parsed)
+            patches = self._generate_sweep_patches(parsed_copy, HEADER_ARGS)
 
-            parsed_copy = copy.deepcopy(remediations["parsed"])
-            file_violations = self.child_scan_result[file_path]
-            if not isinstance(file_violations, list):
-                continue
-
-            header_violations = [
-                v for v in file_violations
-                if isinstance(v, dict) and v.get("directive") == "add_header"
-            ]
-            if not header_violations:
-                continue
-
-            patches = []
-
-            for violation in header_violations:
-                action = violation.get("action", "")
-                args = violation.get("args", [])
-
-                raw_path = ASTEditor._extract_context_path(violation)
-                exact_path = self._relative_context(raw_path) if raw_path else []
-                if not exact_path or not ASTEditor.path_is_valid(parsed_copy, exact_path):
-                    continue
-
-                header_args = args if args else HEADER_ARGS
-
-                if action == "add":
-                    patches.append({
-                        "action": "add",
-                        "exact_path": exact_path,
-                        "directive": "add_header",
-                        "args": header_args,
-                        "priority": 0,
-                    })
-                elif action == "replace":
-                    patches.append({
-                        "action": "upsert",
-                        "exact_path": exact_path,
-                        "directive": "add_header",
-                        "args": header_args,
-                        "priority": 0,
-                    })
-
-            if header_violations and not patches:
-                continue
-
-            sweep_patches = self._generate_sweep_patches(parsed_copy, HEADER_ARGS)
-            patches.extend(sweep_patches)
+            file_violations = self.child_scan_result.get(file_path, [])
+            if isinstance(file_violations, list):
+                for violation in file_violations:
+                    if not isinstance(violation, dict) or violation.get("directive") != "add_header":
+                        continue
+                    raw_path = ASTEditor._extract_context_path(violation)
+                    exact_path = self._relative_context(raw_path) if raw_path else []
+                    if not exact_path or not ASTEditor.path_is_valid(parsed_copy, exact_path):
+                        continue
+                    action = violation.get("action", "")
+                    if action == "replace":
+                        patches.append({
+                            "action": "replace",
+                            "exact_path": exact_path,
+                            "directive": "add_header",
+                            "args": copy.deepcopy(HEADER_ARGS),
+                            "priority": 0,
+                        })
+                    else:
+                        patches.append({
+                            "action": "add",
+                            "exact_path": exact_path,
+                            "directive": "add_header",
+                            "args": copy.deepcopy(HEADER_ARGS),
+                            "priority": 0,
+                        })
 
             if patches:
                 result[file_path] = patches
@@ -289,7 +238,7 @@ class Remediate531(BaseRemedy):
 
     def collect_patches(self):
         self.resolve_user_inputs()
-        return self._build_patches_531()
+        return self._build_patches_531(all_ast_config=self._full_ast_config)
 
     @staticmethod
     def _inject_header_to_all_eligible_blocks(nodes: list, header_args: list) -> None:

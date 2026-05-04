@@ -249,10 +249,11 @@ class Remediate252(BaseRemedy):
             parsed_copy = ASTEditor.apply_reverse_path_patches(parsed_copy, patches)
             self.child_ast_modified[file_path] = {"parsed": parsed_copy}
 
-    def _build_patches_252(self):
+    def _build_patches_252(self, all_ast_config=None):
         """Build patches for batch merged-patch mode."""
         result = {}
-        if not isinstance(self.child_ast_config, dict) or not self.child_ast_config:
+        ast_source = all_ast_config if isinstance(all_ast_config, dict) and all_ast_config.get("config") else self.child_ast_config
+        if not isinstance(ast_source, dict) or not ast_source:
             return result
 
         err_40x = self.user_inputs[0].strip() if len(self.user_inputs) > 0 else ""
@@ -263,12 +264,24 @@ class Remediate252(BaseRemedy):
         if getattr(self, "remedy_input_defaults", None) and len(self.remedy_input_defaults) > 2:
             default_root = self.remedy_input_defaults[2]
 
-        for file_path, file_data in self.child_ast_config.items():
-            if file_path not in self.child_scan_result:
-                continue
-            file_violations = self.child_scan_result[file_path]
-            if not isinstance(file_violations, list) or not file_violations:
-                continue
+        if ast_source is self.child_ast_config:
+            config_items = list(self.child_ast_config.items())
+        else:
+            config_items = []
+            config_list = ast_source.get("config", [])
+            if isinstance(config_list, list):
+                for cfg_entry in config_list:
+                    if not isinstance(cfg_entry, dict):
+                        continue
+                    file_path = cfg_entry.get("file", "")
+                    if not file_path:
+                        continue
+                    config_items.append((file_path, {"parsed": cfg_entry.get("parsed")}))
+
+        for file_path, file_data in config_items:
+            file_violations = self.child_scan_result.get(file_path, [])
+            if not isinstance(file_violations, list):
+                file_violations = []
             parsed = file_data.get("parsed") if isinstance(file_data, dict) else None
             if not isinstance(parsed, list):
                 continue
@@ -285,7 +298,7 @@ class Remediate252(BaseRemedy):
                 context = ASTEditor._extract_context_path(remediation)
                 args = remediation.get("args", [])
 
-                if action not in {"add", "add_directive"}:
+                if action not in {"add", "add_directive", "replace", "modify", "modify_directive"}:
                     continue
 
                 rel_ctx = self._relative_context(context)
@@ -360,7 +373,7 @@ class Remediate252(BaseRemedy):
         is_valid, _ = self._validate_user_inputs()
         if not is_valid:
             return {}
-        return self._build_patches_252()
+        return self._build_patches_252(all_ast_config=self._full_ast_config)
 
     @staticmethod
     def _find_location_path_for_uri(parsed: list, uri: str) -> list | None:
