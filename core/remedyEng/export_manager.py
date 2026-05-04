@@ -98,8 +98,10 @@ class ExportManager:
             if m:
                 port = m.group(1)
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-        folder_name = f"{server}_{port}_remediated_{timestamp}"
-        tar_name = f"{server}_{port}_remediated_{timestamp}.tar.gz"
+        # folder_name = f"{server}_{port}_remediated_{timestamp}"
+        folder_name = f"remediated_output_{port}"
+        # tar_name = f"{server}_{port}_remediated_{timestamp}.tar.gz"
+        tar_name = f"remediated_output_{port}.tar.gz"
         return folder_name, tar_name
 
     def export_config_folder(self, output_dir: Optional[str] = None, scan_path: Optional[str] = None) -> Tuple[Path, Path]:

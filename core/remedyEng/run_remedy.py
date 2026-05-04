@@ -651,8 +651,10 @@ if __name__ == "__main__":
         # Persist a parser-style contract for the remediated AST
         folder_name, _ = exporter._derive_names(
             args.scan_result if args.scan_result else None)
+        # remediated_contract = Path("contracts") / \
+        #     f"parser_output_{folder_name}.json"
         remediated_contract = Path("contracts") / \
-            f"parser_output_{folder_name}.json"
+            f"{folder_name}.json"
         exporter.persist_parser_output(remediated_contract)
         print(f"Export base dir: {export_base_dir}")
         print(f"Exported remediated config folder: {out_dir}")
