@@ -118,24 +118,15 @@ class Remediate532(BaseRemedy):
         csp_policy = self._get_csp_policy()
         header_args = ["Content-Security-Policy", f'"{csp_policy}"', "always"]
 
-        ast_source = all_ast_config if isinstance(all_ast_config, dict) and all_ast_config.get("config") else None
-        if ast_source is None:
-            ast_source = {"config": [{"file": file_path, "parsed": data.get("parsed")} for file_path, data in self.child_ast_config.items()]}
-
-        config_list = ast_source.get("config", []) if isinstance(ast_source, dict) else []
-        if not isinstance(config_list, list):
-            config_list = []
-
-        for config_entry in config_list:
-            if not isinstance(config_entry, dict):
+        for file_path, file_data in self.child_ast_config.items():
+            if file_path not in self.child_scan_result:
                 continue
-            file_path = config_entry.get("file", "")
-            parsed = config_entry.get("parsed")
-            if not file_path or not isinstance(parsed, list):
+            parsed = file_data.get("parsed") if isinstance(file_data, dict) else None
+            if not isinstance(parsed, list):
                 continue
 
             parsed_copy = copy.deepcopy(parsed)
-            patches = Remediate532._generate_sweep_patches(parsed_copy, header_args)
+            patches = []
 
             file_violations = self.child_scan_result.get(file_path, [])
             if isinstance(file_violations, list):
@@ -145,6 +136,9 @@ class Remediate532(BaseRemedy):
                     raw_path = ASTEditor._extract_context_path(violation)
                     exact_path = self._relative_context(raw_path) if raw_path else []
                     if not exact_path or not ASTEditor.path_is_valid(parsed_copy, exact_path):
+                        self.report_runtime_error(
+                            f"{self.id} {file_path}: invalid or missing scanner context for add_header"
+                        )
                         continue
 
                     action = violation.get("action", "")
@@ -172,7 +166,7 @@ class Remediate532(BaseRemedy):
 
     def collect_patches(self):
         self.resolve_user_inputs()
-        return self._build_patches_532(all_ast_config=self._full_ast_config)
+        return self._build_patches_532()
 
     def remediate(self) -> None:
         """

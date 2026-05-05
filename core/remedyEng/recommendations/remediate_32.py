@@ -79,6 +79,9 @@ class Remediate32(BaseRemedy):
                 else:
                     rel_ctx = ASTEditor._extract_context_path(remediation)
                 if not rel_ctx:
+                    self.report_runtime_error(
+                        f"{self.id} {file_path}: missing scanner context for access_log violation"
+                    )
                     continue
 
                 action = remediation.get("action", "")

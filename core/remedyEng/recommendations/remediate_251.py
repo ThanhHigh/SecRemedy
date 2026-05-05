@@ -54,7 +54,16 @@ class Remediate251(BaseRemedy):
                 if action not in {"replace", "modify", "modify_directive", "add"}:
                     continue
                 relative_context = self._relative_context(context)
-                target_contexts = [relative_context] if relative_context else self._find_directive_contexts(parsed_copy, "server_tokens")
+                target_contexts = [relative_context] if relative_context else []
+                if not target_contexts:
+                    fallback = self.choose_fallback_context(
+                        file_path=file_path,
+                        directive="server_tokens",
+                        reason="missing scanner context",
+                        candidates=self._find_directive_contexts(parsed_copy, "server_tokens"),
+                    )
+                    if fallback:
+                        target_contexts = [fallback]
                 for target_context in target_contexts:
                     if not target_context:
                         continue

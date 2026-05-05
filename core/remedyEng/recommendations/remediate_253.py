@@ -135,7 +135,14 @@ class Remediate253(BaseRemedy):
                 if rel_ctx:
                     target_contexts = [rel_ctx]
                 elif remediation.get("logical_context") == "server":
-                    target_contexts = self._find_block_contexts(parsed_copy, "server")
+                    fallback = self.choose_fallback_context(
+                        file_path=file_path,
+                        directive="location",
+                        reason="missing scanner context for server-scoped location",
+                        candidates=self._find_block_contexts(parsed_copy, "server"),
+                    )
+                    if fallback:
+                        target_contexts = [fallback]
 
                 if not target_contexts:
                     continue
@@ -291,15 +298,6 @@ class Remediate253(BaseRemedy):
                                 "block": copy.deepcopy(deny_location),
                                 "priority": 0,
                             })
-
-                    if server_name:
-                        patches.append({
-                            "action": "upsert",
-                            "exact_path": target_ctx,
-                            "directive": "server_name",
-                            "args": [server_name],
-                            "priority": 2,
-                        })
 
             if patches:
                 result[file_path] = [{**p, "_253_acme_order": True} for p in patches]

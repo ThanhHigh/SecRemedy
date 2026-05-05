@@ -395,4 +395,32 @@ class TerminalUI:
                 return False
             print("Invalid input. Enter y or n.")
 
+    def ask_context_fallback_approval(
+        self,
+        *,
+        remedy_id: str,
+        file_path: str,
+        directive: str,
+        reason: str,
+        chosen_context: List[Any],
+        candidate_count: int,
+    ) -> bool:
+        """Ask user to approve fallback placement when scanner context is ambiguous or missing."""
+        print("\n" + "?" * 60)
+        print(f"Fallback Context Approval: {remedy_id}".center(60))
+        print("?" * 60)
+        print(f"File: {file_path}")
+        print(f"Directive: {directive}")
+        print(f"Reason: {reason}")
+        print(f"Candidates found: {candidate_count}")
+        print(f"Proposed context: {chosen_context}")
+        print("Approve fallback placement? (y/n)")
+        while True:
+            response = input().strip().lower()
+            if response in {"y", "yes"}:
+                return True
+            if response in {"n", "no"}:
+                return False
+            print("Invalid input. Enter y or n.")
+
 

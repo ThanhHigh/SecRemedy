@@ -139,9 +139,14 @@ class Remediate411(BaseRemedy):
                         break
 
                 if server_block is None:
-                    server_blocks = self._find_block_contexts(parsed_copy, "server")
-                    if server_blocks:
-                        server_ctx = server_blocks[0]
+                    picked_ctx = self.choose_fallback_context(
+                        file_path=file_path,
+                        directive="return",
+                        reason="scanner context not inside server block",
+                        candidates=self._find_block_contexts(parsed_copy, "server"),
+                    )
+                    if picked_ctx:
+                        server_ctx = picked_ctx
                         server_block = ASTEditor.get_child_ast_config(parsed_copy, server_ctx)
 
                 if not isinstance(server_block, list) or not isinstance(server_ctx, list):
@@ -183,83 +188,6 @@ class Remediate411(BaseRemedy):
             if patches:
                 result[file_path] = patches
 
-        # Proactive sweep: every HTTP server block across ALL config files
-        # should have a redirect return directive.
-        def _has_http_listen(server_block: list) -> bool:
-            listens = [n for n in server_block if isinstance(n, dict) and n.get("directive") == "listen"]
-            if not listens:
-                return True
-            for l in listens:
-                args = l.get("args", [])
-                if "ssl" not in args:
-                    return True
-            return False
-
-        def _sweep_servers(nodes, prefix):
-            sweep_patches = []
-            if not isinstance(nodes, list):
-                return sweep_patches
-            for idx, node in enumerate(nodes):
-                if not isinstance(node, dict):
-                    continue
-                if node.get("directive") == "server" and isinstance(node.get("block"), list):
-                    server_ctx = prefix + [idx, "block"]
-                    server_block = node.get("block", [])
-                    if _has_http_listen(server_block):
-                        invalid_return_idx = None
-                        has_valid_return = False
-                        for child_idx, child in enumerate(server_block):
-                            if not isinstance(child, dict) or child.get("directive") != "return":
-                                continue
-                            if self._is_valid_return(child):
-                                has_valid_return = True
-                                break
-                            if invalid_return_idx is None:
-                                invalid_return_idx = child_idx
-
-                        if has_valid_return:
-                            continue
-                        if invalid_return_idx is not None:
-                            sweep_patches.append({
-                                "action": "replace",
-                                "exact_path": server_ctx + [invalid_return_idx],
-                                "directive": "return",
-                                "args": [redirect_code, redirect_target],
-                                "priority": 1,
-                            })
-                        else:
-                            sweep_patches.append({
-                                "action": "add",
-                                "exact_path": server_ctx,
-                                "directive": "return",
-                                "args": [redirect_code, redirect_target],
-                                "priority": 1,
-                            })
-                block = node.get("block")
-                if isinstance(block, list):
-                    sweep_patches.extend(_sweep_servers(block, prefix + [idx, "block"]))
-            return sweep_patches
-
-        # Sweep ALL config files from the full AST config (not just scan-violated ones)
-        sweep_source = all_ast_config if isinstance(all_ast_config, dict) else None
-        config_list = sweep_source.get("config", []) if sweep_source else []
-        if not isinstance(config_list, list):
-            config_list = []
-
-        for cfg_entry in config_list:
-            if not isinstance(cfg_entry, dict):
-                continue
-            fp = cfg_entry.get("file", "")
-            parsed = cfg_entry.get("parsed")
-            if not isinstance(parsed, list):
-                continue
-
-            sweep_patches = _sweep_servers(parsed, [])
-            if sweep_patches:
-                if fp not in result:
-                    result[fp] = []
-                result[fp].extend(sweep_patches)
-
         return result
 
     def collect_patches(self):
@@ -267,7 +195,7 @@ class Remediate411(BaseRemedy):
         is_valid, _ = self._validate_user_inputs()
         if not is_valid:
             return {}
-        return self._build_patches_411(all_ast_config=self._full_ast_config)
+        return self._build_patches_411()
 
     def remediate(self) -> None:
         """

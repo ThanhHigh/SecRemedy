@@ -34,6 +34,8 @@ class BaseRemedy:
     child_ast_modified: Any = {} #File-grouped modified configs: {file_path: {parsed: [...]}}
     file_approval_status: Dict[str, bool] = {}
     _full_ast_config: Any = None  # Full AST config for cross-file sweeps
+    interactive_mode: bool = False
+    runtime_errors: List[str] = []
 
 
     def __init__(self, recommendation: Recommendation | None = None) -> None:
@@ -50,6 +52,8 @@ class BaseRemedy:
         self.child_ast_modified = {}
         self.file_approval_status = {}
         self._full_ast_config = None
+        self.interactive_mode = False
+        self.runtime_errors = []
 
         if recommendation is not None:
             self.id = recommendation.id.value
@@ -336,6 +340,78 @@ class BaseRemedy:
             Formatted guidance string for terminal display
         """
         return f"Rule {self.id}: {self.title}\n{self.description}"
+
+    def report_runtime_error(self, message: str) -> None:
+        """Store runtime remediation errors for centralized orchestration reporting."""
+        if not isinstance(message, str):
+            return
+        text = message.strip()
+        if not text:
+            return
+        self.runtime_errors.append(text)
+
+    def consume_runtime_errors(self) -> List[str]:
+        """Return and clear runtime remediation errors."""
+        errors = list(self.runtime_errors)
+        self.runtime_errors = []
+        return errors
+
+    def choose_fallback_context(
+        self,
+        *,
+        file_path: str,
+        directive: str,
+        reason: str,
+        candidates: List[List[Any]],
+    ) -> List[Any]:
+        """
+        Resolve fallback placement context with approval for ambiguous/missing scanner paths.
+
+        - One candidate: auto-use in interactive mode, skip in non-interactive only if invalid.
+        - Multiple candidates: interactive asks approval for first best candidate.
+        - Non-interactive ambiguity: emit explicit error and skip.
+        """
+        valid_candidates = [ctx for ctx in candidates if isinstance(ctx, list)]
+        if not valid_candidates:
+            self.report_runtime_error(
+                f"{self.id} {file_path}: no fallback context for directive '{directive}' ({reason})."
+            )
+            return []
+
+        if len(valid_candidates) == 1:
+            return list(valid_candidates[0])
+
+        first = list(valid_candidates[0])
+        if not self.interactive_mode:
+            self.report_runtime_error(
+                f"{self.id} {file_path}: ambiguous context for '{directive}' ({len(valid_candidates)} candidates) in batch mode."
+            )
+            return []
+
+        try:
+            from core.remedyEng.terminal_ui import TerminalUI
+
+            approved = TerminalUI.get_instance().ask_context_fallback_approval(
+                remedy_id=self.id,
+                file_path=file_path,
+                directive=directive,
+                reason=reason,
+                chosen_context=first,
+                candidate_count=len(valid_candidates),
+            )
+        except Exception as exc:
+            self.report_runtime_error(
+                f"{self.id} {file_path}: failed fallback approval prompt for '{directive}': {exc}"
+            )
+            return []
+
+        if approved:
+            return first
+
+        self.report_runtime_error(
+            f"{self.id} {file_path}: fallback context rejected for '{directive}' ({reason})."
+        )
+        return []
 
     def get_affected_files(self) -> List[str]:
         """Return file paths modified by the current remedy."""

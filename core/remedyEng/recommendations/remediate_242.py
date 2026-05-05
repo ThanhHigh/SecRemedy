@@ -103,8 +103,14 @@ class Remediate242(BaseRemedy):
 
                 if not isinstance(target_list, list):
                     http_blocks = self._find_block_contexts(parsed_copy, "http")
-                    if http_blocks:
-                        rel_ctx = http_blocks[0]
+                    picked_ctx = self.choose_fallback_context(
+                        file_path=file_path,
+                        directive=directive if isinstance(directive, str) and directive else "server",
+                        reason="missing-or-invalid scanner context",
+                        candidates=http_blocks,
+                    )
+                    if picked_ctx:
+                        rel_ctx = picked_ctx
                         target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
 
                 if not isinstance(target_list, list):
@@ -127,13 +133,6 @@ class Remediate242(BaseRemedy):
                             "args": copy.deepcopy(args),
                             "priority": 0,
                         })
-                    patches.append({
-                        "action": "upsert",
-                        "exact_path": list(rel_ctx),
-                        "directive": "server_name",
-                        "args": [server_name],
-                        "priority": 0,
-                    })
 
                 elif action == "add_block" and directive == "server":
                     default_server_block = self._build_default_server_block(server_name)
@@ -167,7 +166,19 @@ class Remediate242(BaseRemedy):
                         })
 
             if patches:
-                result[file_path] = patches
+                deduped = {}
+                for patch in patches:
+                    if not isinstance(patch, dict):
+                        continue
+                    key = (
+                        patch.get("action", ""),
+                        tuple(patch.get("exact_path", []) if isinstance(patch.get("exact_path"), list) else []),
+                        patch.get("directive", ""),
+                    )
+                    if key not in deduped:
+                        deduped[key] = patch
+                if deduped:
+                    result[file_path] = list(deduped.values())
 
         return result
 

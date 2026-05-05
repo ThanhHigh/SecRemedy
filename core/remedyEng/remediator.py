@@ -70,6 +70,7 @@ class Remediator:
         self.strict_placement = strict_placement
         self.strict_json_validation = strict_json_validation
         self.batch_patch_merge = batch_patch_merge
+        self.interactive_mode = False
         self.last_run_stats: Dict[str, Any] = {"skipped_invalid_inputs": []}
 
     def display_header(self) -> None:
@@ -96,6 +97,7 @@ class Remediator:
         """Inject global CLI flags into remedy instances."""
         remedy.strict_placement = self.strict_placement
         remedy.strict_json_validation = self.strict_json_validation
+        remedy.interactive_mode = bool(self.interactive_mode)
 
     def _filter_validated_changes(self, remedy: BaseRemedy) -> dict:
         """Keep only per-file AST mutations that pass structural validation."""
@@ -129,6 +131,7 @@ class Remediator:
     def _prepare_remedy(self, remedy: BaseRemedy, ast_config: dict) -> bool:
         """Populate remedy state and return True only when violations exist."""
         self._configure_remedy_flags(remedy)
+        remedy.consume_runtime_errors()
         remedy.read_child_scan_result(self.ast_scan)
         if not remedy.child_scan_result:
             return False
@@ -247,6 +250,9 @@ class Remediator:
                 continue
 
             patches_by_file = remedy.collect_patches()
+            runtime_errors = remedy.consume_runtime_errors()
+            for err in runtime_errors:
+                TerminalUI.get_instance().display_validation_warning(err)
             if not patches_by_file:
                 if debug_enabled():
                     debug_info("ORCHESTRATION", f"[batch] skip {remedy.id}: empty collect_patches")
@@ -442,6 +448,9 @@ class Remediator:
             # Provide full AST so rules can compute patches on all config files
             remedy._full_ast_config = self.ast_baseline
             patches_by_file = remedy.collect_patches()
+            runtime_errors = remedy.consume_runtime_errors()
+            for err in runtime_errors:
+                ui.display_validation_warning(err)
             
             if not patches_by_file:
                 if debug_enabled():
@@ -570,6 +579,7 @@ class Remediator:
             Modified ast_config dictionary
         """
         self.last_run_stats = {"skipped_invalid_inputs": []}
+        self.interactive_mode = bool(interactive)
         if debug_enabled():
             debug_verbose(
                 "ORCHESTRATION",
