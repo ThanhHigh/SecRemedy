@@ -7,11 +7,15 @@
       "pass": "root",
       "strict_private": false,
       "ast_config": "contracts/parsers_output/parser_output_2221.json",
-      "scan_result": "contracts/scan_result/scan_result_2221.json",
+      "scan_result": "contracts/scan_results/scan_result_2221.json",
       "remediate_ast": "contracts/remediated_output/remediated_output_2221.json",
       "remediate_config": "tmp/remedies_config_output/nginx_remediate_2221_v1",
       "remedy_inputs": {
-        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.2": [
+          "/custom_404.html",
+          "/custom_50x.html",
+          "/var/www/html/errors"
+        ],
         "2.5.3": ["/var/www/html", "_"],
         "3.2": ["global:/var/log/nginx/access.log combined", "off"],
         "5.1.1": ["/admin", "127.0.0.1"],
@@ -25,11 +29,15 @@
       "pass": "root",
       "strict_private": false,
       "ast_config": "contracts/parsers_output/parser_output_2222.json",
-      "scan_result": "contracts/scan_result/scan_result_2222.json",
+      "scan_result": "contracts/scan_results/scan_result_2222.json",
       "remediate_ast": "contracts/remediated_output/remediated_output_2222.json",
       "remediate_config": "tmp/remedies_config_output/nginx_remediate_2222_v1",
       "remedy_inputs": {
-        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.2": [
+          "/custom_404.html",
+          "/custom_50x.html",
+          "/var/www/html/errors"
+        ],
         "2.5.3": ["/var/www/html", "_"],
         "3.2": ["global:/var/log/nginx/access.log combined", "off"],
         "5.1.1": ["/admin", "127.0.0.1"],
@@ -43,11 +51,15 @@
       "pass": "root",
       "strict_private": false,
       "ast_config": "contracts/parsers_output/parser_output_2223.json",
-      "scan_result": "contracts/scan_result/scan_result_2223.json",
+      "scan_result": "contracts/scan_results/scan_result_2223.json",
       "remediate_ast": "contracts/remediated_output/remediated_output_2223.json",
       "remediate_config": "tmp/remedies_config_output/nginx_remediate_2223_v1",
       "remedy_inputs": {
-        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.2": [
+          "/custom_404.html",
+          "/custom_50x.html",
+          "/var/www/html/errors"
+        ],
         "2.5.3": ["/var/www/html", "_"],
         "3.2": ["global:/var/log/nginx/access.log combined", "off"],
         "5.1.1": ["/admin", "127.0.0.1"],
@@ -61,11 +73,15 @@
       "pass": "root",
       "strict_private": false,
       "ast_config": "contracts/parsers_output/parser_output_2224.json",
-      "scan_result": "contracts/scan_result/scan_result_2224.json",
+      "scan_result": "contracts/scan_results/scan_result_2224.json",
       "remediate_ast": "contracts/remediated_output/remediated_output_2224.json",
       "remediate_config": "tmp/remedies_config_output/nginx_remediate_2224_v1",
       "remedy_inputs": {
-        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.2": [
+          "/custom_404.html",
+          "/custom_50x.html",
+          "/var/www/html/errors"
+        ],
         "2.5.3": ["/var/www/html", "_"],
         "3.2": ["global:/var/log/nginx/access.log combined", "off"],
         "5.1.1": ["/admin", "127.0.0.1"],

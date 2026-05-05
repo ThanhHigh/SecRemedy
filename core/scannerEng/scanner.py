@@ -211,8 +211,8 @@ def main():
     )
     parser.add_argument(
         "--config", "-c",
-        default="configs.json",
-        help="Path to configuration file (defaults to config.json).",
+        default="scan_after_remedy_config_input.json",
+        help="Path to configuration file (defaults to scan_after_remedy_config_input.json).",
     )
     args = parser.parse_args()
 
@@ -245,9 +245,9 @@ def main():
         print(f"==========================================")
 
         input_path = server.get(
-            "input_path", f"contracts/parser_output_{current_port}.json")
+            "input_path", f"contracts/parsers_output/parser_output_{current_port}.json")
         output_path = server.get(
-            "output_path", f"contracts/scan_result_{current_port}.json")
+            "output_path", f"contracts/scan_result/scan_result_{current_port}.json")
 
         scanner = Scanner(
             server_ip=server.get("ip", "0.0.0.0"),

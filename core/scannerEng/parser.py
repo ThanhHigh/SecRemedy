@@ -128,8 +128,8 @@ def main():
     )
     parser_cli.add_argument(
         "--config", "-c",
-        default="configs.json",
-        help="Path to configuration file (defaults to configs.json)."
+        default="scan_before_remedy_config_input.json",
+        help="Path to configuration file (defaults to scan_before_remedy_config_input.json)."
     )
     args = parser_cli.parse_args()
 
@@ -171,7 +171,7 @@ def main():
 
         # 2. Xác định tên file JSON đầu ra tự động dựa trên config (đóng vai trò là input_path của scanner)
         output_contract_file = server.get(
-            "input_path", f"contracts/parser_output_{current_port}.json")
+            "input_path", f"contracts/parsers_output/parser_output_{current_port}.json")
 
         # 3. Thực thi Parser
         nginx_parser = NginxParser(base_config_path=TARGET_DIR)
