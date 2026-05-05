@@ -1,0 +1,148 @@
+{
+  "servers": [
+    {
+      "ip": "0.0.0.0",
+      "port": 2221,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2221.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2221.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2222,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2222.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2222.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2223,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2223.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2223.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2224,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2224.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2224.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2225,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2225.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2225.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2226,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2226.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2226.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2227,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2227.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2227.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2230,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2230.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2230.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2231,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2231.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2231.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2239,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2239.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2239.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2240,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2240.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2240.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2241,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2241.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2241.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2249,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2249.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2249.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2250,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2250.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2250.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2251,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2251.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2251.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2259,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2259.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2259.json"
+    }
+  ]
+}
