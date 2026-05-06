@@ -964,6 +964,29 @@
                 "404",
                 "/custom_404.html"
               ]
+            },
+            {
+              "directive": "location",
+              "args": [
+                "^~",
+                "/.well-known/acme-challenge/"
+              ],
+              "block": []
+            },
+            {
+              "directive": "location",
+              "args": [
+                "~",
+                "/\\."
+              ],
+              "block": [
+                {
+                  "directive": "deny",
+                  "args": [
+                    "all"
+                  ]
+                }
+              ]
             }
           ]
         }

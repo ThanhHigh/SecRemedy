@@ -13,8 +13,7 @@ class Detector252(BaseRecom):
             return False
 
         block = node.get("block", [])
-        has_server_name_catchall = False
-        has_https_redirect = False
+        has_return_444 = False
 
         for child in block:
             if not isinstance(child, dict):
@@ -22,16 +21,11 @@ class Detector252(BaseRecom):
             dir_name = child.get("directive")
             args = child.get("args", [])
 
-            if dir_name == "server_name" and "_" in args:
-                has_server_name_catchall = True
-
             if dir_name == "return":
-                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
-                    has_https_redirect = True
-                elif len(args) == 1 and args[0].startswith("https://"):
-                    has_https_redirect = True
+                if len(args) == 1 and args[0] == "444":
+                    has_return_444 = True
 
-        return has_server_name_catchall or has_https_redirect
+        return has_return_444
 
     def traverse_directive(self, target_directive: str, directives: List[Dict], filepath: str, logical_context: List[str], exact_path: List[Any], state: Any = None) -> List[Dict[str, Any]]:
         matches = []
@@ -51,7 +45,8 @@ class Detector252(BaseRecom):
                 })
 
             if "block" in directive:
-                new_logical_context = logical_context + [directive["directive"]]
+                new_logical_context = logical_context + \
+                    [directive["directive"]]
                 new_exact_path = current_exact_path + ["block"]
 
                 matches.extend(self.traverse_directive(
@@ -124,7 +119,7 @@ class Detector252(BaseRecom):
             filepath = config_file.get("file", "")
             if not filepath.endswith(".conf"):
                 continue
-            
+
             parsed_ast = config_file.get("parsed", [])
             base_exact_path = ["config", config_idx, "parsed"]
 
@@ -136,7 +131,7 @@ class Detector252(BaseRecom):
                 exact_path=base_exact_path
             )
             http_blocks.extend(https)
-            
+
             servers = self.traverse_directive(
                 target_directive="server",
                 directives=parsed_ast,
@@ -185,11 +180,12 @@ class Detector252(BaseRecom):
                 d = http_match["directive"]
                 epath = http_match["exact_path"]
                 ctx = http_match["logical_context"] + ["http"]
-                
+
                 _, codes = self._get_error_codes(d.get("block", []))
                 m_404, m_50x = self._check_missing(codes)
                 if m_404 or m_50x:
-                    self._add_rems(uncompliances, filepath, epath + ["block"], ctx, m_404, m_50x)
+                    self._add_rems(uncompliances, filepath,
+                                   epath + ["block"], ctx, m_404, m_50x)
         else:
             required_codes = {"404", "500", "502", "503", "504"}
             for server_match in server_blocks:
@@ -197,20 +193,22 @@ class Detector252(BaseRecom):
                 d = server_match["directive"]
                 epath = server_match["exact_path"]
                 ctx = server_match["logical_context"] + ["server"]
-                
+
                 has_ep, codes = self._get_error_codes(d.get("block", []))
-                
+
                 if has_ep:
-                    has_custom_code = any(c not in required_codes for c in codes)
+                    has_custom_code = any(
+                        c not in required_codes for c in codes)
                     if has_custom_code:
                         effective_codes = codes
                     else:
                         effective_codes = codes.union(global_http_codes)
                 else:
                     effective_codes = global_http_codes
-                
+
                 m_404, m_50x = self._check_missing(effective_codes)
                 if m_404 or m_50x:
-                    self._add_rems(uncompliances, filepath, epath + ["block"], ctx, m_404, m_50x)
+                    self._add_rems(uncompliances, filepath,
+                                   epath + ["block"], ctx, m_404, m_50x)
 
         return self._group_by_file(uncompliances)

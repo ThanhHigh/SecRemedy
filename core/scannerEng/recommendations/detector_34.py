@@ -3,6 +3,7 @@ from core.scannerEng.base_recom import BaseRecom, RecomID
 import fnmatch
 import os
 
+
 class Detector34(BaseRecom):
     def __init__(self):
         super().__init__(RecomID.CIS_3_4)
@@ -21,7 +22,8 @@ class Detector34(BaseRecom):
 
             parsed_ast = config_file.get("parsed", [])
             exact_path = ["config", idx, "parsed"]
-            self._traverse(parsed_ast, filepath, exact_path, [], {}, {}, {}, uncompliances)
+            self._traverse(parsed_ast, filepath, exact_path,
+                           [], {}, {}, {}, uncompliances)
 
         return self._group_by_file(uncompliances)
 
@@ -45,7 +47,8 @@ class Detector34(BaseRecom):
                     else:
                         args = node.get("args", [])
                         if args:
-                            included.update(self._resolve_include(args[0], current_idx))
+                            included.update(
+                                self._resolve_include(args[0], current_idx))
                 if "block" in node:
                     self._find_includes(node["block"], included, current_idx)
 
@@ -67,9 +70,12 @@ class Detector34(BaseRecom):
                   fastcgi_params: Dict[str, bool], grpc_headers: Dict[str, bool],
                   uncompliances: List[Dict[str, Any]]):
 
-        has_proxy_override = any(isinstance(n, dict) and n.get("directive") == "proxy_set_header" and (not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
-        has_fastcgi_override = any(isinstance(n, dict) and n.get("directive") == "fastcgi_param" and (not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
-        has_grpc_override = any(isinstance(n, dict) and n.get("directive") == "grpc_set_header" and (not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
+        has_proxy_override = any(isinstance(n, dict) and n.get("directive") == "proxy_set_header" and (
+            not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
+        has_fastcgi_override = any(isinstance(n, dict) and n.get("directive") == "fastcgi_param" and (
+            not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
+        has_grpc_override = any(isinstance(n, dict) and n.get("directive") == "grpc_set_header" and (
+            not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
 
         curr_proxy = proxy_headers.copy() if not has_proxy_override else {}
         curr_fastcgi = fastcgi_params.copy() if not has_fastcgi_override else {}
@@ -139,27 +145,33 @@ class Detector34(BaseRecom):
     def _should_skip_block(self, node: Dict[str, Any]) -> bool:
         if node.get("directive") != "server":
             return False
-        
+
         block = node.get("block", [])
-        has_server_name_catchall = False
+        has_return_444 = False
+        has_return_403 = False
         has_https_redirect = False
-        
+        has_catch_all_server_name = False
+
         for child in block:
             if not isinstance(child, dict):
                 continue
             dir_name = child.get("directive")
             args = child.get("args", [])
-            
-            if dir_name == "server_name" and "_" in args:
-                has_server_name_catchall = True
-            
+
+            if dir_name == "server_name" and args[0] == "_":
+                has_catch_all_server_name = True
+
             if dir_name == "return":
                 if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
                     has_https_redirect = True
                 elif len(args) == 1 and args[0].startswith("https://"):
                     has_https_redirect = True
-                    
-        return has_server_name_catchall or has_https_redirect
+                elif len(args) == 1 and args[0] == "444":
+                    has_return_444 = True
+                elif len(args) == 1 and args[0] == "403":
+                    has_return_403 = True
+
+        return has_return_444 or has_https_redirect or (has_return_403 and has_catch_all_server_name)
 
     def _check_headers(self, filepath: str, exact_path: List[Any], logical_context: List[str],
                        current_headers: Dict[str, bool], directive_name: str,

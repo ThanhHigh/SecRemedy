@@ -211,6 +211,8 @@ def main():
     )
     parser.add_argument(
         "--config", "-c",
+        # default="scan_before_remedy_config_input.json",
+        # help="Path to configuration file (defaults to scan_before_remedy_config_input.json).",
         default="scan_after_remedy_config_input.json",
         help="Path to configuration file (defaults to scan_after_remedy_config_input.json).",
     )
