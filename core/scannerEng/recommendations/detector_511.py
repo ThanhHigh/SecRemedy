@@ -14,6 +14,7 @@ class Detector511(BaseRecom):
             return False
 
         block = node.get("block", [])
+        has_return_444 = False
         has_server_name_catchall = False
         has_https_redirect = False
 
@@ -27,27 +28,29 @@ class Detector511(BaseRecom):
                 has_server_name_catchall = True
 
             if dir_name == "return":
-                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                if len(args) == 1 and args[0] == "444":
+                    has_return_444 = True
+                elif len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
                     has_https_redirect = True
                 elif len(args) == 1 and args[0].startswith("https://"):
                     has_https_redirect = True
 
-        return has_server_name_catchall or has_https_redirect
+        return has_server_name_catchall or has_https_redirect or has_return_444
 
     def _check_block(self, directives_list: List[Dict[str, Any]], logical_context: List[str], exact_path_to_list: List[Any], filepath: str) -> List[Dict[str, Any]]:
         uncompliances = []
         remediations = []
-        
+
         allow_indices = []
         deny_all_indices = []
-        
+
         for idx, directive in enumerate(directives_list):
             if self._should_skip_block(directive):
                 continue
 
             d_name = directive.get("directive")
             d_args = directive.get("args", [])
-            
+
             if d_name == "allow":
                 if not d_args:
                     remediations.append({
@@ -65,17 +68,18 @@ class Detector511(BaseRecom):
                     })
                 else:
                     allow_indices.append(idx)
-                    
+
             elif d_name == "deny":
                 if "all" in d_args:
                     deny_all_indices.append(idx)
-                    
+
             if "block" in directive:
                 new_logical = list(logical_context) + [d_name]
                 new_exact = exact_path_to_list + [idx, "block"]
-                
+
                 if self.strict_private and d_name == "server":
-                    has_acl = any(d.get("directive") in ("allow", "deny") for d in directive["block"])
+                    has_acl = any(d.get("directive") in ("allow", "deny")
+                                  for d in directive["block"])
                     if not has_acl:
                         uncompliances.append({
                             "file": filepath,
@@ -87,16 +91,17 @@ class Detector511(BaseRecom):
                                 "exact_path": new_exact
                             }]
                         })
-                        
-                uncompliances.extend(self._check_block(directive["block"], new_logical, new_exact, filepath))
-                
+
+                uncompliances.extend(self._check_block(
+                    directive["block"], new_logical, new_exact, filepath))
+
         if allow_indices:
             has_valid_deny_all = False
             for d_idx in deny_all_indices:
                 if d_idx > max(allow_indices):
                     has_valid_deny_all = True
                     break
-            
+
             if not has_valid_deny_all:
                 for d_idx in deny_all_indices:
                     remediations.append({
@@ -112,13 +117,13 @@ class Detector511(BaseRecom):
                     "logical_context": list(logical_context),
                     "exact_path": list(exact_path_to_list)
                 })
-                
+
         if remediations:
             uncompliances.append({
                 "file": filepath,
                 "remediations": remediations
             })
-            
+
         return uncompliances
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -139,7 +144,8 @@ class Detector511(BaseRecom):
             base_exact_path = ["config", config_idx, "parsed"]
 
             # Logic chính của detector 5.1.1
-            file_uncompliances = self._check_block(parsed_ast, [], base_exact_path, filepath)
+            file_uncompliances = self._check_block(
+                parsed_ast, [], base_exact_path, filepath)
             uncompliances.extend(file_uncompliances)
 
         # Gộp các uncompliance trùng file thành 1 entry duy nhất,

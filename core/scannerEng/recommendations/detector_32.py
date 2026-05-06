@@ -11,27 +11,26 @@ class Detector32(BaseRecom):
             return False
         if node.get("directive") != "server":
             return False
-        
+
         block = node.get("block", [])
-        has_server_name_catchall = False
+        has_return_444 = False
         has_https_redirect = False
-        
+
         for child in block:
             if not isinstance(child, dict):
                 continue
             dir_name = child.get("directive")
             args = child.get("args", [])
-            
-            if dir_name == "server_name" and "_" in args:
-                has_server_name_catchall = True
-            
+
             if dir_name == "return":
                 if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
                     has_https_redirect = True
                 elif len(args) == 1 and args[0].startswith("https://"):
                     has_https_redirect = True
-                    
-        return has_server_name_catchall or has_https_redirect
+                elif len(args) == 1 and args[0] == "444":
+                    has_return_444 = True
+
+        return has_https_redirect or has_return_444
 
     def _scan_block(self, directives: List[Dict[str, Any]], filepath: str, logical_context: List[str], exact_path: List[Any], is_exception_context: bool) -> List[Dict[str, Any]]:
         uncompliances = []
@@ -42,7 +41,7 @@ class Detector32(BaseRecom):
             current_exact_path = exact_path + [idx]
             dir_name = directive.get("directive", "")
             args = directive.get("args", [])
-            
+
             current_is_exception = is_exception_context
             if dir_name == "location":
                 args_str = "".join(args).lower()
@@ -72,7 +71,7 @@ class Detector32(BaseRecom):
                 uncompliances.extend(self._scan_block(
                     directive["block"], filepath, new_logical_context, new_exact_path, current_is_exception
                 ))
-                
+
         return uncompliances
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:

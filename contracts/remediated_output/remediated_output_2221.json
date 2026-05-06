@@ -211,10 +211,19 @@
                   ]
                 },
                 {
-                  "directive": "error_page",
+                  "directive": "add_header",
                   "args": [
-                    "404",
-                    "/custom_404.html"
+                    "Content-Security-Policy",
+                    "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
+                    "always"
+                  ]
+                },
+                {
+                  "directive": "add_header",
+                  "args": [
+                    "X-Content-Type-Options",
+                    "\"nosniff\"",
+                    "always"
                   ]
                 },
                 {
@@ -225,6 +234,13 @@
                     "503",
                     "504",
                     "/custom_50x.html"
+                  ]
+                },
+                {
+                  "directive": "error_page",
+                  "args": [
+                    "404",
+                    "/custom_404.html"
                   ]
                 },
                 {
@@ -248,55 +264,6 @@
                         "all"
                       ]
                     }
-                  ]
-                },
-                {
-                  "directive": "add_header",
-                  "args": [
-                    "X-Content-Type-Options",
-                    "\"nosniff\"",
-                    "always"
-                  ]
-                },
-                {
-                  "directive": "add_header",
-                  "args": [
-                    "Content-Security-Policy",
-                    "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
-                    "always"
-                  ]
-                },
-                {
-                  "directive": "add_header",
-                  "args": [
-                    "Content-Security-Policy",
-                    "\"default-src 'self'; frame-ancestors 'self'; form-action 'self';\"",
-                    "always"
-                  ]
-                },
-                {
-                  "directive": "add_header",
-                  "args": [
-                    "X-Content-Type-Options",
-                    "\"nosniff\"",
-                    "always"
-                  ]
-                },
-                {
-                  "directive": "error_page",
-                  "args": [
-                    "500",
-                    "502",
-                    "503",
-                    "504",
-                    "/custom_50x.html"
-                  ]
-                },
-                {
-                  "directive": "error_page",
-                  "args": [
-                    "404",
-                    "/custom_404.html"
                   ]
                 }
               ]

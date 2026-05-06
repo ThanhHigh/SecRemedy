@@ -12,27 +12,27 @@ class Detector242(BaseRecom):
             return False
         if node.get("directive") != "server":
             return False
-        
+
         block = node.get("block", [])
-        has_server_name_catchall = False
+        has_return_444 = False
         has_https_redirect = False
-        
+        has_domain_name = False
+
         for child in block:
             if not isinstance(child, dict):
                 continue
             dir_name = child.get("directive")
             args = child.get("args", [])
-            
-            if dir_name == "server_name" and "_" in args:
-                has_server_name_catchall = True
-            
-            if dir_name == "return":
-                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+
+            if dir_name == "server_name" and len(args) > 0 and any(arg != "_" for arg in args):
+                has_domain_name = True
+            elif dir_name == "return":
+                if len(args) == 1 and args[0] == "444":
+                    has_return_444 = True
+                elif len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
                     has_https_redirect = True
-                elif len(args) == 1 and args[0].startswith("https://"):
-                    has_https_redirect = True
-                    
-        return has_server_name_catchall or has_https_redirect
+
+        return has_return_444 or (has_https_redirect and has_domain_name)
 
     def _check_return(self, block: List[Dict[str, Any]], in_if: bool = False) -> bool:
         for d in block:

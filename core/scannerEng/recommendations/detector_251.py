@@ -13,8 +13,7 @@ class Detector251(BaseRecom):
             return False
 
         block = node.get("block", [])
-        has_server_name_catchall = False
-        has_https_redirect = False
+        has_return_444 = False
 
         for child in block:
             if not isinstance(child, dict):
@@ -22,16 +21,11 @@ class Detector251(BaseRecom):
             dir_name = child.get("directive")
             args = child.get("args", [])
 
-            if dir_name == "server_name" and "_" in args:
-                has_server_name_catchall = True
-
             if dir_name == "return":
-                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
-                    has_https_redirect = True
-                elif len(args) == 1 and args[0].startswith("https://"):
-                    has_https_redirect = True
+                if len(args) == 1 and args[0] == "444":
+                    has_return_444 = True
 
-        return has_server_name_catchall or has_https_redirect
+        return has_return_444
 
     def traverse_directive(self, target_directive: str, directives: List[Dict], filepath: str, logical_context: List[str], exact_path: List[Any], state: Any = None) -> List[Dict[str, Any]]:
         matches = []
@@ -51,7 +45,8 @@ class Detector251(BaseRecom):
                 })
 
             if "block" in directive:
-                new_logical_context = logical_context + [directive["directive"]]
+                new_logical_context = logical_context + \
+                    [directive["directive"]]
                 new_exact_path = current_exact_path + ["block"]
 
                 matches.extend(self.traverse_directive(
@@ -119,7 +114,8 @@ class Detector251(BaseRecom):
             args = dir_node.get("args", [])
             val = " ".join(args).strip(" '\"").lower()
 
-            is_global_or_http = len(st["logical_context"]) == 0 or st["logical_context"] == ["http"]
+            is_global_or_http = len(
+                st["logical_context"]) == 0 or st["logical_context"] == ["http"]
 
             if val == "off":
                 if is_global_or_http:

@@ -2,7 +2,7 @@
   "scan_id": 1,
   "server_ip": "0.0.0.0",
   "compliance_score": 92,
-  "created_at": "2026-05-04T17:07:07Z",
+  "created_at": "2026-05-06T03:05:05Z",
   "recommendations": [
     {
       "id": "2.4.1",
@@ -22,6 +22,88 @@
         {
           "file": "/etc/nginx/nginx.conf",
           "remediations": [
+            {
+              "action": "replace",
+              "directive": "server",
+              "args": [],
+              "block": [
+                {
+                  "directive": "listen",
+                  "args": [
+                    "80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:80",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "ssl",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "listen",
+                  "args": [
+                    "[::]:443",
+                    "quic",
+                    "default_server"
+                  ]
+                },
+                {
+                  "directive": "ssl_reject_handshake",
+                  "args": [
+                    "on"
+                  ]
+                },
+                {
+                  "directive": "server_name",
+                  "args": [
+                    "_"
+                  ]
+                },
+                {
+                  "directive": "return",
+                  "args": [
+                    "444"
+                  ]
+                }
+              ],
+              "logical_context": [
+                "http"
+              ],
+              "exact_path": [
+                "config",
+                0,
+                "parsed",
+                5,
+                "block",
+                10
+              ]
+            },
             {
               "action": "add",
               "directive": "server",
