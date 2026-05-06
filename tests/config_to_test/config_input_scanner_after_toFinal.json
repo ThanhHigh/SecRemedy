@@ -29,6 +29,15 @@
     },
     {
       "ip": "0.0.0.0",
+      "port": 2234,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/remediated_output/remediated_output_2234.json",
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2234.json"
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2239,
       "user": "root",
       "pass": "root",
@@ -62,6 +71,15 @@
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2242.json",
       "output_path": "tmp/contracts/scan_again_result/scan_again_result_2242.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2244,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/remediated_output/remediated_output_2244.json",
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2244.json"
     },
     {
       "ip": "0.0.0.0",
@@ -101,6 +119,15 @@
     },
     {
       "ip": "0.0.0.0",
+      "port": 2254,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/remediated_output/remediated_output_2254.json",
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2254.json"
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2259,
       "user": "root",
       "pass": "root",
@@ -137,6 +164,15 @@
     },
     {
       "ip": "0.0.0.0",
+      "port": 2264,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/remediated_output/remediated_output_2264.json",
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2264.json"
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2269,
       "user": "root",
       "pass": "root",
@@ -161,6 +197,15 @@
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2271.json",
       "output_path": "tmp/contracts/scan_again_result/scan_again_result_2271.json"
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2274,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/remediated_output/remediated_output_2274.json",
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2274.json"
     },
     {
       "ip": "0.0.0.0",
