@@ -16,3 +16,4 @@ PROJECT_ANALYSIS.md
 .gemini/
 .pytest_cache/
 .cursor/
+report/
