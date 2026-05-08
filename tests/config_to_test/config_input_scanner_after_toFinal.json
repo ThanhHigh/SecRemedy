@@ -7,7 +7,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2230.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2230.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2230.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2230.md"
     },
     {
       "ip": "0.0.0.0",
@@ -16,7 +17,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2231.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2231.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2231.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2231.md"
     },
     {
       "ip": "0.0.0.0",
@@ -25,7 +27,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2232.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2232.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2232.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2232.md"
     },
     {
       "ip": "0.0.0.0",
@@ -34,7 +37,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2233.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2233.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2233.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2233.md"
     },
     {
       "ip": "0.0.0.0",
@@ -43,7 +47,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2234.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2234.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2234.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2234.md"
     },
     {
       "ip": "0.0.0.0",
@@ -52,7 +57,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2239.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2239.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2239.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2239.md"
     },
     {
       "ip": "0.0.0.0",
@@ -61,7 +67,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2240.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2240.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2240.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2240.md"
     },
     {
       "ip": "0.0.0.0",
@@ -70,7 +77,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2241.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2241.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2241.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2241.md"
     },
     {
       "ip": "0.0.0.0",
@@ -79,7 +87,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2242.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2242.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2242.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2242.md"
     },
     {
       "ip": "0.0.0.0",
@@ -88,7 +97,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2243.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2243.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2243.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2243.md"
     },
     {
       "ip": "0.0.0.0",
@@ -97,7 +107,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2244.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2244.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2244.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2244.md"
     },
     {
       "ip": "0.0.0.0",
@@ -106,7 +117,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2249.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2249.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2249.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2249.md"
     },
     {
       "ip": "0.0.0.0",
@@ -115,7 +127,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2250.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2250.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2250.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2250.md"
     },
     {
       "ip": "0.0.0.0",
@@ -124,7 +137,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2251.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2251.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2251.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2251.md"
     },
     {
       "ip": "0.0.0.0",
@@ -133,7 +147,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2252.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2252.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2252.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2252.md"
     },
     {
       "ip": "0.0.0.0",
@@ -142,7 +157,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2253.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2253.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2253.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2253.md"
     },
     {
       "ip": "0.0.0.0",
@@ -151,7 +167,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2254.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2254.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2254.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2254.md"
     },
     {
       "ip": "0.0.0.0",
@@ -160,7 +177,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2259.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2259.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2259.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2259.md"
     },
     {
       "ip": "0.0.0.0",
@@ -169,7 +187,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2260.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2260.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2260.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2260.md"
     },
     {
       "ip": "0.0.0.0",
@@ -178,7 +197,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2261.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2261.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2261.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2261.md"
     },
     {
       "ip": "0.0.0.0",
@@ -187,7 +207,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2262.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2262.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2262.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2262.md"
     },
     {
       "ip": "0.0.0.0",
@@ -196,7 +217,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2263.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2263.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2263.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2263.md"
     },
     {
       "ip": "0.0.0.0",
@@ -205,7 +227,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2264.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2264.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2264.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2264.md"
     },
     {
       "ip": "0.0.0.0",
@@ -214,7 +237,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2269.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2269.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2269.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2269.md"
     },
     {
       "ip": "0.0.0.0",
@@ -223,7 +247,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2270.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2270.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2270.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2270.md"
     },
     {
       "ip": "0.0.0.0",
@@ -232,7 +257,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2271.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2271.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2271.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2271.md"
     },
     {
       "ip": "0.0.0.0",
@@ -241,7 +267,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2272.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2272.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2272.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2272.md"
     },
     {
       "ip": "0.0.0.0",
@@ -250,7 +277,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2273.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2273.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2273.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2273.md"
     },
     {
       "ip": "0.0.0.0",
@@ -259,7 +287,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2274.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2274.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2274.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2274.md"
     },
     {
       "ip": "0.0.0.0",
@@ -268,9 +297,8 @@
       "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/remediated_output/remediated_output_2279.json",
-      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2279.json"
+      "output_path": "tmp/contracts/scan_again_result/scan_again_result_2279.json",
+      "report_path": "tmp/contracts/scan_again_report/scan_again_report_2279.md"
     }
   ]
 }
-
-

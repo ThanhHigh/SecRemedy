@@ -13,6 +13,7 @@ Usage (Import):
     result  = scanner.run("contracts/parser_output_2221.json", "contracts/scan_result_2221.json")
 """
 
+import os
 import json
 import argparse
 from pathlib import Path
@@ -68,6 +69,7 @@ class Scanner:
         ssh_pass: str | None = None,
         ssh_key: str | None = None,
         strict_private: bool = False,
+        log_file: str | None = None,
     ):
         self.server_ip = server_ip
         self.ssh_port = ssh_port
@@ -75,6 +77,12 @@ class Scanner:
         self.ssh_pass = ssh_pass
         self.ssh_key = ssh_key
         self.strict_private = strict_private
+        self.log_file = log_file
+
+    def log(self, msg: str):
+        if self.log_file:
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(msg + "\n")
 
     # ------------------------------------------------------------------
     # Public API
@@ -192,13 +200,12 @@ class Scanner:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    @staticmethod
-    def _save_json(data: Dict[str, Any], filepath: str) -> None:
+    def _save_json(self, data: Dict[str, Any], filepath: str) -> None:
         path = Path(filepath)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"[Scanner] ✅ Scan result saved to: {path}")
+        self.log(f"[Scanner] ✅ Scan result saved to: {path}")
 
 
 # ---------------------------------------------------------------------------
@@ -238,18 +245,18 @@ def main():
     for server in servers:
         current_port = server.get("port")
         if not current_port:
-            print("[-] Bỏ qua server thiếu cấu hình 'port'")
             continue
-
-        print(f"\n==========================================")
-        print(
-            f"[*] BẮT ĐẦU SCAN PORT {current_port} (IP: {server.get('ip', '0.0.0.0')})")
-        print(f"==========================================")
 
         input_path = server.get(
             "input_path", f"contracts/parsers_output/parser_output_{current_port}.json")
         output_path = server.get(
             "output_path", f"contracts/scan_result/scan_result_{current_port}.json")
+        report_path = server.get(
+            "report_path", f"contracts/scan_report/scan_report_{current_port}.md")
+
+        Path(report_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(f"# Scanner Report - Port {current_port}\n\n```text\n")
 
         scanner = Scanner(
             server_ip=server.get("ip", "0.0.0.0"),
@@ -258,6 +265,7 @@ def main():
             ssh_pass=server.get("pass"),
             ssh_key=server.get("key"),
             strict_private=server.get("strict_private", False),
+            log_file=str(report_path),
         )
 
         try:
@@ -271,21 +279,23 @@ def main():
                          if r.get("status") == "pass")
             failed = total - passed
 
-            print("\n[Scanner] 🔍 Chi tiết kết quả kiểm tra (Detailed Findings):")
+            scanner.log("\n[Scanner] 🔍 Chi tiết kết quả kiểm tra (Detailed Findings):")
             for r in result["recommendations"]:
                 status_icon = "✅" if r["status"] == "pass" else "❌"
-                print(f"  {status_icon} {r['id']} - {r['title']}")
+                scanner.log(f"  {status_icon} {r['id']} - {r['title']}")
 
-            print(
-                f"\n[Scanner] 📊 Compliance Score: {result['compliance_score']}%")
-            print(
-                f"[Scanner] 📋 Total: {total} | ✅ Pass: {passed} | ❌ Fail: {failed}")
+            scanner.log(f"\n[Scanner] 📊 Compliance Score: {result['compliance_score']}%")
+            scanner.log(f"[Scanner] 📋 Total: {total} | ✅ Pass: {passed} | ❌ Fail: {failed}")
         except FileNotFoundError as e:
-            print(f"[LỖI] {e}")
-            print(
-                f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/parser.py -P {current_port}' trước.")
+            with open(report_path, "a", encoding="utf-8") as f:
+                f.write(f"[LỖI] {e}\n")
+                f.write(f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/parser.py -P {current_port}' trước.\n")
         except Exception as e:
-            print(f"[LỖI HỆ THỐNG] {e}")
+            with open(report_path, "a", encoding="utf-8") as f:
+                f.write(f"[LỖI HỆ THỐNG] {e}\n")
+
+        with open(report_path, "a", encoding="utf-8") as f:
+            f.write("```\n")
 
 
 if __name__ == "__main__":

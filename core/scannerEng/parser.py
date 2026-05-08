@@ -6,7 +6,7 @@ import re
 
 
 class NginxParser:
-    def __init__(self, base_config_path, remote_dir='/etc/nginx'):
+    def __init__(self, base_config_path, remote_dir='/etc/nginx', log_file=None):
         """
         Khởi tạo Parser với thư mục chứa cấu hình Nginx đã tải về.
         Ví dụ: base_config_path = "./tmp/nginx_raw_2221"
@@ -15,18 +15,24 @@ class NginxParser:
         self.remote_dir = remote_dir
         # Đường dẫn tới file nginx.conf chính sau khi giải nén
         self.main_conf_path = os.path.join(self.base_config_path, "nginx.conf")
+        self.log_file = log_file
+
+    def log(self, msg):
+        if self.log_file:
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(msg + "\n")
 
     def normalize_includes(self):
         """
         Quét toàn bộ các file .conf đã tải về.
-        Sử dụng regex để chuyển đổi các đường dẫn 
-        include tuyệt đối (VD: include /etc/nginx/conf.d/*.conf;) 
+        Sử dụng regex để chuyển đổi các đường dẫn
+        include tuyệt đối (VD: include /etc/nginx/conf.d/*.conf;)
         thành đường dẫn tương đối (VD: include conf.d/*.conf;).
         """
         if not os.path.exists(self.base_config_path):
             return
 
-        print("[*] Đang tiền xử lý (Pre-processing) để chuẩn hóa đường dẫn include...")
+        self.log("[*] Đang tiền xử lý (Pre-processing) để chuẩn hóa đường dẫn include...")
 
         # Giải thích Regex:
         # (include\s+) : Group 1 - Bắt chữ 'include' và toàn bộ khoảng trắng/tab/newline theo sau nó.
@@ -53,7 +59,7 @@ class NginxParser:
                         # Ghi đè lại file tạm
                         with open(file_path, 'w', encoding='utf-8') as f:
                             f.write(new_content)
-                        print(f"  -> Đã chuẩn hóa include trong file: {file}")
+                        self.log(f"  -> Đã chuẩn hóa include trong file: {file}")
 
     def parse(self):
         """
@@ -65,17 +71,17 @@ class NginxParser:
 
         self.normalize_includes()
 
-        print(f"[*] Đang phân tích cú pháp (AST) cho: {self.main_conf_path}")
+        self.log(f"[*] Đang phân tích cú pháp (AST) cho: {self.main_conf_path}")
 
         # Gọi API của crossplane. catch_errors=True giúp tool không bị crash nếu thiếu file include
         payload = crossplane.parse(self.main_conf_path, catch_errors=True)
 
         # Kiểm tra xem crossplane có gặp lỗi khi parse include không
         if payload.get("status") == "failed" or payload.get("errors"):
-            print(
+            self.log(
                 "[CẢNH BÁO] Crossplane gặp lỗi (Thường do sai đường dẫn include tuyệt đối):")
             for err in payload.get("errors", []):
-                print(f"  -> {err['error']}")
+                self.log(f"  -> {err['error']}")
 
         # Thay thế đường dẫn local thành remote trong kết quả trả về
         base_path_to_replace = os.path.abspath(self.base_config_path)
@@ -117,8 +123,7 @@ class NginxParser:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(payload, f, indent=2)
 
-        print(
-            f"[THÀNH CÔNG] Đã xuất Data Contract (AST) ra file: {output_file}")
+        self.log(f"[THÀNH CÔNG] Đã xuất Data Contract (AST) ra file: {output_file}")
         return payload
 
 
@@ -128,7 +133,7 @@ def main():
     )
     parser_cli.add_argument(
         "--config", "-c",
-        default="scan_before_remedy_config_input.json",
+        default="tests/config_to_test/config_input_scanner_before_toFinal.json",
         help="Path to configuration file (defaults to scan_before_remedy_config_input.json)."
     )
     args = parser_cli.parse_args()
@@ -150,23 +155,27 @@ def main():
         print(f"[-] Không có server nào được định nghĩa trong {config_path}")
         exit(1)
 
+    report_dir = "./tmp/contracts/parsers_report"
+    os.makedirs(report_dir, exist_ok=True)
+
     for server in servers:
         current_port = server.get("port")
         if not current_port:
-            print("[-] Bỏ qua server thiếu cấu hình 'port'")
             continue
 
-        print(f"\n==========================================")
-        print(f"[*] BẮT ĐẦU PARSE PORT {current_port}")
-        print(f"==========================================")
+        report_file = os.path.join(report_dir, f"parser_report_{current_port}.md")
+        with open(report_file, "w", encoding="utf-8") as f:
+            f.write(f"# Parser Report - Port {current_port}\n\n```text\n")
+
         # 1. Xác định thư mục đầu vào tự động dựa trên Port
         TARGET_DIR = f"./tmp/nginx_raw_{current_port}"
 
         # Kiểm tra xem thư mục đã được fetcher.py tải về chưa
         if not os.path.exists(TARGET_DIR):
-            print(f"[LỖI] Không tìm thấy thư mục cấu hình: {TARGET_DIR}")
-            print(
-                f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/fetcher.py --config {config_path}' trước để tải cấu hình về máy.")
+            with open(report_file, "a", encoding="utf-8") as f:
+                f.write(f"[LỖI] Không tìm thấy thư mục cấu hình: {TARGET_DIR}\n")
+                f.write(f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/fetcher.py --config {config_path}' trước để tải cấu hình về máy.\n")
+                f.write("```\n")
             continue
 
         # 2. Xác định tên file JSON đầu ra tự động dựa trên config (đóng vai trò là input_path của scanner)
@@ -174,18 +183,20 @@ def main():
             "input_path", f"contracts/parsers_output/parser_output_{current_port}.json")
 
         # 3. Thực thi Parser
-        nginx_parser = NginxParser(base_config_path=TARGET_DIR)
+        nginx_parser = NginxParser(base_config_path=TARGET_DIR, log_file=report_file)
         try:
             ast_data = nginx_parser.export_to_contract(
                 output_file=output_contract_file)
 
             # In thống kê cơ bản
             parsed_files = len(ast_data.get("config", []))
-            print(
-                f"[*] Tổng số file cấu hình đã phân tích thành công: {parsed_files}")
+            nginx_parser.log(f"[*] Tổng số file cấu hình đã phân tích thành công: {parsed_files}")
 
         except Exception as e:
-            print(f"[LỖI HỆ THỐNG] {e}")
+            nginx_parser.log(f"[LỖI HỆ THỐNG] {e}")
+
+        with open(report_file, "a", encoding="utf-8") as f:
+            f.write("```\n")
 
 
 # --- Khối xử lý CLI Arguments ---

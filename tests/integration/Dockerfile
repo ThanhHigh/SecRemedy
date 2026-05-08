@@ -20,6 +20,17 @@ RUN mkdir -p /etc/ssl/mock_certs && \
     -out /etc/ssl/mock_certs/admin.crt \
     -subj "/C=VN/ST=HN/L=HN/O=DevSecOps/CN=admin"
 
+# Tạo mock Let's Encrypt certificates cho các domain dùng trong test
+RUN for domain in thanhexample1.com thanhexample2 exampletree.com examplefor.com examplephai.com; do \
+        mkdir -p "/etc/letsencrypt/live/$domain" && \
+        cp /etc/ssl/mock_certs/nginx.crt "/etc/letsencrypt/live/$domain/fullchain.pem" && \
+        cp /etc/ssl/mock_certs/nginx.key "/etc/letsencrypt/live/$domain/privkey.pem" && \
+        cp /etc/ssl/mock_certs/nginx.crt "/etc/letsencrypt/live/$domain/chain.pem"; \
+    done
+
+# Sinh dhparam giả lập nhanh
+RUN openssl dhparam -out /etc/nginx/dhparam.pem 512
+
 # Mở port 80 (HTTP), 443 (HTTPS) và 22 (SSH)
 EXPOSE 80 443 22
 

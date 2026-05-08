@@ -10,14 +10,15 @@ config_input_scanner_after_toFinal.json (To run scanner after run remedy)
 
 Begin run test
 In terminal
+
 - Run set up enviroment first
 
-- python -m core.scannerEng.parser --config test/config_to_test/config_input_scanner_before_toFinal.json
+python -m core.scannerEng.parser --config tests/config_to_test/config_input_scanner_before_toFinal.json
 
-- python -m core.scannerEng.scanner --config test/config_to_test/config_input_scanner_before_toFinal.json
+python -m core.scannerEng.scanner --config tests/config_to_test/config_input_scanner_before_toFinal.json
 
-- python -m core.remedyEng.run_remedy --config test/config_to_test/config_input_remedy_toFinal.json
+python -m core.remedyEng.run_remedy --config tests/config_to_test/config_input_remedy_toFinal.json
 
-- python -m core.scannerEng.scanner --config test/config_to_test/config_input_scanner_after_toFinal.json
+python -m core.scannerEng.scanner --config tests/config_to_test/config_input_scanner_after_toFinal.json
 
 You can see the output files in tmp/contracts and the result score info is in terminal
