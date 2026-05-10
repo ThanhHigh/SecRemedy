@@ -128,6 +128,24 @@
     },
     {
       "ip": "0.0.0.0",
+      "port": 2237,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "ast_config": "tmp/contracts/parsers_output/parser_output_2237.json",
+      "scan_result": "tmp/contracts/scan_result/scan_result_2237.json",
+      "remediate_ast": "tmp/contracts/remediated_output/remediated_output_2237.json",
+      "remediate_config": "tmp/remedies_output/nginx_remediate_2237_v1",
+      "remedy_inputs": {
+        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.3": ["/var/www/html", "_"],
+        "3.2": ["global:/var/log/nginx/access.log combined", "off"],
+        "5.1.1": ["/admin", "127.0.0.1"],
+        "5.3.1": ["yes"]
+      }
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2239,
       "user": "root",
       "pass": "root",
@@ -262,6 +280,24 @@
       "scan_result": "tmp/contracts/scan_result/scan_result_2246.json",
       "remediate_ast": "tmp/contracts/remediated_output/remediated_output_2246.json",
       "remediate_config": "tmp/remedies_output/nginx_remediate_2246_v1",
+      "remedy_inputs": {
+        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.3": ["/var/www/html", "_"],
+        "3.2": ["global:/var/log/nginx/access.log combined", "off"],
+        "5.1.1": ["/admin", "127.0.0.1"],
+        "5.3.1": ["yes"]
+      }
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2247,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "ast_config": "tmp/contracts/parsers_output/parser_output_2247.json",
+      "scan_result": "tmp/contracts/scan_result/scan_result_2247.json",
+      "remediate_ast": "tmp/contracts/remediated_output/remediated_output_2247.json",
+      "remediate_config": "tmp/remedies_output/nginx_remediate_2247_v1",
       "remedy_inputs": {
         "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
         "2.5.3": ["/var/www/html", "_"],
@@ -416,6 +452,24 @@
     },
     {
       "ip": "0.0.0.0",
+      "port": 2257,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "ast_config": "tmp/contracts/parsers_output/parser_output_2257.json",
+      "scan_result": "tmp/contracts/scan_result/scan_result_2257.json",
+      "remediate_ast": "tmp/contracts/remediated_output/remediated_output_2257.json",
+      "remediate_config": "tmp/remedies_output/nginx_remediate_2257_v1",
+      "remedy_inputs": {
+        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.3": ["/var/www/html", "_"],
+        "3.2": ["global:/var/log/nginx/access.log combined", "off"],
+        "5.1.1": ["/admin", "127.0.0.1"],
+        "5.3.1": ["yes"]
+      }
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2259,
       "user": "root",
       "pass": "root",
@@ -560,6 +614,24 @@
     },
     {
       "ip": "0.0.0.0",
+      "port": 2267,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "ast_config": "tmp/contracts/parsers_output/parser_output_2267.json",
+      "scan_result": "tmp/contracts/scan_result/scan_result_2267.json",
+      "remediate_ast": "tmp/contracts/remediated_output/remediated_output_2267.json",
+      "remediate_config": "tmp/remedies_output/nginx_remediate_2267_v1",
+      "remedy_inputs": {
+        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.3": ["/var/www/html", "_"],
+        "3.2": ["global:/var/log/nginx/access.log combined", "off"],
+        "5.1.1": ["/admin", "127.0.0.1"],
+        "5.3.1": ["yes"]
+      }
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2269,
       "user": "root",
       "pass": "root",
@@ -694,6 +766,24 @@
       "scan_result": "tmp/contracts/scan_result/scan_result_2276.json",
       "remediate_ast": "tmp/contracts/remediated_output/remediated_output_2276.json",
       "remediate_config": "tmp/remedies_output/nginx_remediate_2276_v1",
+      "remedy_inputs": {
+        "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
+        "2.5.3": ["/var/www/html", "_"],
+        "3.2": ["global:/var/log/nginx/access.log combined", "off"],
+        "5.1.1": ["/admin", "127.0.0.1"],
+        "5.3.1": ["yes"]
+      }
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2277,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "ast_config": "tmp/contracts/parsers_output/parser_output_2277.json",
+      "scan_result": "tmp/contracts/scan_result/scan_result_2277.json",
+      "remediate_ast": "tmp/contracts/remediated_output/remediated_output_2277.json",
+      "remediate_config": "tmp/remedies_output/nginx_remediate_2277_v1",
       "remedy_inputs": {
         "2.5.2": ["/custom_404.html", "/custom_50x.html", "/var/www/html/errors"],
         "2.5.3": ["/var/www/html", "_"],
