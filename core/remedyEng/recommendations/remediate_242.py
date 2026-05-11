@@ -15,9 +15,9 @@ Structure to create (or update):
     listen [::]:443 ssl default_server;
     listen 443 quic default_server;
     listen [::]:443 quic default_server;
-    
+
     server_name _;          # Wildcard - matches anything
-    
+
     ssl_reject_handshake on;  # Prevent TLS cert leakage for unknown domains
     return 444;               # Close connection (nginx code: close connection)
   }
@@ -42,7 +42,7 @@ class Remediate242(BaseRemedy):
     def _validate_user_inputs(self) -> tuple[bool, str]:
         """
         Validate user inputs for default server configuration.
-        
+
         Returns:
             (is_valid: bool, error_message: str)
         """
@@ -50,18 +50,18 @@ class Remediate242(BaseRemedy):
             # Default to _ (wildcard)
             self.user_inputs = ["_"]
             return (True, "")
-        
+
         server_name = self.user_inputs[0].strip()
-        
+
         # If empty, default to _
         if not server_name:
             self.user_inputs[0] = "_"
             return (True, "")
-        
+
         # Rule 2.4.2 requires a true catch-all server block. Reject specific hostnames.
         if server_name != "_":
             return (False, f"server_name '{server_name}' is not catch-all. Use '_' for Rule 2.4.2")
-        
+
         return (True, "")
 
     def collect_patches(self):
@@ -114,7 +114,7 @@ class Remediate242(BaseRemedy):
                         target_list = ASTEditor.get_child_ast_config(parsed_copy, rel_ctx)
 
                 if not isinstance(target_list, list):
-                    if action == "add_block" and directive == "server" and isinstance(rel_ctx, list):
+                    if action == "add" and directive == "server" and isinstance(rel_ctx, list):
                         block_ctx = rel_ctx + ["block"]
                         block_target = ASTEditor.get_child_ast_config(parsed_copy, block_ctx)
                         if isinstance(block_target, list):
@@ -134,10 +134,11 @@ class Remediate242(BaseRemedy):
                             "priority": 0,
                         })
 
-                elif action == "add_block" and directive == "server":
+                elif action == "replace" and directive == "server":
                     default_server_block = self._build_default_server_block(server_name)
                     existing_default_idx = self._find_default_server_index(target_list)
-                    if existing_default_idx >= 0:
+                    # if existing_default_idx >= 0:
+                    if True:
                         patches.append({
                             "action": "replace",
                             "exact_path": list(rel_ctx) + [existing_default_idx],
@@ -150,7 +151,7 @@ class Remediate242(BaseRemedy):
 
                     if self.strict_placement and position_hint == 0:
                         patches.append({
-                            "action": "insert_at",
+                            "action": "add",
                             "exact_path": list(rel_ctx),
                             "index": 0,
                             "block": copy.deepcopy(default_server_block),
@@ -158,7 +159,7 @@ class Remediate242(BaseRemedy):
                         })
                     else:
                         patches.append({
-                            "action": "add_block",
+                            "action": "add",
                             "exact_path": list(rel_ctx),
                             "directive": "server",
                             "block": copy.deepcopy(default_server_block),
@@ -203,16 +204,16 @@ class Remediate242(BaseRemedy):
     def _build_default_server_block(server_name: str) -> dict:
         """
         Build a complete default (catch-all) server block structure.
-        
+
         This block:
         - Listens on all ports (80, 443) for both IPv4 and IPv6
         - Matches any server_name (via _ wildcard)
         - Returns 444 (nginx: close connection) for HTTP
         - Returns ssl_reject_handshake on for HTTPS (prevents cert info leakage)
-        
+
         Args:
             server_name: server_name value to use (typically "_")
-            
+
         Returns:
             Dict representing the server block
         """
@@ -227,7 +228,7 @@ class Remediate242(BaseRemedy):
             {"directive": "ssl_reject_handshake", "args": ["on"]},
             {"directive": "return", "args": ["444"]}
         ]
-        
+
         return {
             "directive": "server",
             "args": [],
@@ -250,8 +251,8 @@ class Remediate242(BaseRemedy):
             directive = item.get("directive")
             args = item.get("args") if isinstance(item.get("args"), list) else []
 
-            if directive == "server_name" and args == ["_"]:
-                return True
+            # if directive == "server_name" and args == ["_"]:
+            #     return True
 
             if directive == "listen" and "default_server" in args:
                 return True
@@ -307,7 +308,7 @@ server {
   listen [::]:443 ssl default_server;
   listen 443 quic default_server;
   listen [::]:443 quic default_server;
-  
+
   server_name _;
   ssl_reject_handshake on;
   return 444;

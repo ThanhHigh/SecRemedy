@@ -123,7 +123,7 @@ SecRemedy/
 │   │   ├── parsers_output/         # AST gốc sau parse
 │   │   ├── scan_result/            # Báo cáo lỗi JSON Contract từ Scanner
 │   │   └── remediated_output/      # AST đã vá
-│   └── remedies_output/            # Thư mục nginx config đã remediate
+│   └── hardened_configs/            # Thư mục nginx config đã remediate
 ├── notes/                          # Ghi chú phát triển
 ├── devsecops_nginx.db              # SQLite DB (runtime)
 └── requirements.txt                # Python dependencies
@@ -177,7 +177,7 @@ Không cần SSH hay Docker. Script tự copy cấu hình tĩnh vào `tmp/`, ch�
 bash tests/run_tests.sh
 ```
 
-Output lưu tại `tmp/contracts/` và `tmp/remedies_output/`.
+Output lưu tại `tmp/contracts/` và `tmp/hardened_configs/`.
 
 ---
 

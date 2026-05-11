@@ -13,9 +13,9 @@ class Detector411(BaseRecom):
             return False
 
         block = node.get("block", [])
-        has_return_444 = False
-        has_https_redirect = False
-        has_domain_name = False
+        has_return_4xx = False
+        has_catch_all_server_name = False
+        has_default_server = False
 
         for child in block:
             if not isinstance(child, dict):
@@ -23,15 +23,14 @@ class Detector411(BaseRecom):
             dir_name = child.get("directive")
             args = child.get("args", [])
 
-            if dir_name == "server_name" and len(args) > 0 and any(arg != "_" for arg in args):
-                has_domain_name = True
-            elif dir_name == "return":
-                if len(args) == 1 and args[0] == "444":
-                    has_return_444 = True
-                elif len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
-                    has_https_redirect = True
+            if dir_name == "return" and len(args) == 1 and args[0] in ["444", "403"]:
+                has_return_4xx = True
+            elif dir_name == "server_name" and len(args) == 1 and args[0] == "_":
+                has_catch_all_server_name = True
+            elif dir_name == "listen" and len(args) == 2 and args[1] == "default_server":
+                has_default_server = True
 
-        return has_return_444 or (has_https_redirect and has_domain_name)
+        return has_return_4xx or has_catch_all_server_name or has_default_server
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         uncompliances = []
