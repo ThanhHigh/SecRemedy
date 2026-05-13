@@ -83,6 +83,8 @@ class Detector242(BaseRecom):
             {"directive": "server_name", "args": ["_"]})
         remediation_block.append({"directive": "return", "args": ["444"]})
 
+        has_replace_rem = False
+
         for config_idx, config_file in enumerate(parser_output.get("config", [])):
             filepath = config_file.get("file", "")
 
@@ -147,6 +149,7 @@ class Detector242(BaseRecom):
                                     is_valid_block = False
 
                             if protocols_with_default and not is_valid_block:
+                                has_replace_rem = True
                                 uncompliances.append({
                                     "file": filepath,
                                     "remediations": [{
@@ -201,6 +204,7 @@ class Detector242(BaseRecom):
                             is_valid_block = False
 
                     if protocols_with_default and not is_valid_block:
+                        has_replace_rem = True
                         uncompliances.append({
                             "file": filepath,
                             "remediations": [{
@@ -216,9 +220,9 @@ class Detector242(BaseRecom):
         if not used_protocols:
             used_protocols.add("http")
 
-        missing_protocols = used_protocols - valid_protocols
+        # missing_protocols = used_protocols - valid_protocols
 
-        if not protocols_with_default:
+        if not has_replace_rem:
             rem_entry = {
                 "action": "add",
                 "directive": "server",

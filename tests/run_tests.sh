@@ -12,7 +12,7 @@ mkdir -p "$TMP_DIR"
 
 echo "2. Lấy nginx_raw_* từ *_uncomply sang tmp/..."
 # Copy mọi thư mục con (nginx_raw_...) nằm trong các thư mục *_uncomply/ vào tmp/
-find "$INTEGRATION_DIR" -type d -name "*_to_*_uncomply" -exec cp -r {}/. "$TMP_DIR/" \;
+find "$INTEGRATION_DIR" -type d -name "*_uncomply" -exec cp -r {}/. "$TMP_DIR/" \;
 
 export PYTHONPATH="$PROJECT_ROOT"
 

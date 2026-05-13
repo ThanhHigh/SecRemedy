@@ -3,9 +3,10 @@ from core.scannerEng.base_recom import BaseRecom, RecomID
 
 
 class Detector511(BaseRecom):
-    def __init__(self, strict_private: bool = False):
+    def __init__(self, strict_private: bool = False, authorized_ips: Optional[List[str]] = None):
         super().__init__(RecomID.CIS_5_1_1)
         self.strict_private = strict_private
+        self.authorized_ips = authorized_ips or []
 
     def _should_skip_block(self, node: Dict[str, Any]) -> bool:
         if not isinstance(node, dict):
@@ -67,7 +68,21 @@ class Detector511(BaseRecom):
                         "exact_path": exact_path_to_list + [idx]
                     })
                 else:
-                    allow_indices.append(idx)
+                    is_valid = True
+                    if self.authorized_ips:
+                        for arg in d_args:
+                            if arg not in self.authorized_ips:
+                                is_valid = False
+                                break
+                    if not is_valid:
+                        remediations.append({
+                            "action": "delete",
+                            "directive": "allow",
+                            "logical_context": list(logical_context),
+                            "exact_path": exact_path_to_list + [idx]
+                        })
+                    else:
+                        allow_indices.append(idx)
 
             elif d_name == "deny":
                 if "all" in d_args:
@@ -151,3 +166,4 @@ class Detector511(BaseRecom):
         # Gộp các uncompliance trùng file thành 1 entry duy nhất,
         # gom tất cả remediations lại. Khớp với JSON Contract (scan_result.json).
         return self._group_by_file(uncompliances)
+

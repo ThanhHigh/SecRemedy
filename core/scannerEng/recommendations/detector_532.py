@@ -14,8 +14,8 @@ class Detector532(BaseRecom):
             return False
 
         block = node.get("block", [])
-        has_server_name_catchall = False
         has_https_redirect = False
+        has_return_4xx = False
 
         for child in block:
             if not isinstance(child, dict):
@@ -23,16 +23,15 @@ class Detector532(BaseRecom):
             dir_name = child.get("directive")
             args = child.get("args", [])
 
-            if dir_name == "server_name" and "_" in args:
-                has_server_name_catchall = True
-
             if dir_name == "return":
                 if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
                     has_https_redirect = True
                 elif len(args) == 1 and args[0].startswith("https://"):
                     has_https_redirect = True
+                elif len(args) == 1 and args[0] in ("444", "403"):
+                    has_return_4xx = True
 
-        return has_server_name_catchall or has_https_redirect
+        return has_https_redirect or has_return_4xx
 
     def _check_csp(self, directive: dict) -> bool:
         args = directive.get("args", [])
@@ -94,11 +93,11 @@ class Detector532(BaseRecom):
 
     def _traverse(self, directives: List[Dict], logical_context: List[str], base_exact_path: List[Any], file_idx: int, inherited_csp: Optional[Dict], config_list: List[Dict], adds: Dict, replaces: Dict, visited_files: set):
         visited_files.add(file_idx)
-        
+
         headers = self._get_direct_add_headers(directives, base_exact_path, file_idx, config_list)
         has_add_header = len(headers) > 0
         local_csp = None
-        
+
         for h in headers:
             args = h["stmt"].get("args", [])
             if args and args[0].lower() in ("content-security-policy", "content-security-policy-report-only"):
@@ -110,15 +109,15 @@ class Detector532(BaseRecom):
                     "is_valid": is_valid,
                     "owner_context": logical_context.copy()
                 }
-        
+
         effective_csp = local_csp if has_add_header else inherited_csp
         current_block_name = logical_context[-1] if logical_context else ""
         block_is_leaf = self._is_leaf(directives, config_list)
-        
+
         if current_block_name in ("server", "location"):
             needs_add = False
             invalid_csp = None
-            
+
             if has_add_header:
                 if local_csp is None:
                     needs_add = True
@@ -131,7 +130,7 @@ class Detector532(BaseRecom):
                 else:
                     if not effective_csp["is_valid"]:
                         invalid_csp = effective_csp
-            
+
             if needs_add:
                 ep_tuple = tuple(base_exact_path)
                 adds[ep_tuple] = {
@@ -142,7 +141,7 @@ class Detector532(BaseRecom):
                 effective_csp = {
                     "stmt": {}, "exact_path": [], "file_idx": 0, "is_valid": True, "owner_context": []
                 }
-            
+
             if invalid_csp:
                 ep_tuple = tuple(invalid_csp["exact_path"])
                 replaces[ep_tuple] = {
@@ -151,20 +150,20 @@ class Detector532(BaseRecom):
                     "exact_path": invalid_csp["exact_path"],
                     "stmt": invalid_csp["stmt"]
                 }
-        
+
         for i, d in enumerate(directives):
             if self._should_skip_block(d):
                 continue
-                
+
             path = base_exact_path + [i]
             dir_name = d.get("directive", "")
-            
+
             if "block" in d:
                 next_context = logical_context.copy()
                 if dir_name in ("http", "server", "location"):
                     next_context.append(dir_name)
                 self._traverse(d["block"], next_context, path + ["block"], file_idx, effective_csp, config_list, adds, replaces, visited_files)
-            
+
             elif dir_name == "include":
                 for inc_idx in self._resolve_includes(d, config_list):
                     if inc_idx < len(config_list):
@@ -175,7 +174,7 @@ class Detector532(BaseRecom):
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         uncompliances = []
         config_list = parser_output.get("config", [])
-        
+
         adds = {}
         replaces = {}
         visited_files = set()
@@ -186,9 +185,9 @@ class Detector532(BaseRecom):
                 if cf.get("file", "").endswith("nginx.conf"):
                     entrypoint_idx = i
                     break
-            
+
             self._traverse(config_list[entrypoint_idx].get("parsed", []), [], ["config", entrypoint_idx, "parsed"], entrypoint_idx, None, config_list, adds, replaces, visited_files)
-            
+
             global_http_csp = None
             for i, stmt in enumerate(config_list[entrypoint_idx].get("parsed", [])):
                 if stmt.get("directive") == "http":
@@ -197,10 +196,10 @@ class Detector532(BaseRecom):
                         args = h["stmt"].get("args", [])
                         if args and args[0].lower() in ("content-security-policy", "content-security-policy-report-only"):
                             global_http_csp = {
-                                "stmt": h["stmt"], "exact_path": h["exact_path"], "file_idx": h["file_idx"], 
+                                "stmt": h["stmt"], "exact_path": h["exact_path"], "file_idx": h["file_idx"],
                                 "is_valid": self._check_csp(h["stmt"]), "owner_context": ["http"]
                             }
-            
+
             for idx, config_file in enumerate(config_list):
                 if idx not in visited_files:
                     filepath = config_file.get("file", "")

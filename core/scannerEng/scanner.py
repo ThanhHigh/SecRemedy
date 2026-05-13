@@ -69,6 +69,8 @@ class Scanner:
         ssh_pass: str | None = None,
         ssh_key: str | None = None,
         strict_private: bool = False,
+        authorized_ports: List[int] | None = None,
+        authorized_ips: List[str] | None = None,
         log_file: str | None = None,
     ):
         self.server_ip = server_ip
@@ -77,6 +79,8 @@ class Scanner:
         self.ssh_pass = ssh_pass
         self.ssh_key = ssh_key
         self.strict_private = strict_private
+        self.authorized_ports = authorized_ports
+        self.authorized_ips = authorized_ips
         self.log_file = log_file
 
     def log(self, msg: str):
@@ -127,7 +131,9 @@ class Scanner:
 
         for recom_id, detector_cls in DETECTOR_REGISTRY.items():
             if recom_id == "5.1.1":
-                detector = detector_cls(strict_private=self.strict_private)
+                detector = detector_cls(strict_private=self.strict_private, authorized_ips=self.authorized_ips)
+            elif recom_id == "2.4.1":
+                detector = detector_cls(authorized_ports=self.authorized_ports)
             else:
                 detector = detector_cls()
             uncompliances = detector.scan(parser_output)
@@ -265,6 +271,8 @@ def main():
             ssh_pass=server.get("pass"),
             ssh_key=server.get("key"),
             strict_private=server.get("strict_private", False),
+            authorized_ports=server.get("authorized_ports"),
+            authorized_ips=server.get("authorized_ips"),
             log_file=str(report_path),
         )
 

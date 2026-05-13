@@ -5,8 +5,13 @@ from core.recom_registry import RecomID
 
 
 class Detector241(BaseRecom):
-    def __init__(self):
+    def __init__(self, authorized_ports: List[int] | None = None):
         super().__init__(RecomID.CIS_2_4_1)
+        # Sử dụng set để tìm kiếm O(1). Nếu không có config, dùng default.
+        if authorized_ports:
+            self.authorized_ports = set(authorized_ports)
+        else:
+            self.authorized_ports = {80, 443, 8080, 8443, 9000}
 
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
@@ -15,8 +20,8 @@ class Detector241(BaseRecom):
         Kết quả được gộp theo file (mỗi file 1 entry) để khớp với JSON Contract.
         """
         uncompliances = []
-        # Cổng hợp lệ (cho phép)
-        authorized_ports = {80, 443, 8080, 8443, 9000}
+        # Cổng hợp lệ (cho phép) - lấy từ cấu hình
+        authorized_ports = self.authorized_ports
 
         # Duyệt từng file AST
         for config_idx, config_file in enumerate(parser_output.get("config", [])):
