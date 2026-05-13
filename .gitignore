@@ -17,3 +17,4 @@ PROJECT_ANALYSIS.md
 .pytest_cache/
 .cursor/
 report/
+texput.log
