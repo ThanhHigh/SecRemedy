@@ -50,6 +50,7 @@ class Detector254(BaseRecom):
                 [],
                 set(),
                 set(),
+                set(),
                 uncompliances
             )
 
@@ -63,13 +64,16 @@ class Detector254(BaseRecom):
         logical_context: List[str], 
         proxy_hidden: set, 
         fastcgi_hidden: set, 
+        uwsgi_hidden: set,
         uncompliances: List[Dict[str, Any]]
     ):
         current_proxy_hidden = set(proxy_hidden)
         current_fastcgi_hidden = set(fastcgi_hidden)
+        current_uwsgi_hidden = set(uwsgi_hidden)
         
         has_proxy_hide = False
         has_fastcgi_hide = False
+        has_uwsgi_hide = False
         for node in ast_list:
             if isinstance(node, dict):
                 d_name = node.get("directive")
@@ -77,6 +81,8 @@ class Detector254(BaseRecom):
                     has_proxy_hide = True
                 elif d_name == "fastcgi_hide_header":
                     has_fastcgi_hide = True
+                elif d_name == "uwsgi_hide_header":
+                    has_uwsgi_hide = True
 
         if has_proxy_hide:
             current_proxy_hidden = set()
@@ -93,6 +99,14 @@ class Detector254(BaseRecom):
                     args = node.get("args", [])
                     if args and not args[0].startswith("$"):
                         current_fastcgi_hidden.add(args[0].lower())
+
+        if has_uwsgi_hide:
+            current_uwsgi_hidden = set()
+            for node in ast_list:
+                if isinstance(node, dict) and node.get("directive") == "uwsgi_hide_header":
+                    args = node.get("args", [])
+                    if args and not args[0].startswith("$"):
+                        current_uwsgi_hidden.add(args[0].lower())
 
         for idx, node in enumerate(ast_list):
             if not isinstance(node, dict):
@@ -138,6 +152,29 @@ class Detector254(BaseRecom):
                             "exact_path": exact_path.copy()
                         }]
                     })
+            elif dir_name == "uwsgi_pass":
+                if "x-powered-by" not in current_uwsgi_hidden:
+                    uncompliances.append({
+                        "file": filepath,
+                        "remediations": [{
+                            "action": "add",
+                            "directive": "uwsgi_hide_header",
+                            "args": ["X-Powered-By"],
+                            "logical_context": logical_context.copy(),
+                            "exact_path": exact_path.copy()
+                        }]
+                    })
+                if "server" not in current_uwsgi_hidden:
+                    uncompliances.append({
+                        "file": filepath,
+                        "remediations": [{
+                            "action": "add",
+                            "directive": "uwsgi_hide_header",
+                            "args": ["Server"],
+                            "logical_context": logical_context.copy(),
+                            "exact_path": exact_path.copy()
+                        }]
+                    })
             
             if "block" in node:
                 self._traverse(
@@ -147,5 +184,6 @@ class Detector254(BaseRecom):
                     logical_context + [dir_name],
                     current_proxy_hidden,
                     current_fastcgi_hidden,
+                    current_uwsgi_hidden,
                     uncompliances
                 )

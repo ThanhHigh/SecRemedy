@@ -1,0 +1,9 @@
+PASS: nginx_raw_2300
+PASS: nginx_raw_2310
+PASS: nginx_raw_2320
+PASS: nginx_raw_2330
+PASS: nginx_raw_2340
+PASS: nginx_raw_2350
+
+=== SUMMARY ===
+Total: 6 | Passed: 6 | Failed: 0

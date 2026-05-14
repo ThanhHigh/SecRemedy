@@ -64,8 +64,8 @@ class Detector241(BaseRecom):
                             {
                                 "action": "delete",
                                 "directive": "listen",
+                                "line": match["line"],
                                 "logical_context": match["logical_context"],
-                                # Bắt buộc có để Remediation biết xóa ở đâu
                                 "exact_path": match["exact_path"]
                             }
                         ]

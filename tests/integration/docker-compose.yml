@@ -1,10 +1,13 @@
 services:
   nginx_test_env:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: nginx_sec_remedy_test
     ports:
       - "8080:80"
       - "8443:443"
-      - "2222:22" # Port SSH cho Paramiko của Member 1 & 2
+      - "2222:22"
     volumes:
-      - ./workspace:/etc/nginx # Thư mục động, Pytest sẽ copy file cấu hình vào đây
+      - ./workspace:/etc/nginx
+    restart: "no"

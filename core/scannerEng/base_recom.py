@@ -27,7 +27,7 @@ class BaseRecom:
         matches = []
         # Dùng enumerate để lấy index của directive trong list hiện tại
         for idx, directive in enumerate(directives):
-
+            line = directive.get("line", 0)
             # Tính toán Exact Path cho directive hiện tại
             # VD: ["config", 0, "parsed"] + [5] => ["config", 0, "parsed", 5]
             current_exact_path = exact_path + [idx]
@@ -36,6 +36,7 @@ class BaseRecom:
             if directive.get("directive") == target_directive:
                 matches.append({
                     "directive": directive,
+                    "line": line,
                     "filepath": filepath,
                     "logical_context": logical_context,
                     "exact_path": current_exact_path,
@@ -63,8 +64,8 @@ class BaseRecom:
         return matches
 
     @staticmethod
-    def _dir(directive: str, args: list = None, block: list = None) -> dict:
-        d = {"directive": directive, "args": args or []}
+    def _dir(directive: str, args: list = None, block: list = None, line: int = 0) -> dict:
+        d = {"directive": directive, "args": args or [], "line": line}
         if block is not None:
             d["block"] = block
         return d

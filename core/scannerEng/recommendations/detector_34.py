@@ -23,7 +23,7 @@ class Detector34(BaseRecom):
             parsed_ast = config_file.get("parsed", [])
             exact_path = ["config", idx, "parsed"]
             self._traverse(parsed_ast, filepath, exact_path,
-                           [], {}, {}, {}, uncompliances)
+                           [], {}, {}, {}, {}, uncompliances)
 
         return self._group_by_file(uncompliances)
 
@@ -68,6 +68,7 @@ class Detector34(BaseRecom):
     def _traverse(self, ast_list: List[Any], filepath: str, exact_path: List[Any],
                   logical_context: List[str], proxy_headers: Dict[str, bool],
                   fastcgi_params: Dict[str, bool], grpc_headers: Dict[str, bool],
+                  uwsgi_params: Dict[str, bool],
                   uncompliances: List[Dict[str, Any]]):
 
         has_proxy_override = any(isinstance(n, dict) and n.get("directive") == "proxy_set_header" and (
@@ -76,10 +77,13 @@ class Detector34(BaseRecom):
             not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
         has_grpc_override = any(isinstance(n, dict) and n.get("directive") == "grpc_set_header" and (
             not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
+        has_uwsgi_override = any(isinstance(n, dict) and n.get("directive") == "uwsgi_param" and (
+            not n.get("args") or n.get("args")[0].lower() not in ("x-forwarded-for", "x-real-ip")) for n in ast_list)
 
         curr_proxy = proxy_headers.copy() if not has_proxy_override else {}
         curr_fastcgi = fastcgi_params.copy() if not has_fastcgi_override else {}
         curr_grpc = grpc_headers.copy() if not has_grpc_override else {}
+        curr_uwsgi = uwsgi_params.copy() if not has_uwsgi_override else {}
 
         for idx, node in enumerate(ast_list):
             if not isinstance(node, dict):
@@ -100,6 +104,10 @@ class Detector34(BaseRecom):
                 curr_grpc[args[0].lower()] = True
                 if len(args) >= 2 and args[1] in ('""', "''", ""):
                     curr_grpc[args[0].lower()] = False
+            elif directive == "uwsgi_param" and len(args) >= 1:
+                curr_uwsgi[args[0].lower()] = True
+                if len(args) >= 2 and args[1] in ('""', "''", ""):
+                    curr_uwsgi[args[0].lower()] = False
 
         for idx, node in enumerate(ast_list):
             if not isinstance(node, dict):
@@ -116,6 +124,9 @@ class Detector34(BaseRecom):
             elif directive == "grpc_pass":
                 self._check_headers(filepath, exact_path, logical_context, curr_grpc,
                                     "grpc_set_header", uncompliances)
+            elif directive == "uwsgi_pass":
+                self._check_headers(filepath, exact_path, logical_context, curr_uwsgi,
+                                    "uwsgi_param", uncompliances)
             elif directive == "include":
                 includes = node.get("includes")
                 args = node.get("args", [])
@@ -133,14 +144,14 @@ class Detector34(BaseRecom):
                         inc_filepath = inc_file.get("file", "")
                         inc_exact_path = ["config", inc_idx, "parsed"]
                         self._traverse(inc_ast, inc_filepath, inc_exact_path, logical_context,
-                                       curr_proxy, curr_fastcgi, curr_grpc, uncompliances)
+                                       curr_proxy, curr_fastcgi, curr_grpc, curr_uwsgi, uncompliances)
             elif "block" in node:
                 if self._should_skip_block(node):
                     continue
                 new_logical = logical_context + [directive]
                 new_exact = exact_path + [idx, "block"]
                 self._traverse(node["block"], filepath, new_exact, new_logical,
-                               curr_proxy, curr_fastcgi, curr_grpc, uncompliances)
+                               curr_proxy, curr_fastcgi, curr_grpc, curr_uwsgi, uncompliances)
 
     def _should_skip_block(self, node: Dict[str, Any]) -> bool:
         if node.get("directive") != "server":

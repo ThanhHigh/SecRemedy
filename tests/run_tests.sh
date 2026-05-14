@@ -4,7 +4,7 @@ set -e
 PROJECT_ROOT=$(pwd)
 TMP_DIR="$PROJECT_ROOT/tmp"
 INTEGRATION_DIR="$PROJECT_ROOT/tests/integration"
-CONFIG_DIR="$PROJECT_ROOT/tests/config_to_test"
+CONFIG_DIR="$PROJECT_ROOT/tests/configs"
 
 echo "1. Dọn/chuẩn bị tmp/..."
 rm -rf "$TMP_DIR"
@@ -18,16 +18,16 @@ export PYTHONPATH="$PROJECT_ROOT"
 
 echo "3. Bắt đầu test..."
 
-echo "-> Chạy Parser (Before)..."
-python -m core.scannerEng.parser --config "$CONFIG_DIR/config_input_scanner_before_toFinal.json"
+echo "-> Chạy Parser (Before remediation)..."
+python -m core.scannerEng.parser --config "$CONFIG_DIR/before_remediation.json"
 
-echo "-> Chạy Scanner (Before)..."
-python -m core.scannerEng.scanner --config "$CONFIG_DIR/config_input_scanner_before_toFinal.json"
+echo "-> Chạy Scanner (Before remediation)..."
+python -m core.scannerEng.scanner --config "$CONFIG_DIR/before_remediation.json"
 
-echo "-> Chạy RemedyEng..."
-python -m core.remedyEng.run_remedy --config "$CONFIG_DIR/config_input_remedy_toFinal.json"
+# echo "-> Chạy RemedyEng..."
+# python -m core.remedyEng.run_remedy --config "$CONFIG_DIR/config_input_remedy_toFinal.json"
 
-echo "-> Chạy Scanner (After)..."
-python -m core.scannerEng.scanner --config "$CONFIG_DIR/config_input_scanner_after_toFinal.json"
+# echo "-> Chạy Scanner (After)..."
+# python -m core.scannerEng.scanner --config "$CONFIG_DIR/config_input_scanner_after_toFinal.json"
 
 echo "4. Xong! Xem output trong tmp/contracts và điểm trên terminal."

@@ -1,38 +1,32 @@
-# Sử dụng Nginx bản mới nhất trên nền Debian
 FROM nginx:1.28
 
-# Cài đặt OpenSSH Server và OpenSSL
-RUN apt-get update && apt-get install -y openssh-server openssl && rm -rf /var/lib/apt/lists/*
+# Install deps
+RUN apt-get update && apt-get install -y \
+    openssh-server \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Cấu hình SSH: Tạo thư mục run, đổi mật khẩu root thành 'root', cho phép root login
-RUN mkdir -p /var/run/sshd
-RUN echo 'root:root' | chpasswd
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+# SSH setup
+RUN mkdir -p /var/run/sshd \
+    && ssh-keygen -A \
+    && echo 'root:root' | chpasswd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
-# Tự động sinh chứng chỉ SSL giả lập để test luật TLS và HSTS
-RUN mkdir -p /etc/ssl/mock_certs && \
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/ssl/mock_certs/nginx.key \
-    -out /etc/ssl/mock_certs/nginx.crt \
-    -subj "/C=VN/ST=HN/L=HN/O=DevSecOps/CN=localhost" && \
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/ssl/mock_certs/admin.key \
-    -out /etc/ssl/mock_certs/admin.crt \
-    -subj "/C=VN/ST=HN/L=HN/O=DevSecOps/CN=admin"
+# Pre-generate TLS assets (required by configs referencing dhparam/ssl certs)
+RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+       -keyout /etc/ssl/private/nginx.key \
+       -out    /etc/ssl/certs/nginx.crt \
+       -subj   "/CN=localhost" \
+    && openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
 
-# Tạo mock Let's Encrypt certificates cho các domain dùng trong test
-RUN for domain in thanhexample1.com thanhexample2 exampletree.com examplefor.com examplephai.com; do \
-        mkdir -p "/etc/letsencrypt/live/$domain" && \
-        cp /etc/ssl/mock_certs/nginx.crt "/etc/letsencrypt/live/$domain/fullchain.pem" && \
-        cp /etc/ssl/mock_certs/nginx.key "/etc/letsencrypt/live/$domain/privkey.pem" && \
-        cp /etc/ssl/mock_certs/nginx.crt "/etc/letsencrypt/live/$domain/chain.pem"; \
-    done
+# Ensure modules-enabled dir exists (nginx.conf includes it)
+RUN mkdir -p /etc/nginx/modules-enabled \
+    && mkdir -p /etc/nginx/conf.d \
+    && mkdir -p /etc/nginx/sites-available \
+    && mkdir -p /etc/nginx/sites-enabled
 
-# Sinh dhparam giả lập nhanh
-RUN openssl dhparam -out /etc/nginx/dhparam.pem 512
-
-# Mở port 80 (HTTP), 443 (HTTPS) và 22 (SSH)
 EXPOSE 80 443 22
 
-# Khởi chạy cả SSHD và Nginx khi container start
-CMD ["/bin/sh", "-c", "/usr/sbin/sshd && nginx -g 'daemon off;'"]
+# Start sshd + nginx (daemon off)
+# Note: we copy dhparam.pem if it doesn't exist in the mounted /etc/nginx
+CMD ["/bin/sh", "-c", "cp -n /etc/ssl/certs/dhparam.pem /etc/nginx/dhparam.pem 2>/dev/null || true; /usr/sbin/sshd && nginx -g 'daemon off;'"]
