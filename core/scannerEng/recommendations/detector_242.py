@@ -100,6 +100,8 @@ class Detector242(BaseRecom):
             base_exact_path = ["config", config_idx, "parsed"]
 
             for dir_idx, directive in enumerate(parsed_ast):
+                line = directive.get("line", 0)
+
                 if directive.get("directive") == "http":
                     http_file = filepath
                     http_path = base_exact_path + [dir_idx, "block"]
@@ -107,6 +109,8 @@ class Detector242(BaseRecom):
                     http_block_len = len(http_block)
 
                     for http_dir_idx, http_dir in enumerate(http_block):
+                        line = http_dir.get("line", 0)
+
                         if http_dir.get("directive") == "server":
                             if self._should_skip_block(http_dir):
                                 continue
@@ -155,6 +159,7 @@ class Detector242(BaseRecom):
                                     "remediations": [{
                                         "action": "replace",
                                         "directive": "server",
+                                        "line": line,
                                         "args": [],
                                         "block": remediation_block,
                                         "logical_context": ["http"],
@@ -210,6 +215,7 @@ class Detector242(BaseRecom):
                             "remediations": [{
                                 "action": "replace",
                                 "directive": "server",
+                                "line": line,
                                 "args": [],
                                 "block": remediation_block,
                                 "logical_context": ["http"],
@@ -220,15 +226,17 @@ class Detector242(BaseRecom):
         if not used_protocols:
             used_protocols.add("http")
 
-        # missing_protocols = used_protocols - valid_protocols
+        missing_protocols = used_protocols - valid_protocols
 
-        if not has_replace_rem:
+        if missing_protocols and not has_replace_rem:
             rem_entry = {
                 "action": "add",
                 "directive": "server",
+                "line": line,
                 "args": [],
                 "block": remediation_block,
-                "logical_context": ["http"]
+                "logical_context": ["http"],
+                "exact_path": http_path + [http_block_len]
             }
 
             if http_file and http_path:

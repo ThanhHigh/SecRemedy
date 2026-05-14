@@ -38,6 +38,7 @@ class Detector251(BaseRecom):
             if directive.get("directive") == target_directive:
                 matches.append({
                     "directive": directive,
+                    "line": directive.get("line"),
                     "filepath": filepath,
                     "logical_context": logical_context,
                     "exact_path": current_exact_path,

@@ -10,9 +10,9 @@ echo "1. Dọn/chuẩn bị tmp/..."
 rm -rf "$TMP_DIR"
 mkdir -p "$TMP_DIR"
 
-echo "2. Lấy nginx_raw_* từ *_uncomply sang tmp/..."
-# Copy mọi thư mục con (nginx_raw_...) nằm trong các thư mục *_uncomply/ vào tmp/
-find "$INTEGRATION_DIR" -type d -name "*_uncomply" -exec cp -r {}/. "$TMP_DIR/" \;
+echo "2. Lấy nginx_raw_* từ các folder con của *_compliant sang tmp/..."
+# Copy mọi thư mục con (nginx_raw_...) nằm trong các thư mục con của các thư mục *_compliant/ vào tmp/
+cp -r "$INTEGRATION_DIR"/*_compliant/*/nginx_raw_* "$TMP_DIR/"
 
 export PYTHONPATH="$PROJECT_ROOT"
 
