@@ -42,7 +42,7 @@ if [[ -n "${TARGET_PORT}" ]]; then
     info "Filtering for port: ${TARGET_PORT}"
     # Use find to copy specific port folder if it exists
     find "${SCRIPT_DIR}" -type d -name "nginx_raw_${TARGET_PORT}" -exec cp -r {} "${TMP_DIR}/" \;
-    
+
     if [[ -z $(ls -A "${TMP_DIR}") ]]; then
         fail "No folders found matching nginx_raw_${TARGET_PORT}"
         exit 1

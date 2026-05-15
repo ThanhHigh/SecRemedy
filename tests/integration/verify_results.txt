@@ -1,26 +1,4 @@
-FAIL: nginx_raw_2233
-       --- NGINX -T OUTPUT ---
-       Error response from daemon: container 330b2fa69ea6e03ec42f2fdb6f58ae9d8a11a8e29eb9d53cf72f0a7740654ab7 is not running
-       --- CONTAINER LOGS ---
-       2026/05/15 10:08:48 [warn] 10#10: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:7
-       nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:7
-       2026/05/15 10:08:48 [warn] 10#10: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:8
-       nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:8
-       2026/05/15 10:08:48 [warn] 10#10: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:42
-       nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:42
-       2026/05/15 10:08:48 [warn] 10#10: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:43
-       nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:43
-       2026/05/15 10:08:48 [warn] 10#10: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:77
-       nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:77
-       2026/05/15 10:08:48 [warn] 10#10: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:78
-       nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/magento.example.com.conf:78
-       2026/05/15 10:08:48 [warn] 10#10: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/thanhexample1.com.conf:2
-       nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/thanhexample1.com.conf:2
-       2026/05/15 10:08:48 [warn] 10#10: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/thanhexample1.com.conf:3
-       nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/sites-enabled/thanhexample1.com.conf:3
-       2026/05/15 10:08:48 [emerg] 10#10: unknown log format "cloudflare" in /etc/nginx/sites-enabled/thanhexample1.com.conf:11
-       nginx: [emerg] unknown log format "cloudflare" in /etc/nginx/sites-enabled/thanhexample1.com.conf:11
-       -----------------------
+PASS: nginx_raw_2229
 
 === SUMMARY ===
-Total: 1 | Passed: 0
+Total: 1 | Passed: 1
