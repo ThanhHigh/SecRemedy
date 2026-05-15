@@ -242,6 +242,87 @@
         "10.0.0.2",
         "1.1.1.1"
       ]
+    },
+    {
+      "ip": "[IP_ADDRESS]",
+      "port": 2229,
+      "user": "root",
+      "pass": "[PASSWORD]",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2229.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2229.json",
+      "report_path": "tmp/contracts/scan_report/scan_report_2229.md",
+      "authorized_ports": [
+        80,
+        443,
+        8080,
+        8443,
+        9000
+      ],
+      "authorized_ips": [
+        "[IP_ADDRESS]",
+        "10.20.30.0/24",
+        "[IP_ADDRESS]",
+        "[IP_ADDRESS]",
+        "2001:db8::/32",
+        "10.0.0.0/8",
+        "10.0.0.2",
+        "1.1.1.1"
+      ]
+    },
+    {
+      "ip": "[IP_ADDRESS]",
+      "port": 2232,
+      "user": "root",
+      "pass": "[PASSWORD]",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2232.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2232.json",
+      "report_path": "tmp/contracts/scan_report/scan_report_2232.md",
+      "authorized_ports": [
+        80,
+        443,
+        8080,
+        8443,
+        9000
+      ],
+      "authorized_ips": [
+        "[IP_ADDRESS]",
+        "10.20.30.0/24",
+        "[IP_ADDRESS]",
+        "[IP_ADDRESS]",
+        "2001:db8::/32",
+        "10.0.0.0/8",
+        "10.0.0.2",
+        "1.1.1.1"
+      ]
+    },
+    {
+      "ip": "[IP_ADDRESS]",
+      "port": 2233,
+      "user": "root",
+      "pass": "[PASSWORD]",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2233.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2233.json",
+      "report_path": "tmp/contracts/scan_report/scan_report_2233.md",
+      "authorized_ports": [
+        80,
+        443,
+        8080,
+        8443,
+        9000
+      ],
+      "authorized_ips": [
+        "[IP_ADDRESS]",
+        "10.20.30.0/24",
+        "[IP_ADDRESS]",
+        "[IP_ADDRESS]",
+        "2001:db8::/32",
+        "10.0.0.0/8",
+        "10.0.0.2",
+        "1.1.1.1"
+      ]
     }
   ]
 }

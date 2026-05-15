@@ -59,6 +59,7 @@ class Detector32(BaseRecom):
                                     {
                                         "action": "delete",
                                         "directive": "access_log",
+                                        "line": directive.get("line"),
                                         "logical_context": logical_context,
                                         "exact_path": current_exact_path
                                     }

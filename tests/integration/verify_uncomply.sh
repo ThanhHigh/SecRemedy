@@ -19,19 +19,38 @@ RESULTS_FILE="${SCRIPT_DIR}/verify_results.txt"
 # ── Colors ──────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[1;31m'
 NC='\033[0m'
 
 pass() { echo -e "${GREEN}[PASS]${NC} $*"; }
 info() { echo -e "${YELLOW}[INFO]${NC} $*"; }
+fail() { echo -e "${RED}[FAIL]${NC} $*"; }
 
 # ── Pre-flight ──────────────────────────────────────────────────────────
 if ! command -v docker &>/dev/null; then
     echo "ERROR: docker not found." >&2; exit 1
 fi
 
+TARGET_PORT="${1:-}"
+
+rm -rf "${WORKSPACE_DIR}"
+rm -rf "${TMP_DIR}"
 mkdir -p "${WORKSPACE_DIR}"
 mkdir -p "${TMP_DIR}"
-cp -r "${SCRIPT_DIR}"/*_compliant/*/nginx_raw_* "${TMP_DIR}/"
+
+if [[ -n "${TARGET_PORT}" ]]; then
+    info "Filtering for port: ${TARGET_PORT}"
+    # Use find to copy specific port folder if it exists
+    find "${SCRIPT_DIR}" -type d -name "nginx_raw_${TARGET_PORT}" -exec cp -r {} "${TMP_DIR}/" \;
+    
+    if [[ -z $(ls -A "${TMP_DIR}") ]]; then
+        fail "No folders found matching nginx_raw_${TARGET_PORT}"
+        exit 1
+    fi
+else
+    cp -r "${SCRIPT_DIR}"/*_compliant/*/nginx_raw_* "${TMP_DIR}/"
+fi
+
 > "${RESULTS_FILE}"  # truncate results file
 
 total=0; passed=0
@@ -76,6 +95,19 @@ for config_dir in "${TMP_DIR}"/nginx_raw_*/; do
             docker logs "${CONTAINER_NAME}" 2>&1 || echo "Could not get logs"
             echo "-----------------------"
         } | sed 's/^/       /' >> "${RESULTS_FILE}"
+
+        rm -rf "${TMP_DIR}"
+        echo ""
+        echo "════════════════════════════════════"
+        echo " Results: ${passed}/${total} passed"
+        echo " Full log: ${RESULTS_FILE}"
+        echo "════════════════════════════════════"
+        {
+            echo ""
+            echo "=== SUMMARY ==="
+            echo "Total: ${total} | Passed: ${passed}"
+        } >> "${RESULTS_FILE}"
+
         exit 1
     fi
 
