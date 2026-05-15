@@ -38,6 +38,7 @@ class Detector251(BaseRecom):
             if directive.get("directive") == target_directive:
                 matches.append({
                     "directive": directive,
+                    "line": directive.get("line"),
                     "filepath": filepath,
                     "logical_context": logical_context,
                     "exact_path": current_exact_path,
@@ -128,6 +129,7 @@ class Detector251(BaseRecom):
                         "action": "replace",
                         "directive": "server_tokens",
                         "args": ["off"],
+                        "line": st["line"],
                         "logical_context": st["logical_context"],
                         "exact_path": st["exact_path"]
                     }]
@@ -142,10 +144,12 @@ class Detector251(BaseRecom):
                 exact_path = first_http_block["exact_path"] + ["block"]
                 logical_context = ["http"]
                 filepath = first_http_block["filepath"]
+                line = first_http_block.get("line")
             elif first_file_parsed_path:
                 exact_path = first_file_parsed_path["exact_path"]
                 logical_context = []
                 filepath = first_file_parsed_path["filepath"]
+                line = None
             else:
                 return self._group_by_file(uncompliances)
 
@@ -155,6 +159,7 @@ class Detector251(BaseRecom):
                     "action": "add",
                     "directive": "server_tokens",
                     "args": ["off"],
+                    "line": line,
                     "logical_context": logical_context,
                     "exact_path": exact_path
                 }]

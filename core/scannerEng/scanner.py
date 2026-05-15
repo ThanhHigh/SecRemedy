@@ -82,6 +82,7 @@ class Scanner:
         self.authorized_ports = authorized_ports
         self.authorized_ips = authorized_ips
         self.log_file = log_file
+        self.scan_server = True  # detector_252 flag
 
     def log(self, msg: str):
         if self.log_file:
@@ -134,6 +135,8 @@ class Scanner:
                 detector = detector_cls(strict_private=self.strict_private, authorized_ips=self.authorized_ips)
             elif recom_id == "2.4.1":
                 detector = detector_cls(authorized_ports=self.authorized_ports)
+            elif recom_id == "2.5.2":
+                detector = detector_cls(scan_server=self.scan_server)
             else:
                 detector = detector_cls()
             uncompliances = detector.scan(parser_output)
@@ -210,7 +213,9 @@ class Scanner:
         path = Path(filepath)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            json_str = json.dumps(data, indent=2, ensure_ascii=False)
+            json_str = json_str.replace("sites-enabled", "sites-available")
+            f.write(json_str)
         self.log(f"[Scanner] ✅ Scan result saved to: {path}")
 
 
@@ -275,6 +280,7 @@ def main():
             authorized_ips=server.get("authorized_ips"),
             log_file=str(report_path),
         )
+        scanner.scan_server = server.get("scan_server", True)
 
         try:
             result = scanner.run(

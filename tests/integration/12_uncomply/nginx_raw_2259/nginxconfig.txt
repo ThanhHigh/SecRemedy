@@ -1,1 +1,0 @@
-https://www.digitalocean.com/community/tools/nginx?domains.0.server.domain=exampletree.com&domains.0.server.path=%2Fvar%2Fwww%2Fexampletree&domains.0.php.php=false&domains.0.reverseProxy.reverseProxy=true&domains.0.routing.index=index.html&domains.0.routing.fallbackHtml=true&global.security.serverTokens=true

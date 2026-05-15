@@ -100,6 +100,8 @@ class Detector242(BaseRecom):
             base_exact_path = ["config", config_idx, "parsed"]
 
             for dir_idx, directive in enumerate(parsed_ast):
+                line = directive.get("line", 0)
+
                 if directive.get("directive") == "http":
                     http_file = filepath
                     http_path = base_exact_path + [dir_idx, "block"]
@@ -107,12 +109,15 @@ class Detector242(BaseRecom):
                     http_block_len = len(http_block)
 
                     for http_dir_idx, http_dir in enumerate(http_block):
+                        line = http_dir.get("line", 0)
+
                         if http_dir.get("directive") == "server":
                             if self._should_skip_block(http_dir):
                                 continue
 
                             server_block = http_dir.get("block", [])
                             protocols_with_default = set()
+                            current_block_protocols = set()
                             has_valid_return = self._check_return(server_block)
                             has_ssl_reject = False
 
@@ -123,13 +128,19 @@ class Detector242(BaseRecom):
                                     is_quic = "quic" in args
                                     is_default = "default_server" in args
 
-                                    p = "http"
+                                    addr = str(args[0]) if args else ""
+                                    is_ipv6 = "[::]" in addr
+
+                                    base_p = "http"
                                     if is_quic:
-                                        p = "quic"
+                                        base_p = "quic"
                                     elif is_ssl:
-                                        p = "https"
+                                        base_p = "https"
+
+                                    p = f"ipv6_{base_p}" if is_ipv6 else f"ipv4_{base_p}"
 
                                     used_protocols.add(p)
+                                    current_block_protocols.add(p)
                                     if is_default:
                                         protocols_with_default.add(p)
 
@@ -139,14 +150,17 @@ class Detector242(BaseRecom):
 
                             is_valid_block = True
                             for p in protocols_with_default:
-                                if p == "http" and has_valid_return:
+                                if "http" in p and has_valid_return:
                                     valid_protocols.add(p)
-                                elif p == "https" and has_valid_return and has_ssl_reject:
+                                elif "https" in p and has_valid_return and has_ssl_reject:
                                     valid_protocols.add(p)
-                                elif p == "quic" and has_valid_return:
+                                elif "quic" in p and has_valid_return:
                                     valid_protocols.add(p)
                                 else:
                                     is_valid_block = False
+
+                            if protocols_with_default and current_block_protocols - protocols_with_default:
+                                is_valid_block = False
 
                             if protocols_with_default and not is_valid_block:
                                 has_replace_rem = True
@@ -155,6 +169,7 @@ class Detector242(BaseRecom):
                                     "remediations": [{
                                         "action": "replace",
                                         "directive": "server",
+                                        "line": line,
                                         "args": [],
                                         "block": remediation_block,
                                         "logical_context": ["http"],
@@ -168,6 +183,7 @@ class Detector242(BaseRecom):
 
                     server_block = directive.get("block", [])
                     protocols_with_default = set()
+                    current_block_protocols = set()
                     has_valid_return = self._check_return(server_block)
                     has_ssl_reject = False
 
@@ -178,13 +194,19 @@ class Detector242(BaseRecom):
                             is_quic = "quic" in args
                             is_default = "default_server" in args
 
-                            p = "http"
+                            addr = str(args[0]) if args else ""
+                            is_ipv6 = "[::]" in addr
+
+                            base_p = "http"
                             if is_quic:
-                                p = "quic"
+                                base_p = "quic"
                             elif is_ssl:
-                                p = "https"
+                                base_p = "https"
+
+                            p = f"ipv6_{base_p}" if is_ipv6 else f"ipv4_{base_p}"
 
                             used_protocols.add(p)
+                            current_block_protocols.add(p)
                             if is_default:
                                 protocols_with_default.add(p)
 
@@ -194,14 +216,17 @@ class Detector242(BaseRecom):
 
                     is_valid_block = True
                     for p in protocols_with_default:
-                        if p == "http" and has_valid_return:
+                        if "http" in p and has_valid_return:
                             valid_protocols.add(p)
-                        elif p == "https" and has_valid_return and has_ssl_reject:
+                        elif "https" in p and has_valid_return and has_ssl_reject:
                             valid_protocols.add(p)
-                        elif p == "quic" and has_valid_return:
+                        elif "quic" in p and has_valid_return:
                             valid_protocols.add(p)
                         else:
                             is_valid_block = False
+
+                    if protocols_with_default and current_block_protocols - protocols_with_default:
+                        is_valid_block = False
 
                     if protocols_with_default and not is_valid_block:
                         has_replace_rem = True
@@ -210,6 +235,7 @@ class Detector242(BaseRecom):
                             "remediations": [{
                                 "action": "replace",
                                 "directive": "server",
+                                "line": line,
                                 "args": [],
                                 "block": remediation_block,
                                 "logical_context": ["http"],
@@ -218,17 +244,19 @@ class Detector242(BaseRecom):
                         })
 
         if not used_protocols:
-            used_protocols.add("http")
+            used_protocols.add("ipv4_http")
 
-        # missing_protocols = used_protocols - valid_protocols
+        missing_protocols = used_protocols - valid_protocols
 
-        if not has_replace_rem:
+        if missing_protocols and not has_replace_rem:
             rem_entry = {
                 "action": "add",
                 "directive": "server",
+                "line": line,
                 "args": [],
                 "block": remediation_block,
-                "logical_context": ["http"]
+                "logical_context": ["http"],
+                "exact_path": http_path + [http_block_len] if http_path else ["config", 0, "parsed", http_block_len]
             }
 
             if http_file and http_path:

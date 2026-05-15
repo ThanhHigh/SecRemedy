@@ -1,1 +1,0 @@
-https://www.digitalocean.com/community/tools/nginx?domains.0.server.domain=examplefor.com&domains.0.server.path=%2Fvar%2Fwww%2Fhtml&domains.0.php.magentoRules=true&global.logging.errorLogEnabled=true&global.logging.logNotFound=true&global.logging.cloudflare=true&global.logging.xForwardedFor=true&global.logging.xForwardedProto=true

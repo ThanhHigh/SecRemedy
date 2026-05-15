@@ -715,3 +715,79 @@ def test_edge_json_structure_matches(detector):
     assert "args" in rem
     assert "logical_context" in rem
     assert "exact_path" in rem
+
+
+# =====================================================================
+# 3. Kiểm thử uWSGI (uWSGI Test Cases)
+# =====================================================================
+
+def test_valid_uwsgi_hide_all(detector):
+    """Test 46: Có uwsgi_pass, ẩn đủ X-Powered-By và Server trong location."""
+    out = _make_parser_output([_http_block([
+        _server_block([
+            _location_block(["/"], [
+                _dir("uwsgi_pass", ["unix:/tmp/uwsgi.sock"]),
+                _dir("uwsgi_hide_header", ["X-Powered-By"]),
+                _dir("uwsgi_hide_header", ["Server"])
+            ])
+        ])
+    ])])
+    assert detector.scan(out) == []
+
+
+def test_missing_uwsgi_x_powered_by(detector):
+    """Test 47: uwsgi_pass thiếu X-Powered-By."""
+    out = _make_parser_output([_http_block([
+        _server_block([
+            _location_block(["/"], [
+                _dir("uwsgi_pass", ["unix:/tmp/uwsgi.sock"]),
+                _dir("uwsgi_hide_header", ["Server"])
+            ])
+        ])
+    ])])
+    res = detector.scan(out)
+    assert len(res) == 1
+    assert res[0]["remediations"][0]["args"] == ["X-Powered-By"]
+
+
+def test_missing_uwsgi_server(detector):
+    """Test 48: uwsgi_pass thiếu Server."""
+    out = _make_parser_output([_http_block([
+        _server_block([
+            _location_block(["/"], [
+                _dir("uwsgi_pass", ["unix:/tmp/uwsgi.sock"]),
+                _dir("uwsgi_hide_header", ["X-Powered-By"])
+            ])
+        ])
+    ])])
+    res = detector.scan(out)
+    assert len(res) == 1
+    assert res[0]["remediations"][0]["args"] == ["Server"]
+
+
+def test_missing_uwsgi_both(detector):
+    """Test 49: uwsgi_pass thiếu cả 2."""
+    out = _make_parser_output([_http_block([
+        _server_block([
+            _location_block(["/"], [
+                _dir("uwsgi_pass", ["unix:/tmp/uwsgi.sock"])
+            ])
+        ])
+    ])])
+    res = detector.scan(out)
+    assert len(res) == 1
+    assert len(res[0]["remediations"]) == 2
+
+
+def test_valid_uwsgi_inherited_hide(detector):
+    """Test 50: uwsgi_hide_header ở http, uwsgi_pass ở location -> Pass."""
+    out = _make_parser_output([_http_block([
+        _dir("uwsgi_hide_header", ["X-Powered-By"]),
+        _dir("uwsgi_hide_header", ["Server"]),
+        _server_block([
+            _location_block(["/"], [
+                _dir("uwsgi_pass", ["unix:/tmp/uwsgi.sock"])
+            ])
+        ])
+    ])])
+    assert detector.scan(out) == []
