@@ -38,7 +38,7 @@ class Detector531(BaseRecom):
         for i, d in enumerate(dirs):
             if self._should_skip_block(d):
                 continue
-                
+
             d_path = exact_path + [i]
             f_idx = d_path[1]
             yield d, f_idx, d_path
@@ -144,8 +144,29 @@ class Detector531(BaseRecom):
                     self._evaluate_block(new_block_type, new_dirs_at_level, new_exact_path, pass_state,
                                          new_logical_context, http_state, config_list, all_remediations, unique_remediations)
 
+    @staticmethod
+    def _collect_included_indices(config_list: List[Dict[str, Any]]) -> set:
+        """Collect all config indices that are referenced via 'includes'."""
+        included = set()
+
+        def _walk(directives):
+            for d in directives:
+                if not isinstance(d, dict):
+                    continue
+                for idx in d.get("includes", []):
+                    included.add(idx)
+                if "block" in d:
+                    _walk(d["block"])
+
+        for config in config_list:
+            _walk(config.get("parsed", []))
+        return included
+
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         config_list = parser_output.get("config", [])
+
+        # 0. Identify files that are included by others (already visited via include traversal)
+        included_indices = self._collect_included_indices(config_list)
 
         # 1. Compute http_state
         http_state = "MISSING"
@@ -162,8 +183,10 @@ class Detector531(BaseRecom):
         all_remediations = []
         unique_remediations = set()
 
-        # Start evaluation from the root of all files
+        # Start evaluation from root files only (skip included files)
         for f_idx, config in enumerate(config_list):
+            if f_idx in included_indices:
+                continue
             root_exact_path = ["config", f_idx, "parsed"]
             root_dirs = list(self._get_directives_at_level(
                 config.get("parsed", []), root_exact_path, config_list))
