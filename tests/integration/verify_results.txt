@@ -21,3 +21,7 @@ PASS: nginx_raw_2244
 PASS: nginx_raw_2245
 PASS: nginx_raw_2246
 PASS: nginx_raw_2247
+PASS: nginx_raw_2252
+
+=== SUMMARY ===
+Total: 24 | Passed: 24
