@@ -57,6 +57,7 @@ class Detector511(BaseRecom):
                     remediations.append({
                         "action": "delete",
                         "directive": "allow",
+                        "line": directive.get("line"),
                         "logical_context": list(logical_context),
                         "exact_path": exact_path_to_list + [idx]
                     })
@@ -64,6 +65,7 @@ class Detector511(BaseRecom):
                     remediations.append({
                         "action": "delete",
                         "directive": "allow",
+                        "line": directive.get("line"),
                         "logical_context": list(logical_context),
                         "exact_path": exact_path_to_list + [idx]
                     })
@@ -78,6 +80,7 @@ class Detector511(BaseRecom):
                         remediations.append({
                             "action": "delete",
                             "directive": "allow",
+                            "line": directive.get("line"),
                             "logical_context": list(logical_context),
                             "exact_path": exact_path_to_list + [idx]
                         })
@@ -101,6 +104,7 @@ class Detector511(BaseRecom):
                             "remediations": [{
                                 "action": "add",
                                 "directive": "deny",
+                                "line": directive.get("line"),
                                 "args": ["all"],
                                 "logical_context": new_logical,
                                 "exact_path": new_exact
@@ -122,6 +126,7 @@ class Detector511(BaseRecom):
                     remediations.append({
                         "action": "delete",
                         "directive": "deny",
+                        "line": directives_list[d_idx].get("line"),
                         "logical_context": list(logical_context),
                         "exact_path": exact_path_to_list + [d_idx]
                     })

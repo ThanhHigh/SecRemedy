@@ -10,7 +10,13 @@ class Detector252(BaseRecom):
     def _should_skip_block(self, node: Dict[str, Any]) -> bool:
         if not isinstance(node, dict):
             return False
-        if node.get("directive") != "server":
+
+        dir_name = node.get("directive")
+        # Bỏ qua upstream blocks: CIS 2.5.2 chỉ áp dụng cho Virtual Host (Client -> Nginx)
+        if dir_name == "upstream":
+            return True
+
+        if dir_name != "server":
             return False
 
         block = node.get("block", [])
@@ -31,9 +37,6 @@ class Detector252(BaseRecom):
     def traverse_directive(self, target_directive: str, directives: List[Dict], filepath: str, logical_context: List[str], exact_path: List[Any], state: Any = None) -> List[Dict[str, Any]]:
         matches = []
         for idx, directive in enumerate(directives):
-            if directive.get("directive") == "upstream":
-                continue
-
             if self._should_skip_block(directive):
                 continue
 
@@ -165,7 +168,7 @@ class Detector252(BaseRecom):
         # 2. Scan Server blocks
         for s in server_blocks:
             has_ep, codes = self._get_error_codes(s["directive"].get("block", []))
-            
+
             if has_ep:
                 # Local error_page overrides http level
                 m404, m50x = self._check_missing(codes)

@@ -9,7 +9,13 @@ class Detector411(BaseRecom):
     def _should_skip_block(self, node: Dict[str, Any]) -> bool:
         if not isinstance(node, dict):
             return False
-        if node.get("directive") != "server":
+
+        dir_name = node.get("directive")
+        # Bỏ qua upstream blocks: CIS 4.1.1 chỉ áp dụng cho Virtual Host (Client -> Nginx)
+        if dir_name == "upstream":
+            return True
+
+        if dir_name != "server":
             return False
 
         block = node.get("block", [])
@@ -97,6 +103,21 @@ class Detector411(BaseRecom):
         if valid_return_in_if:
             return
 
+        # Check return directives inside location blocks
+        valid_return_in_location = False
+        for d in block:
+            if d.get("directive") == "location" and "block" in d:
+                for child in d["block"]:
+                    if child.get("directive") == "return":
+                        if self._is_valid_return(child):
+                            valid_return_in_location = True
+                            break
+            if valid_return_in_location:
+                break
+
+        if valid_return_in_location:
+            return
+
         has_valid_return = False
         invalid_return_idx = -1
 
@@ -117,6 +138,7 @@ class Detector411(BaseRecom):
                 "remediations": [{
                     "action": "replace",
                     "directive": "return",
+                    "line": block[invalid_return_idx].get("line"),
                     "args": ["301", "https://$host$request_uri"],
                     "logical_context": logical_context,
                     "exact_path": exact_path + ["block", invalid_return_idx]
@@ -128,6 +150,7 @@ class Detector411(BaseRecom):
                 "remediations": [{
                     "action": "add",
                     "directive": "return",
+                    "line": server_node.get("line"),
                     "args": ["301", "https://$host$request_uri"],
                     "logical_context": logical_context,
                     "exact_path": exact_path + ["block"]
