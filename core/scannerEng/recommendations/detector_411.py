@@ -73,17 +73,23 @@ class Detector411(BaseRecom):
     def _check_server(self, server_node: Dict[str, Any], exact_path: List[Any], logical_context: List[str], uncompliances: List[Any], filepath: str):
         block = server_node.get("block", [])
 
-        listens = [d for d in block if d.get("directive") == "listen"]
+        listens = [(i, d) for i, d in enumerate(block) if d.get("directive") == "listen"]
+
+        http_listens = []
+        https_listens = []
+        
+        for i, l in listens:
+            args = l.get("args", [])
+            if "ssl" not in args:
+                http_listens.append((i, l))
+            else:
+                https_listens.append((i, l))
 
         has_http = False
         if not listens:
             has_http = True
         else:
-            for l in listens:
-                args = l.get("args", [])
-                if "ssl" not in args:
-                    has_http = True
-                    break
+            has_http = len(http_listens) > 0
 
         if not has_http:
             return
@@ -130,6 +136,55 @@ class Detector411(BaseRecom):
                     invalid_return_idx = i
 
         if has_valid_return:
+            return
+
+        is_mixed = len(http_listens) > 0 and len(https_listens) > 0
+
+        if is_mixed:
+            https_block = []
+            http_listen_indices = {i for i, d in http_listens}
+            for i, d in enumerate(block):
+                if i not in http_listen_indices:
+                    https_block.append(d)
+
+            http_block = []
+            for _, d in http_listens:
+                http_block.append(d)
+            server_names = [d for d in block if d.get("directive") == "server_name"]
+            for d in server_names:
+                http_block.append(d)
+            http_block.append({
+                "directive": "return",
+                "args": ["301", "https://$host$request_uri"]
+            })
+
+            uncompliances.append({
+                "file": filepath,
+                "remediations": [
+                    {
+                        "action": "delete",
+                        "directive": "server",
+                        "exact_path": exact_path,
+                        "logical_context": logical_context
+                    },
+                    {
+                        "action": "add",
+                        "directive": "server",
+                        "args": [],
+                        "block": https_block,
+                        "exact_path": exact_path[:-1],
+                        "logical_context": logical_context[:-1]
+                    },
+                    {
+                        "action": "add",
+                        "directive": "server",
+                        "args": [],
+                        "block": http_block,
+                        "exact_path": exact_path[:-1],
+                        "logical_context": logical_context[:-1]
+                    }
+                ]
+            })
             return
 
         if invalid_return_idx != -1:
