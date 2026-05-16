@@ -197,10 +197,10 @@
       "scan_server": true
     },
     {
-      "ip": "[IP_ADDRESS]",
+      "ip": "0.0.0.0",
       "port": 2227,
       "user": "root",
-      "pass": "[PASSWORD]",
+      "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/parsers_output/parser_output_2227.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2227.json",
@@ -213,10 +213,10 @@
         9000
       ],
       "authorized_ips": [
-        "[IP_ADDRESS]",
+        "192.168.1.100",
         "10.20.30.0/24",
-        "[IP_ADDRESS]",
-        "[IP_ADDRESS]",
+        "127.0.0.1",
+        "10.0.0.1",
         "2001:db8::/32",
         "10.0.0.0/8",
         "10.0.0.2",
@@ -225,10 +225,10 @@
       "scan_server": true
     },
     {
-      "ip": "[IP_ADDRESS]",
+      "ip": "0.0.0.0",
       "port": 2228,
       "user": "root",
-      "pass": "[PASSWORD]",
+      "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/parsers_output/parser_output_2228.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2228.json",
@@ -241,10 +241,10 @@
         9000
       ],
       "authorized_ips": [
-        "[IP_ADDRESS]",
+        "192.168.1.100",
         "10.20.30.0/24",
-        "[IP_ADDRESS]",
-        "[IP_ADDRESS]",
+        "127.0.0.1",
+        "10.0.0.1",
         "2001:db8::/32",
         "10.0.0.0/8",
         "10.0.0.2",
@@ -253,10 +253,10 @@
       "scan_server": true
     },
     {
-      "ip": "[IP_ADDRESS]",
+      "ip": "0.0.0.0",
       "port": 2229,
       "user": "root",
-      "pass": "[PASSWORD]",
+      "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/parsers_output/parser_output_2229.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2229.json",
@@ -269,10 +269,11 @@
         9000
       ],
       "authorized_ips": [
-        "[IP_ADDRESS]",
+        "192.168.1.100",
         "10.20.30.0/24",
         "[IP_ADDRESS]",
-        "[IP_ADDRESS]",
+        "127.0.0.1",
+        "10.0.0.1",
         "2001:db8::/32",
         "10.0.0.0/8",
         "10.0.0.2",
@@ -281,10 +282,38 @@
       "scan_server": true
     },
     {
-      "ip": "[IP_ADDRESS]",
+      "ip": "0.0.0.0",
+      "port": 2230,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2230.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2230.json",
+      "report_path": "tmp/contracts/scan_report/scan_report_2230.md",
+      "authorized_ports": [
+        80,
+        443,
+        8080,
+        8443,
+        9000
+      ],
+      "authorized_ips": [
+        "192.168.1.100",
+        "10.20.30.0/24",
+        "127.0.0.1",
+        "10.0.0.1",
+        "2001:db8::/32",
+        "10.0.0.0/8",
+        "10.0.0.2",
+        "1.1.1.1"
+      ],
+      "scan_server": true
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2232,
       "user": "root",
-      "pass": "[PASSWORD]",
+      "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/parsers_output/parser_output_2232.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2232.json",
@@ -297,10 +326,10 @@
         9000
       ],
       "authorized_ips": [
-        "[IP_ADDRESS]",
+        "192.168.1.100",
         "10.20.30.0/24",
-        "[IP_ADDRESS]",
-        "[IP_ADDRESS]",
+        "127.0.0.1",
+        "10.0.0.1",
         "2001:db8::/32",
         "10.0.0.0/8",
         "10.0.0.2",
@@ -309,10 +338,10 @@
       "scan_server": true
     },
     {
-      "ip": "[IP_ADDRESS]",
+      "ip": "0.0.0.0",
       "port": 2233,
       "user": "root",
-      "pass": "[PASSWORD]",
+      "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/parsers_output/parser_output_2233.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2233.json",
@@ -325,10 +354,10 @@
         9000
       ],
       "authorized_ips": [
-        "[IP_ADDRESS]",
+        "192.168.1.100",
         "10.20.30.0/24",
-        "[IP_ADDRESS]",
-        "[IP_ADDRESS]",
+        "127.0.0.1",
+        "10.0.0.1",
         "2001:db8::/32",
         "10.0.0.0/8",
         "10.0.0.2",
@@ -337,10 +366,38 @@
       "scan_server": true
     },
     {
-      "ip": "[IP_ADDRESS]",
+      "ip": "0.0.0.0",
+      "port": 2235,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2235.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2235.json",
+      "report_path": "tmp/contracts/scan_report/scan_report_2235.md",
+      "authorized_ports": [
+        80,
+        443,
+        8080,
+        8443,
+        9000
+      ],
+      "authorized_ips": [
+        "192.168.1.100",
+        "10.20.30.0/24",
+        "127.0.0.1",
+        "10.0.0.1",
+        "2001:db8::/32",
+        "10.0.0.0/8",
+        "10.0.0.2",
+        "1.1.1.1"
+      ],
+      "scan_server": true
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2238,
       "user": "root",
-      "pass": "[PASSWORD]",
+      "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/parsers_output/parser_output_2238.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2238.json",
@@ -353,10 +410,10 @@
         9000
       ],
       "authorized_ips": [
-        "[IP_ADDRESS]",
+        "192.168.1.100",
         "10.20.30.0/24",
-        "[IP_ADDRESS]",
-        "[IP_ADDRESS]",
+        "127.0.0.1",
+        "10.0.0.1",
         "2001:db8::/32",
         "10.0.0.0/8",
         "10.0.0.2",
@@ -365,10 +422,10 @@
       "scan_server": true
     },
     {
-      "ip": "[IP_ADDRESS]",
+      "ip": "0.0.0.0",
       "port": 2239,
       "user": "root",
-      "pass": "[PASSWORD]",
+      "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/parsers_output/parser_output_2239.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2239.json",
@@ -381,10 +438,10 @@
         9000
       ],
       "authorized_ips": [
-        "[IP_ADDRESS]",
+        "192.168.1.100",
         "10.20.30.0/24",
-        "[IP_ADDRESS]",
-        "[IP_ADDRESS]",
+        "127.0.0.1",
+        "10.0.0.1",
         "2001:db8::/32",
         "10.0.0.0/8",
         "10.0.0.2",
@@ -393,10 +450,10 @@
       "scan_server": true
     },
     {
-      "ip": "[IP_ADDRESS]",
+      "ip": "0.0.0.0",
       "port": 2240,
       "user": "root",
-      "pass": "[PASSWORD]",
+      "pass": "root",
       "strict_private": false,
       "input_path": "tmp/contracts/parsers_output/parser_output_2240.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2240.json",
@@ -409,10 +466,10 @@
         9000
       ],
       "authorized_ips": [
-        "[IP_ADDRESS]",
+        "192.168.1.100",
         "10.20.30.0/24",
-        "[IP_ADDRESS]",
-        "[IP_ADDRESS]",
+        "127.0.0.1",
+        "10.0.0.1",
         "2001:db8::/32",
         "10.0.0.0/8",
         "10.0.0.2",
