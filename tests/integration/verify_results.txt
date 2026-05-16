@@ -12,3 +12,12 @@ PASS: nginx_raw_2230
 PASS: nginx_raw_2232
 PASS: nginx_raw_2233
 PASS: nginx_raw_2234
+PASS: nginx_raw_2235
+PASS: nginx_raw_2238
+PASS: nginx_raw_2239
+PASS: nginx_raw_2240
+PASS: nginx_raw_2241
+PASS: nginx_raw_2244
+PASS: nginx_raw_2245
+PASS: nginx_raw_2246
+PASS: nginx_raw_2247
