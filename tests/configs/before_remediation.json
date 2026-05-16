@@ -391,6 +391,34 @@
         "1.1.1.1"
       ],
       "scan_server": true
+    },
+    {
+      "ip": "[IP_ADDRESS]",
+      "port": 2240,
+      "user": "root",
+      "pass": "[PASSWORD]",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2240.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2240.json",
+      "report_path": "tmp/contracts/scan_report/scan_report_2240.md",
+      "authorized_ports": [
+        80,
+        443,
+        8080,
+        8443,
+        9000
+      ],
+      "authorized_ips": [
+        "[IP_ADDRESS]",
+        "10.20.30.0/24",
+        "[IP_ADDRESS]",
+        "[IP_ADDRESS]",
+        "2001:db8::/32",
+        "10.0.0.0/8",
+        "10.0.0.2",
+        "1.1.1.1"
+      ],
+      "scan_server": true
     }
   ]
 }
