@@ -1,27 +1,4 @@
-PASS: nginx_raw_2220
-PASS: nginx_raw_2221
-PASS: nginx_raw_2222
-PASS: nginx_raw_2223
-PASS: nginx_raw_2224
-PASS: nginx_raw_2225
-PASS: nginx_raw_2226
-PASS: nginx_raw_2227
-PASS: nginx_raw_2228
-PASS: nginx_raw_2229
-PASS: nginx_raw_2230
-PASS: nginx_raw_2232
-PASS: nginx_raw_2233
-PASS: nginx_raw_2234
-PASS: nginx_raw_2235
-PASS: nginx_raw_2238
 PASS: nginx_raw_2239
-PASS: nginx_raw_2240
-PASS: nginx_raw_2241
-PASS: nginx_raw_2244
-PASS: nginx_raw_2245
-PASS: nginx_raw_2246
-PASS: nginx_raw_2247
-PASS: nginx_raw_2252
 
 === SUMMARY ===
-Total: 24 | Passed: 24
+Total: 1 | Passed: 1

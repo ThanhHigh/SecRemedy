@@ -311,6 +311,34 @@
     },
     {
       "ip": "0.0.0.0",
+      "port": 2231,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2231.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2231.json",
+      "report_path": "tmp/contracts/scan_report/scan_report_2231.md",
+      "authorized_ports": [
+        80,
+        443,
+        8080,
+        8443,
+        9000
+      ],
+      "authorized_ips": [
+        "192.168.1.100",
+        "10.20.30.0/24",
+        "127.0.0.1",
+        "10.0.0.1",
+        "2001:db8::/32",
+        "10.0.0.0/8",
+        "10.0.0.2",
+        "1.1.1.1"
+      ],
+      "scan_server": true
+    },
+    {
+      "ip": "0.0.0.0",
       "port": 2232,
       "user": "root",
       "pass": "root",
