@@ -165,18 +165,25 @@ class Detector253(BaseRecom):
                 "args": ["/"],
                 "logical_context": logical_context,
                 "exact_path": exact_path + ["block"],
+                "line": server_block.get("line"),
                 "block": []
             }
             if acme_loc is None:
                 rem["block"].append({
                     "directive": "location",
                     "args": ["^~", "/.well-known/acme-challenge/"],
-                    "block": [{"directive": "allow", "args": ["all"]}]
+                    "block": [
+                        {"directive": "allow", "args": ["all"]},
+                        {"directive": "default_type", "args": ["text/plain"]}
+                    ]
                 })
             rem["block"].append({
                 "directive": "location",
                 "args": ["~", "/\\."],
-                "block": [{"directive": "deny", "args": ["all"]}]
+                "block": [
+                    {"directive": "deny", "args": ["all"]},
+                    {"directive": "return", "args": ["404"]}
+                ]
             })
             remediations.append(rem)
         else:
@@ -187,24 +194,48 @@ class Detector253(BaseRecom):
                     "args": deny_loc.get("args", []),
                     "logical_context": logical_context,
                     "exact_path": exact_path + ["block", deny_idx],
+                    "line": deny_loc.get("line"),
                     "block": [
                         {"directive": "deny", "args": ["all"]},
                         {"directive": "return", "args": ["404"]}
                     ]
                 }
                 remediations.append(rem)
-            else:
-                if acme_loc is not None and acme_idx > deny_idx:
-                    rem = {
-                        "action": "replace",
+            
+            if acme_loc is None:
+                rem = {
+                    "action": "add",
+                    "directive": "location",
+                    "logical_context": logical_context,
+                    "exact_path": exact_path + ["block"],
+                    "line": server_block.get("line"),
+                    "block": [{
                         "directive": "location",
-                        "logical_context": logical_context,
-                        "exact_path": exact_path + ["block", deny_idx],
+                        "args": ["^~", "/.well-known/acme-challenge/"],
                         "block": [
-                            {"directive": "deny", "args": ["all"]}
+                            {"directive": "allow", "args": ["all"]},
+                            {"directive": "default_type", "args": ["text/plain"]}
                         ]
-                    }
-                    remediations.append(rem)
+                    }]
+                }
+                remediations.append(rem)
+            elif acme_idx > deny_idx:
+                rem_del = {
+                    "action": "delete",
+                    "directive": "location",
+                    "logical_context": logical_context,
+                    "exact_path": exact_path + ["block", acme_idx],
+                    "line": acme_loc.get("line")
+                }
+                rem_add = {
+                    "action": "add",
+                    "directive": "location",
+                    "logical_context": logical_context,
+                    "exact_path": exact_path + ["block"],
+                    "line": server_block.get("line"),
+                    "block": [acme_loc]
+                }
+                remediations.extend([rem_del, rem_add])
 
         if remediations:
             return {

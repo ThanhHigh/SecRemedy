@@ -18,7 +18,7 @@
 | No. compliances | Test case IDs      | No. test cases | No. presets involved | Preset not involved    | Reason for not involved    | Progress |
 | :-------------- | ------------------ | -------------- | :------------------- | :--------------------- | -------------------------- | -------- |
 | 0               | 2220 -> 2224       | 5              | 5                    | Nginx-Frontend-SPA-CDN | (2) is not a reverse proxy | 5/5      |
-| 1               | 2226 -> 2237       | 12             | 5                    | Nginx-Frontend-SPA-CDN | (2) is not a reverse proxy | 7/12     |
+| 1               | 2226 -> 2237       | 12             | 5                    | Nginx-Frontend-SPA-CDN | (2) is not a reverse proxy | 9/12     |
 | 2               | 2225, 2238 -> 2239 | 3              | 6                    |                        |                            | 3/3      |
 | 3               | 2240 -> 2242       | 3              | 6                    |                        |                            | 0/3      |
 | 4               | 2243 -> 2245       | 3              | 6                    |                        |                            | 0/3      |

@@ -125,7 +125,7 @@ class Remediate253(BaseRemedy):
                 if not isinstance(remediation, dict):
                     continue
                 action = remediation.get("action")
-                if action not in {"add", "add_block", "replace"}:
+                if action not in {"add", "add_block", "replace", "delete"}:
                     continue
                 if remediation.get("directive") != "location":
                     continue
@@ -145,6 +145,16 @@ class Remediate253(BaseRemedy):
                         target_contexts = [fallback]
 
                 if not target_contexts:
+                    continue
+
+                if action == "delete":
+                    for tc in target_contexts:
+                        patches.append({
+                            "action": "delete",
+                            "exact_path": tc,
+                            "directive": "location",
+                            "priority": 0
+                        })
                     continue
 
                 location_block = remediation.get("block", [])
