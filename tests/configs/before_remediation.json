@@ -9,13 +9,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2220.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2220.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2220.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -37,13 +31,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2221.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2221.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2221.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -65,13 +53,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2222.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2222.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2222.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -93,13 +75,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2223.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2223.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2223.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -121,13 +97,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2224.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2224.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2224.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -149,13 +119,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2225.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2225.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2225.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -177,13 +141,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2226.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2226.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2226.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -205,13 +163,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2227.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2227.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2227.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -233,13 +185,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2228.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2228.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2228.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -261,13 +207,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2229.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2229.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2229.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -290,13 +230,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2230.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2230.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2230.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -318,13 +252,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2231.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2231.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2231.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -346,13 +274,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2232.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2232.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2232.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -374,13 +296,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2233.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2233.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2233.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -402,13 +318,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2234.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2234.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2234.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -430,13 +340,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2235.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2235.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2235.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -458,13 +362,29 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2236.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2236.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2236.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
+      "authorized_ips": [
+        "192.168.1.100",
+        "10.20.30.0/24",
+        "127.0.0.1",
+        "10.0.0.1",
+        "2001:db8::/32",
+        "10.0.0.0/8",
+        "10.0.0.2",
+        "1.1.1.1"
       ],
+      "scan_server": true
+    },
+    {
+      "ip": "0.0.0.0",
+      "port": 2237,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "input_path": "tmp/contracts/parsers_output/parser_output_2237.json",
+      "output_path": "tmp/contracts/scan_result/scan_result_2237.json",
+      "report_path": "tmp/contracts/scan_report/scan_report_2237.md",
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -486,13 +406,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2238.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2238.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2238.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -514,13 +428,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2239.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2239.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2239.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -542,13 +450,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2240.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2240.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2240.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -570,13 +472,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2241.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2241.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2241.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -598,13 +494,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2244.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2244.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2244.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -626,13 +516,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2245.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2245.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2245.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -654,13 +538,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2246.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2246.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2246.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -682,13 +560,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2247.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2247.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2247.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
@@ -710,13 +582,7 @@
       "input_path": "tmp/contracts/parsers_output/parser_output_2252.json",
       "output_path": "tmp/contracts/scan_result/scan_result_2252.json",
       "report_path": "tmp/contracts/scan_report/scan_report_2252.md",
-      "authorized_ports": [
-        80,
-        443,
-        8080,
-        8443,
-        9000
-      ],
+      "authorized_ports": [80, 443, 8080, 8443, 9000],
       "authorized_ips": [
         "192.168.1.100",
         "10.20.30.0/24",
