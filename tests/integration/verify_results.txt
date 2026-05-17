@@ -1,4 +1,4 @@
-PASS: nginx_raw_2249
+PASS: nginx_raw_2250
 
 === SUMMARY ===
 Total: 1 | Passed: 1
