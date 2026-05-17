@@ -1,0 +1,21 @@
+[*] Dry-run port 2223 ...
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 198, in <module>
+    main()
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 170, in main
+    result = engine.dry_run(args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 84, in dry_run
+    self._injector.apply(hardened_ast, item)
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/injector.py", line 21, in apply
+    parent, index = self._locator.locate(ast, item.exact_path)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/locator.py", line 28, in locate
+    parent = self._navigate(ast, exact_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/locator.py", line 34, in _navigate
+    node = node[key]
+           ~~~~^^^^^
+KeyError: 'block'
