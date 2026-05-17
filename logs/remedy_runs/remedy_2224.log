@@ -1,0 +1,118 @@
+[*] Dry-run port 2224 ...
+[+] Status : pending
+[+] Output : /home/nguye24/projects/sandbox/SecRemedy/tmp/hardened_configs/2224
+
+--- UNIFIED DIFF ---
+--- original/nginx.conf
++++ hardened/nginx.conf
+@@ -18,7 +18,6 @@
+     client_max_body_size 16M;
+     include mime.types;
+     default_type application/octet-stream;
+-    access_log off;
+     error_log /dev/null;
+     ssl_session_timeout 1d;
+     ssl_session_cache shared:SSL:10m;
+@@ -45,4 +44,18 @@
+     }
+     include conf.d/*.conf;
+     include sites-enabled/*;
++    server {
++        listen 80 default_server;
++        listen [::]:80 default_server;
++        listen 443 ssl default_server;
++        listen [::]:443 ssl default_server;
++        listen 443 quic default_server;
++        listen [::]:443 quic default_server;
++        ssl_reject_handshake on;
++        server_name _;
++        return 444;
++    }
++    server_tokens off;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
+ }--- original/nodejs.example.com.conf
++++ hardened/nodejs.example.com.conf
+@@ -1,8 +1,25 @@
+ server {
+-    listen 80;
+-    listen 8085;
+-    listen [::]:80;
+-    listen [::]:8085;
++    listen 443 ssl http2;
++    listen [::]:443 ssl http2;
++    server_name .nodejs.example.com;
++    ssl_certificate /etc/ssl/certs/nginx.crt;
++    ssl_certificate_key /etc/ssl/private/nginx.key;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
++}
++server {
+     listen 443 ssl http2;
+     listen [::]:443 ssl http2;
+     server_name www.nodejs.example.com;
+@@ -18,9 +35,10 @@
+     include nginxconfig.io/general.conf;
+ }
+ server {
+-    listen 443 ssl http2;
+-    listen [::]:443 ssl http2;
+-    server_name .nodejs.example.com;
+-    ssl_certificate /etc/ssl/certs/nginx.crt;
+-    ssl_certificate_key /etc/ssl/private/nginx.key;
++    listen 80;
++    listen 8085;
++    listen [::]:80;
++    listen [::]:8085;
++    server_name www.nodejs.example.com;
++    return 301 https://$host$request_uri;
+ }--- original/security.conf
++++ hardened/security.conf
+@@ -1,13 +1,12 @@
+ add_header X-XSS-Protection '1; mode=block' always;
+ add_header X-Content-Type-Options nosniff always;
+ add_header Referrer-Policy no-referrer-when-downgrade always;
+-add_header Content-Security-Policy "default-src 'self' http: https: ws: wss: data: blob: 'unsafe-inline'; frame-ancestors 'self';" always;
++add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ add_header Permissions-Policy interest-cohort=() always;
+ location ~ /\.(?!well-known) {
+     deny all;
+ }
+ location /admin_login/ {
+-    allow 192.168.1.106;
+     allow 10.20.30.0/24;
+     deny all;
+ }--- original/proxy.conf
++++ hardened/proxy.conf
+@@ -9,4 +9,8 @@
+ proxy_set_header X-Forwarded-Port '';
+ proxy_connect_timeout 60s;
+ proxy_send_timeout 60s;
+-proxy_read_timeout 60s;+proxy_read_timeout 60s;
++proxy_hide_header X-Powered-By;
++proxy_hide_header Server;
++proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
++proxy_set_header X-Real-IP $remote_addr;--- original/general.conf
++++ hardened/general.conf
+@@ -10,6 +10,8 @@
+ location ~* '\.(?:svgz?|ttf|ttc|otf|eot|woff2?)$' {
+     add_header Access-Control-Allow-Origin *;
+     expires 7d;
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ gzip on;
+ gzip_vary on;
+

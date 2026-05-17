@@ -1,0 +1,15 @@
+[*] Dry-run port 2244 ...
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 228, in <module>
+    main()
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 198, in main
+    result = engine.dry_run(args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 75, in dry_run
+    items = self._reader.load(str(scan_result_path))
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/reader.py", line 33, in load
+    raise FileNotFoundError(f"scan_result not found: {scan_result_path}")
+FileNotFoundError: scan_result not found: /home/nguye24/projects/sandbox/SecRemedy/tmp/contracts/scan_result/scan_result_2244.json

@@ -1,0 +1,165 @@
+[*] Dry-run port 2241 ...
+[+] Status : pending
+[+] Output : /home/nguye24/projects/sandbox/SecRemedy/tmp/hardened_configs/2241
+
+--- UNIFIED DIFF ---
+--- original/nginx.conf
++++ hardened/nginx.conf
+@@ -31,4 +31,18 @@
+     resolver_timeout 2s;
+     include conf.d/*.conf;
+     include sites-enabled/*;
++    server {
++        listen 80 default_server;
++        listen [::]:80 default_server;
++        listen 443 ssl default_server;
++        listen [::]:443 ssl default_server;
++        listen 443 quic default_server;
++        listen [::]:443 quic default_server;
++        ssl_reject_handshake on;
++        server_name _;
++        return 444;
++    }
++    server_tokens off;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
+ }--- original/frontend.example.com.conf
++++ hardened/frontend.example.com.conf
+@@ -10,6 +10,18 @@
+         try_files $uri $uri/ /index.html;
+     }
+     include nginxconfig.io/general.conf;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
+ }
+ server {
+     listen 443 ssl http2;
+@@ -27,9 +39,25 @@
+         add_header Access-Control-Allow-Origin *;
+         add_header Cache-Control public;
+         expires 30d;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
+     location / {
+         deny all;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
++    }
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
+     }
+ }
+ server {
+@@ -38,6 +66,20 @@
+     server_name .frontend.example.com;
+     ssl_certificate /etc/ssl/certs/nginx.crt;
+     ssl_certificate_key /etc/ssl/private/nginx.key;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ server {
+     listen 80;
+@@ -46,22 +88,41 @@
+     error_page 404 /custom_404.html;
+     error_page 500 502 503 504 /custom_50x.html;
+     location ^~ /.well-known/acme-challenge/ {
+-        allow all;
+         default_type text/plain;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
+     location ~ /\. {
+         deny all;
+         return 404;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
+     location / {
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
++    return 301 https://$host$request_uri;
+ }
+ server {
+     listen 80;
+-    listen 8082;
+     listen [::]:80;
+-    listen [::]:8082;
+     server_name .frontend.example.com;
+     location / {
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
++    return 301 https://$host$request_uri;
+ }--- original/security.conf
++++ hardened/security.conf
+@@ -1,13 +1,12 @@
+ add_header X-XSS-Protection '1; mode=block' always;
+ add_header X-Content-Type-Options nosniff always;
+ add_header Referrer-Policy no-referrer-when-downgrade always;
+-add_header Content-Security-Policy "default-src 'self' http: https: ws: wss: data: blob: 'unsafe-inline'; frame-ancestors 'self';" always;
++add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ add_header Permissions-Policy interest-cohort=() always;
+ location ~ /\.(?!well-known) {
+     deny all;
+ }
+ location /admin_login/ {
+-    allow 192.168.1.202;
+     allow 10.20.30.0/24;
+     deny all;
+ }--- original/general.conf
++++ hardened/general.conf
+@@ -10,6 +10,8 @@
+ location ~* '\.(?:svgz?|ttf|ttc|otf|eot|woff2?)$' {
+     add_header Access-Control-Allow-Origin *;
+     expires 7d;
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ gzip on;
+ gzip_vary on;
+

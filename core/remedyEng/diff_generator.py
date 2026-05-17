@@ -1,32 +1,52 @@
-"""Diff helpers for remediation review."""
+"""
+Step 5 — Diff Generator
 
-from __future__ import annotations
+So sánh original AST vs hardened AST (cả hai được build bởi crossplane)
+để sinh Unified Diff text gửi lên Frontend UI.
+
+Dùng crossplane.build() để serialize cả hai AST trước khi diff,
+đảm bảo format nhất quán và diff chỉ phản ánh thay đổi ngữ nghĩa.
+"""
 
 import difflib
-import json
-from typing import Any
+import crossplane
+from pathlib import Path
 
 
-def generate_unified_diff(before_text: str, after_text: str, file_path: str) -> str:
-    """Generate a unified text diff for a single file."""
-    before_lines = before_text.splitlines()
-    after_lines = after_text.splitlines()
+class DiffGenerator:
+    def generate_from_ast(self, original_ast: dict, hardened_ast: dict) -> str:
+        """
+        Build cả hai AST → so sánh từng cặp file → ghép thành 1 unified diff string.
+        """
+        parts: list[str] = []
 
-    if before_lines == after_lines:
-        return ""
+        orig_configs = original_ast.get("config", [])
+        hard_configs = hardened_ast.get("config", [])
 
-    diff_lines = difflib.unified_diff(
-        before_lines,
-        after_lines,
-        fromfile=f"a/{file_path}",
-        tofile=f"b/{file_path}",
-        lineterm="",
-    )
-    return "\n".join(diff_lines)
+        for orig_cfg, hard_cfg in zip(orig_configs, hard_configs):
+            filename = Path(orig_cfg["file"]).name
+            orig_lines = crossplane.build(orig_cfg["parsed"]).splitlines(keepends=True)
+            hard_lines = crossplane.build(hard_cfg["parsed"]).splitlines(keepends=True)
 
+            diff = difflib.unified_diff(
+                orig_lines,
+                hard_lines,
+                fromfile=f"original/{filename}",
+                tofile=f"hardened/{filename}",
+            )
+            parts.extend(diff)
 
-def generate_ast_fallback_diff(before_ast: Any, after_ast: Any, file_path: str) -> str:
-    """Generate a readable fallback diff when config rendering is unavailable."""
-    before_text = json.dumps(before_ast, indent=2, sort_keys=True)
-    after_text = json.dumps(after_ast, indent=2, sort_keys=True)
-    return generate_unified_diff(before_text, after_text, f"{file_path} (AST fallback)")
+        return "".join(parts)
+
+    def generate(self, original_path: str, hardened_path: str) -> str:
+        """Diff hai file text trực tiếp (dùng khi đã có file trên disk)."""
+        orig = Path(original_path).read_text(encoding="utf-8").splitlines(keepends=True)
+        hard = Path(hardened_path).read_text(encoding="utf-8").splitlines(keepends=True)
+        filename = Path(original_path).name
+        diff = difflib.unified_diff(
+            orig,
+            hard,
+            fromfile=f"original/{filename}",
+            tofile=f"hardened/{filename}",
+        )
+        return "".join(diff)
