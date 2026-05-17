@@ -1,21 +1,136 @@
 [*] Dry-run port 2221 ...
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 198, in <module>
-    main()
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 170, in main
-    result = engine.dry_run(args.port)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 84, in dry_run
-    self._injector.apply(hardened_ast, item)
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/injector.py", line 21, in apply
-    parent, index = self._locator.locate(ast, item.exact_path)
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/locator.py", line 28, in locate
-    parent = self._navigate(ast, exact_path)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/locator.py", line 34, in _navigate
-    node = node[key]
-           ~~~~^^^^^
-KeyError: 'block'
+[!] Skip invalid item: add location path=['config', 2, 'parsed', 0, 'block', 1, 'block'] — KeyError: 'block'
+[!] Skip invalid item: add location path=['config', 2, 'parsed', 0, 'block', 0, 'block'] — KeyError: 'block'
+[+] Status : pending
+[+] Output : /home/nguye24/projects/sandbox/SecRemedy/tmp/hardened_configs/2221
+[!] Skipped 2 invalid item(s) — see warnings above
+
+--- UNIFIED DIFF ---
+--- original/nginx.conf
++++ hardened/nginx.conf
+@@ -18,7 +18,6 @@
+     client_max_body_size 16M;
+     include mime.types;
+     default_type application/octet-stream;
+-    access_log off;
+     error_log /dev/null;
+     ssl_session_timeout 1d;
+     ssl_session_cache shared:SSL:10m;
+@@ -32,4 +31,18 @@
+     resolver_timeout 2s;
+     include conf.d/*.conf;
+     include sites-enabled/*;
++    server {
++        listen 80 default_server;
++        listen [::]:80 default_server;
++        listen 443 ssl default_server;
++        listen [::]:443 ssl default_server;
++        listen 443 quic default_server;
++        listen [::]:443 quic default_server;
++        ssl_reject_handshake on;
++        server_name _;
++        return 444;
++    }
++    server_tokens off;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
+ }--- original/spa.example.com.conf
++++ hardened/spa.example.com.conf
+@@ -22,6 +22,18 @@
+         fastcgi_pass php_spa_example_com;
+         include nginxconfig.io/php_fastcgi.conf;
+     }
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
+ }
+ server {
+     listen 443 ssl http2;
+@@ -29,13 +41,40 @@
+     server_name .spa.example.com;
+     ssl_certificate /etc/ssl/certs/nginx.crt;
+     ssl_certificate_key /etc/ssl/private/nginx.key;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ server {
+     listen 80;
+-    listen 8083;
+     listen [::]:80;
+-    listen [::]:8083;
+     server_name .spa.example.com;
+     location / {
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
++    return 301 https://$host$request_uri;
+ }--- original/security.conf
++++ hardened/security.conf
+@@ -1,13 +1,11 @@
+ add_header X-XSS-Protection '1; mode=block' always;
+ add_header X-Content-Type-Options nosniff always;
+ add_header Referrer-Policy no-referrer-when-downgrade always;
+-add_header Content-Security-Policy "default-src 'self' http: https: ws: wss: data: blob: 'unsafe-inline'; frame-ancestors 'self';" always;
++add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ add_header Permissions-Policy interest-cohort=() always;
+ location ~ /\.(?!well-known) {
+     deny all;
+ }
+ location /admin_login/ {
+-    allow 192.168.1.103;
+-    allow 10.20.30.0/32;
+     deny all;
+ }--- original/general.conf
++++ hardened/general.conf
+@@ -10,6 +10,8 @@
+ location ~* '\.(?:svgz?|ttf|ttc|otf|eot|woff2?)$' {
+     add_header Access-Control-Allow-Origin *;
+     expires 7d;
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ gzip on;
+ gzip_vary on;
+--- original/php_fastcgi.conf
++++ hardened/php_fastcgi.conf
+@@ -8,4 +8,7 @@
+ fastcgi_param DOCUMENT_ROOT $realpath_root;
+ fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+ fastcgi_param PATH_INFO $_fastcgi_path_info;
+-fastcgi_param PHP_ADMIN_VALUE open_basedir=$base/:/usr/lib/php/:/tmp/;+fastcgi_param PHP_ADMIN_VALUE open_basedir=$base/:/usr/lib/php/:/tmp/;
++fastcgi_hide_header X-Powered-By;
++fastcgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
++fastcgi_param X-Real-IP $remote_addr;

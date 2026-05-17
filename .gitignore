@@ -4,6 +4,7 @@ __pycache__/
 *.db
 tmp/
 backups/
+logs/
 notes/
 core/remedyEng/archive/
 core/remedyEng/plan/

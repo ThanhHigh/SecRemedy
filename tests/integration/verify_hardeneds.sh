@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# verify_uncomply.sh
-# For each nginx config folder in 12_uncomply/:
-#   1. Copy it into ./workspace
-#   2. Build + start nginx container
-#   3. Run nginx -t inside container
-#   4. Record PASS/FAIL
-#   5. Teardown
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +6,7 @@ TMP_DIR="${SCRIPT_DIR}/tmp"
 WORKSPACE_DIR="${SCRIPT_DIR}/workspace"
 COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
 CONTAINER_NAME="nginx_sec_remedy_test"
-RESULTS_FILE="${SCRIPT_DIR}/verify_results.txt"
+RESULTS_FILE="${SCRIPT_DIR}/verify_hardeneds.txt"
 
 # ── Colors ──────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'
@@ -41,14 +33,14 @@ mkdir -p "${TMP_DIR}"
 if [[ -n "${TARGET_PORT}" ]]; then
     info "Filtering for port: ${TARGET_PORT}"
     # Use find to copy specific port folder if it exists
-    find "${SCRIPT_DIR}" -type d -name "nginx_raw_${TARGET_PORT}" -exec cp -r {} "${TMP_DIR}/" \;
+    find "${SCRIPT_DIR}/../../tmp/hardened_configs" -type d -name "${TARGET_PORT}" -exec cp -r {} "${TMP_DIR}/" \;
 
     if [[ -z $(ls -A "${TMP_DIR}") ]]; then
-        fail "No folders found matching nginx_raw_${TARGET_PORT}"
+        fail "No folders found matching ${TARGET_PORT}"
         exit 1
     fi
 else
-    cp -r "${SCRIPT_DIR}"/*_compliant/*/nginx_raw_* "${TMP_DIR}/"
+    cp -r "${SCRIPT_DIR}/../../tmp/hardened_configs"/* "${TMP_DIR}/"
 fi
 
 > "${RESULTS_FILE}"  # truncate results file
@@ -60,7 +52,7 @@ info "Building Docker image..."
 docker compose -f "${COMPOSE_FILE}" build --quiet || { echo "ERROR: Docker image build failed." >&2; exit 1; }
 
 # ── Iterate config folders ──────────────────────────────────────────────
-for config_dir in "${TMP_DIR}"/nginx_raw_*/; do
+for config_dir in "${TMP_DIR}"/*/; do
     folder_name="$(basename "${config_dir}")"
     total=$((total + 1))
 

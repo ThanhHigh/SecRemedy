@@ -1,21 +1,120 @@
 [*] Dry-run port 2227 ...
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 198, in <module>
-    main()
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 170, in main
-    result = engine.dry_run(args.port)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 84, in dry_run
-    self._injector.apply(hardened_ast, item)
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/injector.py", line 21, in apply
-    parent, index = self._locator.locate(ast, item.exact_path)
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/locator.py", line 28, in locate
-    parent = self._navigate(ast, exact_path)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/locator.py", line 34, in _navigate
-    node = node[key]
-           ~~~~^^^^^
-KeyError: 'block'
+[+] Status : pending
+[+] Output : /home/nguye24/projects/sandbox/SecRemedy/tmp/hardened_configs/2227
+
+--- UNIFIED DIFF ---
+--- original/nginx.conf
++++ hardened/nginx.conf
+@@ -18,7 +18,6 @@
+     client_max_body_size 16M;
+     include mime.types;
+     default_type application/octet-stream;
+-    access_log off;
+     error_log /dev/null;
+     ssl_session_timeout 1d;
+     ssl_session_cache shared:SSL:10m;
+@@ -43,4 +42,7 @@
+         server_name _;
+         return 444;
+     }
++    server_tokens off;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
+ }--- original/django.example.com.conf
++++ hardened/django.example.com.conf
+@@ -19,6 +19,18 @@
+         alias $base/static/;
+     }
+     include nginxconfig.io/general.conf;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
+ }
+ server {
+     listen 443 ssl http2;
+@@ -26,13 +38,40 @@
+     server_name .django.example.com;
+     ssl_certificate /etc/ssl/certs/nginx.crt;
+     ssl_certificate_key /etc/ssl/private/nginx.key;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ server {
+     listen 80;
+-    listen 8081;
+     listen [::]:80;
+-    listen [::]:8081;
+     server_name .django.example.com;
+     location / {
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location / {
++        location ^~ /.well-known/acme-challenge/ {
++            allow all;
++            default_type text/plain;
++        }
++        location ~ /\. {
++            deny all;
++            return 404;
++        }
++    }
++    return 301 https://$host$request_uri;
+ }--- original/security.conf
++++ hardened/security.conf
+@@ -1,10 +1,9 @@
+ add_header X-XSS-Protection '1; mode=block' always;
+ add_header X-Content-Type-Options nosniff always;
+ add_header Referrer-Policy no-referrer always;
+-add_header Content-Security-Policy "default-src 'self' http: https: ws: wss: data: blob: 'unsafe-inline'; frame-ancestors 'self';" always;
++add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ add_header Permissions-Policy interest-cohort=() always;
+ location ~ /\.(?!well-known) {
+     allow 127.0.0.1;
+-    allow 10.0.0.0/12;
+     deny all;
+ }--- original/general.conf
++++ hardened/general.conf
+@@ -10,6 +10,8 @@
+ location ~* '\.(?:svgz?|ttf|ttc|otf|eot|woff2?)$' {
+     add_header Access-Control-Allow-Origin *;
+     expires 7d;
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ gzip on;
+ gzip_vary on;
+--- original/uwsgi_params
++++ hardened/uwsgi_params
+@@ -11,4 +11,8 @@
+ uwsgi_param REMOTE_ADDR $remote_addr;
+ uwsgi_param REMOTE_PORT $remote_port;
+ uwsgi_param SERVER_PORT $server_port;
+-uwsgi_param SERVER_NAME $server_name;+uwsgi_param SERVER_NAME $server_name;
++uwsgi_hide_header X-Powered-By;
++uwsgi_hide_header Server;
++uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
++uwsgi_param X-Real-IP $remote_addr;

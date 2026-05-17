@@ -33,7 +33,7 @@
 +    error_page 500 502 503 504 /custom_50x.html;
  }--- original/nodejs.example.com.conf
 +++ hardened/nodejs.example.com.conf
-@@ -1,8 +1,24 @@
+@@ -1,8 +1,25 @@
  server {
 -    listen 80;
 -    listen 8085;
@@ -57,16 +57,14 @@
 +            return 404;
 +        }
 +    }
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
 +}
 +server {
      listen 443 ssl http2;
      listen [::]:443 ssl http2;
      server_name www.nodejs.example.com;
-@@ -16,12 +32,13 @@
-         include nginxconfig.io/proxy.conf;
-     }
+@@ -18,10 +35,10 @@
      include nginxconfig.io/general.conf;
-+    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
  }
  server {
 -    listen 443 ssl http2;

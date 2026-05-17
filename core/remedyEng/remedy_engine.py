@@ -36,6 +36,15 @@ from core.remedyEng.executor import RemoteExecutor
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # SecRemedy/
 
 
+def _path_sort_key(item) -> tuple:
+    """
+    Build sort key cho exact_path mixed int/str: (0, val) cho int, (1, val) cho str.
+    Sắp theo key DESC → op tại index cao trong cùng parent_list chạy trước,
+    tránh index-shift do delete/insert ở index thấp.
+    """
+    return tuple((0, x) if isinstance(x, int) else (1, x) for x in item.exact_path)
+
+
 class RemedyEngine:
     def __init__(self) -> None:
         self._reader = ScanResultReader()
@@ -78,10 +87,28 @@ class RemedyEngine:
 
         hardened_ast = copy.deepcopy(original_ast)
 
-        # Sort DESC by line → inject từ cuối file lên đầu, tránh index shift
-        items_sorted = sorted(items, key=lambda x: x.line, reverse=True)
+        # Sort theo exact_path DESC: op ở index cao chạy trước → delete/insert ở
+        # index thấp không shift các path đã queue. Stable hơn line-based sort
+        # vì line=0 không phản ánh vị trí trong block.
+        items_sorted = sorted(items, key=_path_sort_key, reverse=True)
+        skipped: list[dict] = []
         for item in items_sorted:
-            self._injector.apply(hardened_ast, item)
+            try:
+                self._injector.apply(hardened_ast, item)
+            except (KeyError, IndexError, TypeError, ValueError) as e:
+                # Scanner có thể sinh exact_path không hợp lệ (vd trỏ vào
+                # directive đơn không có inner block). Skip + log để
+                # Member 1 thấy item nào sai, không crash cả batch.
+                reason = f"{type(e).__name__}: {e}"
+                skipped.append({
+                    "file": item.file,
+                    "action": item.action,
+                    "directive": item.directive,
+                    "exact_path": item.exact_path,
+                    "reason": reason,
+                })
+                print(f"[!] Skip invalid item: {item.action} {item.directive} "
+                      f"path={item.exact_path} — {reason}")
 
         # Step 4: Build hardened config files
         output_files = self._builder.build(hardened_ast, str(hardened_dir))
@@ -94,6 +121,7 @@ class RemedyEngine:
             "hardened_dir": str(hardened_dir),
             "output_files": output_files,
             "status": "pending",
+            "skipped": skipped,
         }
 
     def execute(self, port: int, ssh_creds: dict) -> dict:
@@ -170,6 +198,8 @@ def main() -> None:
         result = engine.dry_run(args.port)
         print(f"[+] Status : {result['status']}")
         print(f"[+] Output : {result['hardened_dir']}")
+        if result.get("skipped"):
+            print(f"[!] Skipped {len(result['skipped'])} invalid item(s) — see warnings above")
         if result["diff"]:
             print("\n--- UNIFIED DIFF ---")
             print(result["diff"])
