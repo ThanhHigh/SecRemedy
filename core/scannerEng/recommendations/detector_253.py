@@ -35,6 +35,11 @@ class Detector253(BaseRecom):
 
     def traverse_directive(self, target_directive: str, directives: List[Dict], filepath: str, logical_context: List[str], exact_path: List[Any], state: Any = None) -> List[Dict[str, Any]]:
         matches = []
+
+        # SKIP: server directive inside upstream is backend, not webserver
+        if "upstream" in logical_context:
+            return matches
+
         for idx, directive in enumerate(directives):
             if self._should_skip_block(directive):
                 continue

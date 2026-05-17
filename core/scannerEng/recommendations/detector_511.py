@@ -46,6 +46,13 @@ class Detector511(BaseRecom):
         deny_all_indices = []
 
         for idx, directive in enumerate(directives_list):
+            d_name = directive.get("directive")
+            d_args = directive.get("args", [])
+
+            # --- SKIP ACME CHALLENGE ---
+            if d_name == "location" and any("/.well-known/acme-challenge/" in str(arg) for arg in d_args):
+                continue 
+            # ------------------------------------------
             if self._should_skip_block(directive):
                 continue
 
