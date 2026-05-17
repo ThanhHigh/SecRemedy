@@ -45,7 +45,7 @@ Hai engine độc lập, hoạt động tuần tự, giao tiếp qua **JSON Cont
   - Giải quyết kế thừa Nginx (`proxy_set_header` ở `http` kế thừa xuống `location`).
   - Truy vết lỗi sâu trong các file lồng nhau (`conf.d/*.conf`, `sites-enabled/*.conf`).
   - Phân tích `include` đệ quy để tránh false negative khi directive nằm ở snippet riêng.
-- **JSON Contract & Điểm tuân thủ:** Xuất báo cáo kèm Compliance Score. Mỗi vi phạm sinh JSON Contract chứa hành động sửa (`add`, `modify`, `delete`, `add_block`) + `exact_path` trên AST + `line` number.
+- **JSON Contract & Điểm tuân thủ:** Xuất báo cáo kèm Compliance Score. Mỗi vi phạm sinh JSON Contract chứa hành động sửa (`add`, `replace`, `delete`) + `exact_path` trên AST + `line` number.
 
 ### 2. Trình Tự động Khắc phục (Remediation Engine) — 🔄 Đang phát triển
 
@@ -56,9 +56,9 @@ Mỗi vi phạm trong `scan_result.json` chứa một mảng `remediations[]` �
 ```json
 "remediations": [
   {
-    "action": "add",                         // Loại hành động: add | modify | delete | add_block
+    "action": "add",                         // Loại hành động: add | replace | delete
     "directive": "server_tokens",             // Tên directive cần thao tác
-    "args": ["off"],                          // Giá trị mới (với action add/modify)
+    "args": ["off"],                          // Giá trị mới (với action add/replace)
     "line": 17,                               // Số dòng tham chiếu trong file gốc
     "logical_context": ["http"],             // Ngữ cảnh Nginx (http / server / location)
     "exact_path": ["config", 0, "parsed", 6, "block"]  // Đường dẫn chính xác đến node trong AST
@@ -66,25 +66,50 @@ Mỗi vi phạm trong `scan_result.json` chứa một mảng `remediations[]` �
 ]
 ```
 
-**Pipeline thực thi của Remedy Engine (5 bước):**
+**Pipeline thực thi của Remedy Engine (6 bước):**
 
-1. **Đọc scan_result** — Load `scan_result.json` từ `tmp/contracts/scan_result/`. Với mỗi `uncompliance`, duyệt qua từng item trong `remediations[]`.
+1. **Đọc scan_result (Reader)** — Load `scan_result.json` từ `tmp/contracts/scan_result/`. Với mỗi `uncompliance`, xếp hàng từng item trong `remediations[]`.
 2. **Định vị AST (Locator)** — Dùng `exact_path` để điều hướng chính xác đến node cần thao tác trong cây AST JSON (đã được crossplane parse sẵn). Không cần re-parse hay phân tích logic.
 3. **Tiêm thay đổi (Injector)** — Thực thi `action`:
-   - `add` / `add_block` → chèn directive/block mới vào đúng vị trí trong AST
-   - `modify` → cập nhật `args` của directive tại node đó
+   - `add` → chèn directive/block mới vào đúng vị trí trong AST
+   - `replace` → xóa directive cũ, chèn directive mới tại node đó
    - `delete` → xóa node đó khỏi AST
-4. **Dựng lại config (Builder)** — Crossplane serialize AST đã chỉnh thành text Nginx config (`.conf`). Lưu ra file tạm.
-5. **Sinh diff & Validate** — Dùng `difflib` sinh Unified Diff (gốc vs. đã sửa). Upload file tạm lên server, chạy `nginx -t -c <temp_file>` qua SSH. Chỉ tiến hành Apply nếu `nginx -t` trả về `syntax is ok`.
+4. **Dựng lại config (Builder)** — `crossplane.build()` serialize AST đã chỉnh thành text Nginx config (`.conf`). Lưu ra `tmp/hardened_configs/<port>_hardened.conf`.
+5. **Sinh diff (Diff Generator)** — Dùng `difflib.unified_diff()` sinh Unified Diff (gốc vs. hardened) → gửi lên Frontend UI cho user review.
+6. **Thực thi (Executor)** — Chỉ chạy sau khi Approve Gate mở:
+   - Backup: `cp -R /etc/nginx/ /etc/nginx.bak/` trên server
+   - SFTP push hardened config lên `/etc/nginx/*`
+   - Không chạy `nginx -s reload` (nằm ngoài scope Executor)
+
+**Approve Gate** nằm giữa Step 5 và Step 6 — Gate chỉ mở khi **user chủ động nhấn Approve** trên UI, không tự động.
+
+**Trạng thái Remediation trong DB:**
+
+| Trạng thái | Điều kiện |
+| :--------: | --------- |
+| `pending`  | Dry-Run xong, chờ Approve |
+| `approved` | User nhấn Approve |
+| `applied`  | Executor push thành công |
+| `failed`   | SSH lỗi hoặc SFTP lỗi |
+
+**File I/O Mapping:**
+
+| Vai trò    | Đường dẫn |
+| :--------: | --------- |
+| **INPUT**  | `tmp/contracts/scan_result/<port>_scan_result.json` |
+| **INPUT**  | `tmp/contracts/parsers_output/<port>_ast.json` |
+| **WORK**   | `tmp/hardened_configs/<port>_hardened.conf` |
+| **OUTPUT** | `/etc/nginx/*` trên target server |
+| **BACKUP** | `/etc/nginx.bak/*` trên target server |
 
 ### 3. Quy trình Khắc phục An toàn (Safe Remediation Workflow)
 
-Zero-downtime đảm bảo bởi pipeline nghiêm ngặt — chỉ kích hoạt sau khi Remedy Engine hoàn tất bước 1–4:
+Zero-downtime đảm bảo bởi pipeline nghiêm ngặt:
 
-1. **Dry-Run & Diff:** Sinh Unified Diff (gốc vs. đã sửa theo instruction) → hiển thị lên Frontend UI để user review.
-2. **Kiểm thử cú pháp:** Upload file tạm lên target host, chạy `nginx -t -c <temp_file>` qua SSH, đọc kết quả.
-3. **Gate check:** `nginx -t` fail → dừng toàn bộ, báo lỗi, không động vào file thật trên server.
-4. **Approve & Apply:** Chỉ khi `nginx -t` OK **và** user nhấn Approve trên UI → ghi cấu hình đã harden vào file mới + push lên target server. ( không có reload).
+1. **Pre-check:** Backend SSH vào server, chạy `nginx -t`. Fail → trả lỗi về UI, dừng toàn bộ.
+2. **Dry-Run & Diff:** Sinh Unified Diff (gốc vs. hardened) → hiển thị lên Frontend UI để user review.
+3. **Approve Gate:** User nhấn Approve → Gate mở → Executor chạy. Không approve → không ghi file.
+4. **Backup & Apply:** Executor backup `/etc/nginx/` trước, sau đó SFTP push hardened config lên server (không reload).
 
 ## Môi trường Kiểm thử (Test Environment)
 
@@ -188,7 +213,37 @@ SecRemedy/
 
 ## Kiến trúc Hệ thống (Architecture)
 
+### Kiến trúc 3 tầng
+
+```
+[ Tầng 1: Frontend — Streamlit UI ]
+  Dashboard: Score + danh sách vi phạm CIS
+  Remediation UI: Dry-Run → Diff → Approve
+        │  Click Scan / Dry-Run / Approve
+        ▼
+[ Tầng 2: Backend API — FastAPI ]
+  POST /scan    →  nginx -t pre-check → Scanner Engine
+  POST /dry-run →  nginx -t pre-check → Remediation Engine (Steps 1–5)
+  POST /approve →  Approve Gate → Executor (Step 6)
+        │
+        ▼
+[ Tầng 3: Core Engines ]
+  Scanner Engine:      SSH Fetch → Crossplane Parse → CIS Evaluate → Score + SQLite
+  Remediation Engine:  AST Locate → AST Inject → Build hardened.conf → Unified Diff
+  Safe Pipeline:       SSH Backup → SFTP Push hardened config
+        │
+        ▼
+[ Tầng 4: Infrastructure — SQLite ]
+  Bảng Servers | ScanResults | Remediations
+```
+
+> **Pre-check `nginx -t`:** Mỗi endpoint `/scan` và `/dry-run` đều SSH vào server chạy `nginx -t` trước. Fail → trả lỗi về UI ngay, không chạy engine.
+
+### Stack kỹ thuật
+
 - **Backend Engine:** Python 3.10+
+- **API Layer:** FastAPI
+- **Frontend:** Streamlit (hoặc Vue/React)
 - **Database:** SQLite + SQLAlchemy ORM
 - **Thư viện cốt lõi:**
   - `paramiko 4.x` — SSH đọc/ghi file và chạy lệnh từ xa
