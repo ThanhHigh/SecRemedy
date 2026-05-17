@@ -127,35 +127,81 @@ class NginxParser:
         return payload
 
 
+RAW_CONFIGS_DIR = "./tmp/raw_configs"
+HARDENED_CONFIGS_DIR = "./tmp/hardened_configs"
+
+PHASE_PATHS = {
+    "before": {
+        "raw_dir": RAW_CONFIGS_DIR,
+        "parser_output_dir": "tmp/contracts/parsers_output",
+        "parser_report_dir": "./tmp/contracts/parsers_report",
+    },
+    "after": {
+        "raw_dir": HARDENED_CONFIGS_DIR,
+        "parser_output_dir": "tmp/contracts/parsers_output_after",
+        "parser_report_dir": "./tmp/contracts/parsers_report_after",
+    },
+}
+
+
+def _discover_servers_from_raw_configs(raw_dir=RAW_CONFIGS_DIR):
+    """Tự động lấy danh sách port từ tên các thư mục con của <raw_dir>/."""
+    if not os.path.isdir(raw_dir):
+        return []
+    ports = []
+    for name in sorted(os.listdir(raw_dir)):
+        full = os.path.join(raw_dir, name)
+        if os.path.isdir(full) and name.isdigit():
+            ports.append(int(name))
+    return [{"port": p} for p in ports]
+
+
 def main():
     parser_cli = argparse.ArgumentParser(
         description="Nginx Configuration AST Parser (Crossplane Wrapper)"
     )
     parser_cli.add_argument(
         "--config", "-c",
-        default="tests/config_to_test/config_input_scanner_before_toFinal.json",
-        help="Path to configuration file (defaults to scan_before_remedy_config_input.json)."
+        default=None,
+        help="Path to config file. Nếu bỏ trống: tự động quét toàn bộ <raw_dir>/<port>/."
+    )
+    parser_cli.add_argument(
+        "--phase",
+        choices=["before", "after"],
+        default="before",
+        help="'before' đọc tmp/raw_configs/, 'after' đọc tmp/hardened_configs/. "
+             "Đồng thời quyết định nơi ghi parser_output (after → suffix _after)."
     )
     args = parser_cli.parse_args()
 
+    paths = PHASE_PATHS[args.phase]
+    raw_dir = paths["raw_dir"]
+    parser_output_dir = paths["parser_output_dir"]
+    report_dir = paths["parser_report_dir"]
+
     config_path = args.config
-    if not os.path.exists(config_path):
-        print(f"[-] Lỗi: Không tìm thấy file cấu hình {config_path}")
-        exit(1)
+    if config_path:
+        if not os.path.exists(config_path):
+            print(f"[-] Lỗi: Không tìm thấy file cấu hình {config_path}")
+            exit(1)
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_data = json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"[-] Lỗi cú pháp JSON trong file {config_path}: {e}")
+            exit(1)
+        servers = config_data.get("servers", [])
+        if not servers:
+            print(f"[-] Không có server nào được định nghĩa trong {config_path}")
+            exit(1)
+    else:
+        servers = _discover_servers_from_raw_configs(raw_dir)
+        if not servers:
+            print(f"[-] Không có raw config nào dưới {raw_dir}. "
+                  f"Hãy chạy 'tests/run_tests.sh' trước, hoặc cung cấp --config.")
+            exit(1)
+        print(f"[*] [phase={args.phase}] Auto-discovered {len(servers)} port(s) từ {raw_dir}.")
 
-    try:
-        with open(config_path, "r", encoding="utf-8") as f:
-            config_data = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"[-] Lỗi cú pháp JSON trong file {config_path}: {e}")
-        exit(1)
-
-    servers = config_data.get("servers", [])
-    if not servers:
-        print(f"[-] Không có server nào được định nghĩa trong {config_path}")
-        exit(1)
-
-    report_dir = "./tmp/contracts/parsers_report"
     os.makedirs(report_dir, exist_ok=True)
 
     for server in servers:
@@ -165,22 +211,22 @@ def main():
 
         report_file = os.path.join(report_dir, f"parser_report_{current_port}.md")
         with open(report_file, "w", encoding="utf-8") as f:
-            f.write(f"# Parser Report - Port {current_port}\n\n```text\n")
+            f.write(f"# Parser Report - Port {current_port} ({args.phase})\n\n```text\n")
 
-        # 1. Xác định thư mục đầu vào tự động dựa trên Port
-        TARGET_DIR = f"./tmp/nginx_raw_{current_port}"
+        # 1. Xác định thư mục đầu vào tự động dựa trên Port (raw configs đã copy bởi run_tests.sh)
+        TARGET_DIR = f"{raw_dir}/{current_port}"
 
-        # Kiểm tra xem thư mục đã được fetcher.py tải về chưa
+        # Kiểm tra xem thư mục raw configs đã sẵn sàng chưa
         if not os.path.exists(TARGET_DIR):
             with open(report_file, "a", encoding="utf-8") as f:
                 f.write(f"[LỖI] Không tìm thấy thư mục cấu hình: {TARGET_DIR}\n")
-                f.write(f"[*] Gợi ý: Hãy chạy lệnh 'python core/scannerEng/fetcher.py --config {config_path}' trước để tải cấu hình về máy.\n")
+                f.write(f"[*] Gợi ý: Hãy chạy 'bash tests/run_tests.sh' để chuẩn bị {raw_dir}/<port>/.\n")
                 f.write("```\n")
             continue
 
         # 2. Xác định tên file JSON đầu ra tự động dựa trên config (đóng vai trò là input_path của scanner)
         output_contract_file = server.get(
-            "input_path", f"contracts/parsers_output/parser_output_{current_port}.json")
+            "input_path", f"{parser_output_dir}/parser_output_{current_port}.json")
 
         # 3. Thực thi Parser
         nginx_parser = NginxParser(base_config_path=TARGET_DIR, log_file=report_file)

@@ -1,15 +1,92 @@
 [*] Dry-run port 2246 ...
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 228, in <module>
-    main()
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 198, in main
-    result = engine.dry_run(args.port)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 75, in dry_run
-    items = self._reader.load(str(scan_result_path))
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/reader.py", line 33, in load
-    raise FileNotFoundError(f"scan_result not found: {scan_result_path}")
-FileNotFoundError: scan_result not found: /home/nguye24/projects/sandbox/SecRemedy/tmp/contracts/scan_result/scan_result_2246.json
+[+] Status : pending
+[+] Output : /home/nguye24/projects/sandbox/SecRemedy/tmp/hardened_configs/2246
+
+--- UNIFIED DIFF ---
+--- original/nginx.conf
++++ hardened/nginx.conf
+@@ -18,7 +18,6 @@
+     client_max_body_size 16M;
+     include mime.types;
+     default_type application/octet-stream;
+-    access_log off;
+     error_log /dev/null;
+     ssl_session_timeout 1d;
+     ssl_session_cache shared:SSL:10m;
+@@ -31,7 +30,7 @@
+     resolver 1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 64.6.64.6 64.6.65.6 valid=60s;
+     resolver_timeout 2s;
+     include conf.d/*.conf;
+-    include sites-enabled/*;
++    include sites-available/*;
+     server {
+         listen 80 default_server;
+         listen [::]:80 default_server;
+@@ -43,4 +42,7 @@
+         server_name _;
+         return 444;
+     }
++    server_tokens off;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
+ }--- original/wordpress.example.com.conf
++++ hardened/wordpress.example.com.conf
+@@ -19,6 +19,16 @@
+     }
+     add_header X-Content-Type-Options nosniff always;
+     add_header Content-Security-Policy "default-src 'self'; frame-ancestors 'self'; form-action 'self';" always;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
++    }
+ }
+ server {
+     listen 443 ssl http2;
+@@ -28,6 +38,16 @@
+     ssl_certificate_key /etc/ssl/private/nginx.key;
+     add_header X-Content-Type-Options nosniff always;
+     add_header Content-Security-Policy "default-src 'self'; frame-ancestors 'self'; form-action 'self';" always;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
++    }
+ }
+ server {
+     listen 80;
+@@ -37,4 +57,15 @@
+     }
+     add_header X-Content-Type-Options nosniff always;
+     add_header Content-Security-Policy "default-src 'self'; frame-ancestors 'self'; form-action 'self';" always;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
++    }
++    return 301 https://$host$request_uri;
+ }--- original/php_fastcgi.conf
++++ hardened/php_fastcgi.conf
+@@ -8,4 +8,7 @@
+ fastcgi_param DOCUMENT_ROOT $realpath_root;
+ fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+ fastcgi_param PATH_INFO $_fastcgi_path_info;
+-fastcgi_param PHP_ADMIN_VALUE open_basedir=$base/:/usr/lib/php/:/tmp/;+fastcgi_param PHP_ADMIN_VALUE open_basedir=$base/:/usr/lib/php/:/tmp/;
++fastcgi_hide_header X-Powered-By;
++fastcgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
++fastcgi_param X-Real-IP $remote_addr;

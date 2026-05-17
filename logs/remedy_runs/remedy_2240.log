@@ -13,6 +13,15 @@
      error_log /dev/null;
      ssl_session_timeout 1d;
      ssl_session_cache shared:SSL:10m;
+@@ -32,7 +31,7 @@
+     resolver 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 9.9.9.9 149.112.112.112 valid=60s;
+     resolver_timeout 2s;
+     include conf.d/*.conf;
+-    include sites-enabled/*;
++    include sites-available/*;
+     server {
+         listen 80 default_server;
+         listen [::]:80 default_server;
 @@ -44,4 +43,6 @@
          server_name _;
          return 444;
@@ -21,40 +30,36 @@
 +    error_page 500 502 503 504 /custom_50x.html;
  }--- original/django.example.com.conf
 +++ hardened/django.example.com.conf
-@@ -19,6 +19,18 @@
+@@ -19,6 +19,16 @@
          alias $base/static/;
      }
      include nginxconfig.io/general.conf;
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
-+    location / {
-+        location ^~ /.well-known/acme-challenge/ {
-+            allow all;
-+            default_type text/plain;
-+        }
-+        location ~ /\. {
-+            deny all;
-+            return 404;
-+        }
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
 +    }
  }
  server {
      listen 443 ssl http2;
-@@ -26,11 +38,40 @@
+@@ -26,11 +36,36 @@
      server_name .django.example.com;
      ssl_certificate /etc/ssl/certs/nginx.crt;
      ssl_certificate_key /etc/ssl/private/nginx.key;
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
-+    location / {
-+        location ^~ /.well-known/acme-challenge/ {
-+            allow all;
-+            default_type text/plain;
-+        }
-+        location ~ /\. {
-+            deny all;
-+            return 404;
-+        }
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
 +    }
 +    add_header X-Content-Type-Options '"nosniff"' always;
 +    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
@@ -69,15 +74,13 @@
      }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
-+    location / {
-+        location ^~ /.well-known/acme-challenge/ {
-+            allow all;
-+            default_type text/plain;
-+        }
-+        location ~ /\. {
-+            deny all;
-+            return 404;
-+        }
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
 +    }
 +    return 301 https://$host$request_uri;
  }--- original/security.conf

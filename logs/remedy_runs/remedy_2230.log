@@ -13,10 +13,12 @@
      error_log /dev/null;
      ssl_session_timeout 1d;
      ssl_session_cache shared:SSL:10m;
-@@ -32,4 +31,18 @@
+@@ -31,5 +30,19 @@
+     resolver 1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 64.6.64.6 64.6.65.6 valid=60s;
      resolver_timeout 2s;
      include conf.d/*.conf;
-     include sites-enabled/*;
+-    include sites-enabled/*;
++    include sites-available/*;
 +    server {
 +        listen 80 default_server;
 +        listen [::]:80 default_server;
@@ -33,15 +35,7 @@
 +    error_page 500 502 503 504 /custom_50x.html;
  }--- original/wordpress.example.com.conf
 +++ hardened/wordpress.example.com.conf
-@@ -8,7 +8,6 @@
-     ssl_certificate_key /etc/ssl/private/nginx.key;
-     include nginxconfig.io/security.conf;
-     location ^~ /.well-known/acme-challenge/ {
--        allow all;
-         default_type text/plain;
-     }
-     location ~ /\. {
-@@ -25,6 +24,8 @@
+@@ -25,6 +25,8 @@
          fastcgi_pass unix:/var/run/php/php-fpm.sock;
          include nginxconfig.io/php_fastcgi.conf;
      }
@@ -50,11 +44,9 @@
  }
  server {
      listen 443 ssl http2;
-@@ -33,28 +34,39 @@
-     ssl_certificate /etc/ssl/certs/nginx.crt;
-     ssl_certificate_key /etc/ssl/private/nginx.key;
+@@ -35,26 +37,39 @@
      location ^~ /.well-known/acme-challenge/ {
--        allow all;
+         allow all;
          default_type text/plain;
 +        add_header X-Content-Type-Options '"nosniff"' always;
 +        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
@@ -79,7 +71,7 @@
 +        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
      }
      location ^~ /.well-known/acme-challenge/ {
--        allow all;
+         allow all;
          default_type text/plain;
 +        add_header X-Content-Type-Options '"nosniff"' always;
 +        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;

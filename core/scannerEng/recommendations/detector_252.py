@@ -20,6 +20,7 @@ class Detector252(BaseRecom):
             return False
 
         block = node.get("block", [])
+        has_https_redirect = False
         has_return_444 = False
 
         for child in block:
@@ -29,10 +30,14 @@ class Detector252(BaseRecom):
             args = child.get("args", [])
 
             if dir_name == "return":
-                if len(args) == 1 and args[0] == "444":
+                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0] == "444":
                     has_return_444 = True
 
-        return has_return_444
+        return has_return_444 or has_https_redirect
 
     def traverse_directive(self, target_directive: str, directives: List[Dict], filepath: str, logical_context: List[str], exact_path: List[Any], state: Any = None) -> List[Dict[str, Any]]:
         matches = []

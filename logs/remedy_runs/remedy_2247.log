@@ -1,15 +1,107 @@
 [*] Dry-run port 2247 ...
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 228, in <module>
-    main()
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 198, in main
-    result = engine.dry_run(args.port)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/remedy_engine.py", line 75, in dry_run
-    items = self._reader.load(str(scan_result_path))
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/nguye24/projects/sandbox/SecRemedy/core/remedyEng/reader.py", line 33, in load
-    raise FileNotFoundError(f"scan_result not found: {scan_result_path}")
-FileNotFoundError: scan_result not found: /home/nguye24/projects/sandbox/SecRemedy/tmp/contracts/scan_result/scan_result_2247.json
+[+] Status : pending
+[+] Output : /home/nguye24/projects/sandbox/SecRemedy/tmp/hardened_configs/2247
+
+--- UNIFIED DIFF ---
+--- original/nginx.conf
++++ hardened/nginx.conf
+@@ -33,5 +33,16 @@
+     resolver 1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4 208.67.222.222 208.67.220.220 64.6.64.6 64.6.65.6 valid=60s;
+     resolver_timeout 2s;
+     include conf.d/*.conf;
+-    include sites-enabled/*;
++    include sites-available/*;
++    server {
++        listen 80 default_server;
++        listen [::]:80 default_server;
++        listen 443 ssl default_server;
++        listen [::]:443 ssl default_server;
++        listen 443 quic default_server;
++        listen [::]:443 quic default_server;
++        ssl_reject_handshake on;
++        server_name _;
++        return 444;
++    }
+ }--- original/wordpress.example.com.conf
++++ hardened/wordpress.example.com.conf
+@@ -39,29 +39,37 @@
+     location ^~ /.well-known/acme-challenge/ {
+         allow all;
+         default_type text/plain;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
+     location ~ /\. {
+         deny all;
+         return 404;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
+ }
+ server {
+     listen 80;
+-    listen 8084;
+     listen [::]:80;
+-    listen [::]:8084;
+     server_name .wordpress.example.com;
+     error_page 404 /custom_404.html;
+     error_page 500 502 503 504 /custom_50x.html;
+     location / {
+         return 301 https://www.wordpress.example.com$request_uri;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
+     location ^~ /.well-known/acme-challenge/ {
+         allow all;
+         default_type text/plain;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
+     location ~ /\. {
+         deny all;
+         return 404;
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+     }
+ }--- original/security.conf
++++ hardened/security.conf
+@@ -1,7 +1,7 @@
+ add_header X-XSS-Protection '1; mode=block' always;
+ add_header X-Content-Type-Options nosniff always;
+ add_header Referrer-Policy no-referrer always;
+-add_header Content-Security-Policy "script-src 'self' http: https: ws: wss: data: blob: 'unsafe-inline'; 'unsafe-eval'; frame-ancestors 'self';" always;
++add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ add_header Permissions-Policy interest-cohort=() always;
+ location ~ /\.(?!well-known) {
+     deny all;
+--- original/general.conf
++++ hardened/general.conf
+@@ -10,6 +10,8 @@
+ location ~* '\.(?:svgz?|ttf|ttc|otf|eot|woff2?)$' {
+     add_header Access-Control-Allow-Origin *;
+     expires 7d;
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ gzip on;
+ gzip_vary on;
+--- original/wordpress.example.com.wordpress.conf
++++ hardened/wordpress.example.com.wordpress.conf
+@@ -11,7 +11,6 @@
+ }
+ location ~ ^/wp-content/plugins {
+     allow 192.168.1.100;
+-    allow 10.20.30.0/32;
+     deny all;
+ }
+ location ~* '^/(?:xmlrpc\.php|wp-links-opml\.php|wp-config\.php|wp-config-sample\.php|readme\.html|license\.txt)$' {
+--- original/php_fastcgi.conf
++++ hardened/php_fastcgi.conf
+@@ -8,4 +8,7 @@
+ fastcgi_param DOCUMENT_ROOT $realpath_root;
+ fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+ fastcgi_param PATH_INFO $_fastcgi_path_info;
+-fastcgi_param PHP_ADMIN_VALUE open_basedir=$base/:/usr/lib/php/:/tmp/;+fastcgi_param PHP_ADMIN_VALUE open_basedir=$base/:/usr/lib/php/:/tmp/;
++fastcgi_hide_header X-Powered-By;
++fastcgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
++fastcgi_param X-Real-IP $remote_addr;

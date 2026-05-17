@@ -223,35 +223,82 @@ class Scanner:
 # CLI Entry Point
 # ---------------------------------------------------------------------------
 
+RAW_CONFIGS_DIR = Path("./tmp/raw_configs")
+HARDENED_CONFIGS_DIR = Path("./tmp/hardened_configs")
+
+PHASE_PATHS = {
+    "before": {
+        "discover_dir": RAW_CONFIGS_DIR,
+        "parser_output_dir": "tmp/contracts/parsers_output",
+        "scan_result_dir": "tmp/contracts/scan_result",
+        "scan_report_dir": "tmp/contracts/scan_report",
+    },
+    "after": {
+        "discover_dir": HARDENED_CONFIGS_DIR,
+        "parser_output_dir": "tmp/contracts/parsers_output_after",
+        "scan_result_dir": "tmp/contracts/scan_result_after",
+        "scan_report_dir": "tmp/contracts/scan_report_after",
+    },
+}
+
+
+def _discover_servers_from_raw_configs(raw_dir: Path = RAW_CONFIGS_DIR) -> List[Dict[str, Any]]:
+    """Tự động lấy danh sách port từ tên các thư mục con của <raw_dir>/."""
+    if not raw_dir.is_dir():
+        return []
+    ports = sorted(
+        int(p.name) for p in raw_dir.iterdir()
+        if p.is_dir() and p.name.isdigit()
+    )
+    return [{"port": p} for p in ports]
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="SecRemedy Scanner Engine — CIS Benchmark Assessment",
     )
     parser.add_argument(
         "--config", "-c",
-        # default="scan_before_remedy_config_input.json",
-        # help="Path to configuration file (defaults to scan_before_remedy_config_input.json).",
-        default="scan_after_remedy_config_input.json",
-        help="Path to configuration file (defaults to scan_after_remedy_config_input.json).",
+        default=None,
+        help="Path to config file. Nếu bỏ trống: tự động quét toàn bộ <raw_dir>/<port>/.",
+    )
+    parser.add_argument(
+        "--phase",
+        choices=["before", "after"],
+        default="before",
+        help="'before' quét tmp/raw_configs/, 'after' quét tmp/hardened_configs/ và "
+             "đọc/ghi vào các thư mục có suffix _after.",
     )
     args = parser.parse_args()
 
-    config_path = Path(args.config)
-    if not config_path.exists():
-        print(f"[-] Lỗi: Không tìm thấy file cấu hình {args.config}")
-        exit(1)
+    paths = PHASE_PATHS[args.phase]
+    discover_dir = paths["discover_dir"]
+    parser_output_dir = paths["parser_output_dir"]
+    scan_result_dir = paths["scan_result_dir"]
+    scan_report_dir = paths["scan_report_dir"]
 
-    try:
-        with open(config_path, "r", encoding="utf-8") as f:
-            config_data = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"[-] Lỗi cú pháp JSON trong file {args.config}: {e}")
-        exit(1)
-
-    servers = config_data.get("servers", [])
-    if not servers:
-        print(f"[-] Không có server nào được định nghĩa trong {args.config}")
-        exit(1)
+    if args.config:
+        config_path = Path(args.config)
+        if not config_path.exists():
+            print(f"[-] Lỗi: Không tìm thấy file cấu hình {args.config}")
+            exit(1)
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_data = json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"[-] Lỗi cú pháp JSON trong file {args.config}: {e}")
+            exit(1)
+        servers = config_data.get("servers", [])
+        if not servers:
+            print(f"[-] Không có server nào được định nghĩa trong {args.config}")
+            exit(1)
+    else:
+        servers = _discover_servers_from_raw_configs(discover_dir)
+        if not servers:
+            print(f"[-] Không có raw config nào dưới {discover_dir}. "
+                  f"Hãy chạy 'tests/run_tests.sh' trước, hoặc cung cấp --config.")
+            exit(1)
+        print(f"[*] [phase={args.phase}] Auto-discovered {len(servers)} port(s) từ {discover_dir}.")
 
     for server in servers:
         current_port = server.get("port")
@@ -259,15 +306,15 @@ def main():
             continue
 
         input_path = server.get(
-            "input_path", f"contracts/parsers_output/parser_output_{current_port}.json")
+            "input_path", f"{parser_output_dir}/parser_output_{current_port}.json")
         output_path = server.get(
-            "output_path", f"contracts/scan_result/scan_result_{current_port}.json")
+            "output_path", f"{scan_result_dir}/scan_result_{current_port}.json")
         report_path = server.get(
-            "report_path", f"contracts/scan_report/scan_report_{current_port}.md")
+            "report_path", f"{scan_report_dir}/scan_report_{current_port}.md")
 
         Path(report_path).parent.mkdir(parents=True, exist_ok=True)
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write(f"# Scanner Report - Port {current_port}\n\n```text\n")
+            f.write(f"# Scanner Report - Port {current_port} ({args.phase})\n\n```text\n")
 
         scanner = Scanner(
             server_ip=server.get("ip", "0.0.0.0"),

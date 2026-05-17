@@ -13,10 +13,12 @@
      error_log /dev/null;
      ssl_session_timeout 1d;
      ssl_session_cache shared:SSL:10m;
-@@ -32,4 +31,18 @@
+@@ -31,5 +30,19 @@
+     resolver 1.1.1.1 1.0.0.1 [2606:4700:4700::1111] [2606:4700:4700::1001] 8.8.8.8 8.8.4.4 [2001:4860:4860::8888] [2001:4860:4860::8844] 208.67.222.222 208.67.220.220 [2620:119:35::35] [2620:119:53::53] valid=60s;
      resolver_timeout 2s;
      include conf.d/*.conf;
-     include sites-enabled/*;
+-    include sites-enabled/*;
++    include sites-available/*;
 +    server {
 +        listen 80 default_server;
 +        listen [::]:80 default_server;
@@ -33,26 +35,24 @@
 +    error_page 500 502 503 504 /custom_50x.html;
  }--- original/frontend.example.com.conf
 +++ hardened/frontend.example.com.conf
-@@ -10,6 +10,18 @@
+@@ -10,6 +10,16 @@
          try_files $uri $uri/ /index.html;
      }
      include nginxconfig.io/general.conf;
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
-+    location / {
-+        location ^~ /.well-known/acme-challenge/ {
-+            allow all;
-+            default_type text/plain;
-+        }
-+        location ~ /\. {
-+            deny all;
-+            return 404;
-+        }
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
 +    }
  }
  server {
      listen 443 ssl http2;
-@@ -18,7 +30,6 @@
+@@ -18,7 +28,6 @@
      root /var/www/frontend.example.com/public;
      ssl_certificate /etc/ssl/certs/nginx.crt;
      ssl_certificate_key /etc/ssl/private/nginx.key;
@@ -60,7 +60,7 @@
      gzip on;
      gzip_vary on;
      gzip_proxied any;
-@@ -28,9 +39,25 @@
+@@ -28,9 +37,23 @@
          add_header Access-Control-Allow-Origin *;
          add_header Cache-Control public;
          expires 30d;
@@ -74,33 +74,29 @@
 +    }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
-+    location / {
-+        location ^~ /.well-known/acme-challenge/ {
-+            allow all;
-+            default_type text/plain;
-+        }
-+        location ~ /\. {
-+            deny all;
-+            return 404;
-+        }
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
      }
  }
  server {
-@@ -39,20 +66,62 @@
+@@ -39,20 +62,56 @@
      server_name .frontend.example.com;
      ssl_certificate /etc/ssl/certs/nginx.crt;
      ssl_certificate_key /etc/ssl/private/nginx.key;
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
-+    location / {
-+        location ^~ /.well-known/acme-challenge/ {
-+            allow all;
-+            default_type text/plain;
-+        }
-+        location ~ /\. {
-+            deny all;
-+            return 404;
-+        }
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
 +    }
 +    add_header X-Content-Type-Options '"nosniff"' always;
 +    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
@@ -115,15 +111,13 @@
      }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
-+    location / {
-+        location ^~ /.well-known/acme-challenge/ {
-+            allow all;
-+            default_type text/plain;
-+        }
-+        location ~ /\. {
-+            deny all;
-+            return 404;
-+        }
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
 +    }
 +    return 301 https://$host$request_uri;
  }
@@ -139,15 +133,13 @@
      }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
-+    location / {
-+        location ^~ /.well-known/acme-challenge/ {
-+            allow all;
-+            default_type text/plain;
-+        }
-+        location ~ /\. {
-+            deny all;
-+            return 404;
-+        }
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
 +    }
 +    return 301 https://$host$request_uri;
  }--- original/security.conf

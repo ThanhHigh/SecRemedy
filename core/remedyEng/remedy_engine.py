@@ -25,6 +25,8 @@ Usage (Import):
 import argparse
 import copy
 import json
+import posixpath
+import re
 from pathlib import Path
 
 from core.remedyEng.reader import ScanResultReader
@@ -34,6 +36,10 @@ from core.remedyEng.diff_generator import DiffGenerator
 from core.remedyEng.executor import RemoteExecutor
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # SecRemedy/
+
+# Match "sites-enabled" chỉ khi đứng độc lập (không phải prefix của "sites-enabled-backup" v.v.).
+# Lookaround loại trừ kế cận word-char hoặc dấu '-'.
+_SITES_ENABLED_RE = re.compile(r"(?<![A-Za-z0-9_-])sites-enabled(?![A-Za-z0-9_-])")
 
 
 def _path_sort_key(item) -> tuple:
@@ -110,8 +116,24 @@ class RemedyEngine:
                 print(f"[!] Skip invalid item: {item.action} {item.directive} "
                       f"path={item.exact_path} — {reason}")
 
+        # Rewrite "sites-enabled" → "sites-available" trong toàn AST.
+        # Nginx convention: sites-available giữ file thật, sites-enabled chỉ symlink.
+        # Push hardened config vào sites-available để tránh ghi đè symlink.
+        self._rewrite_sites_enabled(hardened_ast)
+
+        # Dump modified AST → tmp/contracts/mod_asts/mod_ast_<port>.json.
+        # Snapshot sau inject + rewrite, trước build → debug/audit injector output.
+        self._write_mod_ast(port, hardened_ast)
+
+        # Tính common base (vd "/etc/nginx") để strip khỏi cây hardened_dir.
+        # Tránh tạo etc/nginx/... rỗng. Lưu marker để execute() prepend lại.
+        remote_base = self._compute_remote_base(hardened_ast)
+        self._write_remote_base(hardened_dir, remote_base)
+
         # Step 4: Build hardened config files
-        output_files = self._builder.build(hardened_ast, str(hardened_dir))
+        output_files = self._builder.build(
+            hardened_ast, str(hardened_dir), strip_prefix=remote_base
+        )
 
         # Step 5: Generate unified diff
         diff = self._diff_gen.generate_from_ast(original_ast, hardened_ast)
@@ -149,16 +171,66 @@ class RemedyEngine:
         if not executor.backup():
             return {"status": "failed", "error": "SSH backup failed"}
 
+        # hardened_dir mirror tương đối theo remote_base (vd /etc/nginx).
+        # Đọc marker để prepend lại khi push remote. Bỏ qua file marker.
+        remote_base = self._read_remote_base(hardened_dir)
+        base = remote_base.rstrip("/") or ""
         local_files = {
-            str(f): f"/etc/nginx/{f.name}"
-            for f in hardened_dir.iterdir()
-            if f.is_file()
+            str(f): f"{base}/{f.relative_to(hardened_dir).as_posix()}"
+            for f in hardened_dir.rglob("*")
+            if f.is_file() and f.name != ".remote_base"
         }
 
         if not executor.push(local_files):
             return {"status": "failed", "error": "SFTP push failed"}
 
         return {"status": "applied", "error": None}
+
+    # ------------------------------------------------------------------
+    # AST rewriters
+    # ------------------------------------------------------------------
+    def _rewrite_sites_enabled(self, ast: dict) -> None:
+        """Replace token "sites-enabled" => "sites-available" trong AST (in-place).
+        Chỉ match token độc lập — "sites-enabled-backup" không bị đổi."""
+        def sub(s: str) -> str:
+            return _SITES_ENABLED_RE.sub("sites-available", s)
+
+        def walk(node):
+            if isinstance(node, dict):
+                for k, v in node.items():
+                    if isinstance(v, str):
+                        node[k] = sub(v)
+                    else:
+                        walk(v)
+            elif isinstance(node, list):
+                for i, v in enumerate(node):
+                    if isinstance(v, str):
+                        node[i] = sub(v)
+                    else:
+                        walk(v)
+        walk(ast)
+
+    # ------------------------------------------------------------------
+    # Remote base helpers
+    # ------------------------------------------------------------------
+    def _compute_remote_base(self, ast: dict) -> str:
+        """Common parent dir của tất cả config file. Vd ["/etc/nginx/nginx.conf",
+        "/etc/nginx/sites-available/x.conf"] → "/etc/nginx"."""
+        files = [c["file"] for c in ast.get("config", []) if c.get("file")]
+        if not files:
+            return ""
+        parents = [posixpath.dirname(f) or "/" for f in files]
+        return posixpath.commonpath(parents) if len(parents) > 1 else parents[0]
+
+    def _write_remote_base(self, hardened_dir: Path, base: str) -> None:
+        hardened_dir.mkdir(parents=True, exist_ok=True)
+        (hardened_dir / ".remote_base").write_text(base, encoding="utf-8")
+
+    def _read_remote_base(self, hardened_dir: Path) -> str:
+        marker = hardened_dir / ".remote_base"
+        if not marker.exists():
+            return ""
+        return marker.read_text(encoding="utf-8").strip()
 
     # ------------------------------------------------------------------
     # Path helpers
@@ -169,8 +241,17 @@ class RemedyEngine:
     def _ast_path(self, port: int) -> Path:
         return BASE_DIR / "tmp" / "contracts" / "parsers_output" / f"parser_output_{port}.json"
 
+    def _mod_ast_path(self, port: int) -> Path:
+        return BASE_DIR / "tmp" / "contracts" / "mod_asts" / f"mod_ast_{port}.json"
+
     def _hardened_dir(self, port: int) -> Path:
         return BASE_DIR / "tmp" / "hardened_configs" / str(port)
+
+    def _write_mod_ast(self, port: int, ast: dict) -> None:
+        path = self._mod_ast_path(port)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(ast, f, indent=2, ensure_ascii=False)
 
 
 # ---------------------------------------------------------------------------

@@ -164,33 +164,32 @@ class Detector253(BaseRecom):
         remediations = []
 
         if deny_loc is None:
-            rem = {
-                "action": "add",
-                "directive": "location",
-                "args": ["/"],
-                "logical_context": logical_context,
-                "exact_path": exact_path + ["block"],
-                "line": server_block.get("line"),
-                "block": []
-            }
             if acme_loc is None:
-                rem["block"].append({
+                remediations.append({
+                    "action": "add",
                     "directive": "location",
                     "args": ["^~", "/.well-known/acme-challenge/"],
+                    "logical_context": logical_context,
+                    "exact_path": exact_path + ["block"],
+                    "line": server_block.get("line"),
                     "block": [
                         {"directive": "allow", "args": ["all"]},
                         {"directive": "default_type", "args": ["text/plain"]}
                     ]
                 })
-            rem["block"].append({
+            
+            remediations.append({
+                "action": "add",
                 "directive": "location",
                 "args": ["~", "/\\."],
+                "logical_context": logical_context,
+                "exact_path": exact_path + ["block"],
+                "line": server_block.get("line"),
                 "block": [
                     {"directive": "deny", "args": ["all"]},
                     {"directive": "return", "args": ["404"]}
                 ]
             })
-            remediations.append(rem)
         else:
             if not self._check_deny_location_validity(deny_loc):
                 rem = {
@@ -211,17 +210,14 @@ class Detector253(BaseRecom):
                 rem = {
                     "action": "add",
                     "directive": "location",
+                    "args": ["^~", "/.well-known/acme-challenge/"],
                     "logical_context": logical_context,
                     "exact_path": exact_path + ["block"],
                     "line": server_block.get("line"),
-                    "block": [{
-                        "directive": "location",
-                        "args": ["^~", "/.well-known/acme-challenge/"],
-                        "block": [
-                            {"directive": "allow", "args": ["all"]},
-                            {"directive": "default_type", "args": ["text/plain"]}
-                        ]
-                    }]
+                    "block": [
+                        {"directive": "allow", "args": ["all"]},
+                        {"directive": "default_type", "args": ["text/plain"]}
+                    ]
                 }
                 remediations.append(rem)
             elif acme_idx > deny_idx:
@@ -235,10 +231,11 @@ class Detector253(BaseRecom):
                 rem_add = {
                     "action": "add",
                     "directive": "location",
+                    "args": acme_loc.get("args", []),
                     "logical_context": logical_context,
                     "exact_path": exact_path + ["block"],
                     "line": server_block.get("line"),
-                    "block": [acme_loc]
+                    "block": acme_loc.get("block", [])
                 }
                 remediations.extend([rem_del, rem_add])
 
