@@ -89,8 +89,6 @@
 -    listen [::]:8085;
      server_name cdn.magento.example.com;
      location / {
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
      }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
@@ -103,6 +101,8 @@
 +        return 404;
 +    }
 +    return 301 https://$host$request_uri;
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
  }
  server {
      listen 80;
@@ -111,8 +111,6 @@
 -    listen [::]:8085;
      server_name .magento.example.com;
      location / {
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
      }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
@@ -125,6 +123,8 @@
 +        return 404;
 +    }
 +    return 301 https://$host$request_uri;
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
  }--- original/security.conf
 +++ hardened/security.conf
 @@ -1,7 +1,7 @@

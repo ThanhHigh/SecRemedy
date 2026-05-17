@@ -87,55 +87,35 @@
  }
  server {
      listen 80;
-@@ -48,20 +84,38 @@
-     location ^~ /.well-known/acme-challenge/ {
-         allow all;
-         default_type text/plain;
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
-+    }
-+    location ~ /\. {
-+        deny all;
-+        return 404;
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
-+    }
-+    location / {
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
-+    }
+@@ -55,13 +91,27 @@
+     }
+     location / {
+     }
 +    return 301 https://$host$request_uri;
-+}
-+server {
-+    listen 80;
-+    listen [::]:80;
-+    server_name .frontend.example.com;
-+    location / {
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
-+    }
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
+ }
+ server {
+     listen 80;
+-    listen 8082;
+     listen [::]:80;
+-    listen [::]:8082;
+     server_name .frontend.example.com;
+     location / {
+     }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
 +    location ^~ /.well-known/acme-challenge/ {
 +        allow all;
 +        default_type text/plain;
-     }
-     location ~ /\. {
-         deny all;
-         return 404;
-     }
--    location / {
--    }
--}
--server {
--    listen 80;
--    listen 8082;
--    listen [::]:80;
--    listen [::]:8082;
--    server_name .frontend.example.com;
--    location / {
--    }
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
++    }
 +    return 301 https://$host$request_uri;
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
  }--- original/security.conf
 +++ hardened/security.conf
 @@ -1,13 +1,12 @@

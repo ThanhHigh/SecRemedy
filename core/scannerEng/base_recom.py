@@ -16,6 +16,50 @@ class BaseRecom:
         self.impact = recom.impact
         self.remediation = recom.remediation_procedure
 
+    def _should_skip_block(self, node: Dict[str, Any]) -> bool:
+        """
+        Kiểm tra xem một block có nên bị bỏ qua khi scan không.
+        Mặc định bỏ qua các block 'upstream' hoặc các 'server' block chỉ dùng để redirect HTTPS hoặc drop connection.
+        Các detector có thể ghi đè (override) hàm này nếu có logic riêng.
+        """
+        if not isinstance(node, dict):
+            return False
+
+        dir_name = node.get("directive")
+        # Bỏ qua upstream blocks vì một số luật chỉ áp dụng cho Virtual Host
+        if dir_name == "upstream":
+            return True
+
+        if dir_name != "server":
+            return False
+
+        block = node.get("block", [])
+        has_return_444 = False
+        has_return_403 = False
+        has_https_redirect = False
+        has_catch_all_server_name = False
+
+        for child in block:
+            if not isinstance(child, dict):
+                continue
+            child_dir = child.get("directive")
+            args = child.get("args", [])
+
+            if child_dir == "server_name" and len(args) > 0 and args[0] == "_":
+                has_catch_all_server_name = True
+
+            if child_dir == "return":
+                if len(args) >= 2 and args[0] in ("301", "302", "307", "308") and args[1].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0].startswith("https://"):
+                    has_https_redirect = True
+                elif len(args) == 1 and args[0] == "444":
+                    has_return_444 = True
+                elif len(args) == 1 and args[0] == "403":
+                    has_return_403 = True
+
+        return has_return_444 or has_https_redirect or (has_return_403 and has_catch_all_server_name)
+
     def scan(self, parser_output: Dict[str, Any]) -> List[Dict[str, Any]]:
         raise NotImplementedError("Các detector phải override hàm này")
 
