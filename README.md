@@ -12,108 +12,166 @@
 
 Mục tiêu cốt lõi: quy trình **"Safe Auto-Remediation"** — áp dụng Hardening hiệu quả, đảm bảo zero-downtime nhờ kiểm tra cú pháp Nginx tự động trước khi ghi đè.
 
+## Trạng thái Phát triển (Development Status)
+
+| Engine             |     Trạng thái     | Ghi chú                                        |
+| ------------------ | :----------------: | ---------------------------------------------- |
+| Scanner Engine     |   ✅ Hoàn thành    | 12 Detector CIS đầy đủ, JSON Contract output   |
+| Remediation Engine | 🔄 Đang phát triển | Cấu trúc thư mục tạo sẵn, logic chưa implement |
+| Frontend / API     |  ⏳ Chưa bắt đầu   | FastAPI + Streamlit/Vue (kế hoạch)             |
+
 ## Tính năng cốt lõi (Key Features)
 
 Hai engine độc lập, hoạt động tuần tự, giao tiếp qua **JSON Contract** lưu trong `tmp/contracts/`.
 
-### 1. Trình Đánh giá Bảo mật (Scanner Engine)
+### 1. Trình Đánh giá Bảo mật (Scanner Engine) — ✅ Hoàn thành
 
 - **Thu thập tự động (SSH Fetcher):** Kết nối SSH (`paramiko`), đóng gói và tải về toàn bộ `/etc/nginx` để phân tích ngoại tuyến. Port SSH đọc động từ config JSON — không hardcode.
 - **Phân tích cấu trúc đệ quy (Crossplane Parser):** Dùng `crossplane` chuyển đổi toàn bộ file `.conf` (kể cả lồng nhau qua `include`) thành AST JSON. Hỗ trợ chế độ batch qua `--config` JSON.
 - **Phát hiện lỗ hổng (CIS Detectors):** **12 Detector** kế thừa `BaseRecom`, quét đệ quy qua AST (khối `http`, `server`, `location`) theo chuẩn CIS Nginx Benchmark:
-  - Bóc tách số port IPv4/IPv6 (2.4.1), kiểm tra default server block (2.4.2), phát hiện thiếu `server_tokens`/`error_page` (2.5.1, 2.5.2), thiếu block chặn `.git` (2.5.3), v.v.
-  - Giải quyết logic kế thừa Nginx (ví dụ: `proxy_set_header` ở `http` kế thừa xuống `location`).
-  - Truy vết lỗi sâu trong các file lồng nhau (`conf.d/*.conf`).
-- **JSON Contract & Điểm tuân thủ:** Xuất báo cáo kèm Compliance Score. Mỗi vi phạm sinh JSON Contract chứa hành động sửa (`add`, `modify`, `delete`, `add_block`) + `exact_path` trên AST.
+  - `2.4.1` — Listen port authorization (IPv4/IPv6 aware)
+  - `2.4.2` — Default server block (catch-all) enforcement
+  - `2.5.1` — `server_tokens off` validation
+  - `2.5.2` — Custom error pages (không tham chiếu NGINX)
+  - `2.5.3` — Block hidden files (`.git`, `.env`, v.v.)
+  - `2.5.4` — Reverse proxy không tiết lộ backend headers
+  - `3.2` — Access log enabled
+  - `3.4` — IP forwarding headers (`X-Real-IP`, `X-Forwarded-For`)
+  - `4.1.1` — HTTP → HTTPS redirect
+  - `5.1.1` — IP allow/deny access control
+  - `5.3.1` — `X-Content-Type-Options: nosniff`
+  - `5.3.2` — Content Security Policy (CSP)
+- **Logic nâng cao:**
+  - Giải quyết kế thừa Nginx (`proxy_set_header` ở `http` kế thừa xuống `location`).
+  - Truy vết lỗi sâu trong các file lồng nhau (`conf.d/*.conf`, `sites-enabled/*.conf`).
+  - Phân tích `include` đệ quy để tránh false negative khi directive nằm ở snippet riêng.
+- **JSON Contract & Điểm tuân thủ:** Xuất báo cáo kèm Compliance Score. Mỗi vi phạm sinh JSON Contract chứa hành động sửa (`add`, `modify`, `delete`, `add_block`) + `exact_path` trên AST + `line` number.
 
-### 2. Trình Tự động Khắc phục (Remediation Engine)
+### 2. Trình Tự động Khắc phục (Remediation Engine) — 🔄 Đang phát triển
 
-- **Chạy batch không tương tác:** Chế độ `--config` JSON cho phép chạy toàn bộ pipeline (parse → scan → remedy → export) trên nhiều cấu hình cùng lúc, không cần người dùng nhập gì.
-- **Chỉnh sửa AST chính xác (AST Editor):** Định vị chính xác vị trí vi phạm trên AST, thực hiện sửa in-memory: `add`, `modify`, `delete`, `add_block` mà không phá cấu trúc file gốc.
-- **Xuất cấu hình (Export Manager):** Dịch ngược AST đã vá thành thư mục cấu hình Nginx hoàn chỉnh (`nginx_remediate_<port>_v<N>/`), kèm normalization tự động (xóa `allow all` thừa, sửa default-server block).
-- **Xem trước thay đổi (Dry-Run Code Diff):** Dùng `crossplane` dịch ngược AST → text, rồi `difflib` sinh Unified Diff. Người dùng đối chiếu từng dòng `+`/`-` trước khi approve.
-- **12 Remedy** kế thừa `BaseRemedy` — tương ứng 1-1 với 12 Detector (241, 242, 251, 252, 253, 254, 32, 34, 411, 511, 531, 532).
+> **Nguyên tắc cốt lõi:** Remedy Engine **không** tự tìm lỗi, **không** tự quyết định cách sửa. Nó chỉ đọc và thực thi đúng các instruction đã được Scanner mã hóa sẵn trong `scan_result.json`.
+
+Mỗi vi phạm trong `scan_result.json` chứa một mảng `remediations[]` — đây là danh sách lệnh chi tiết mà Remedy Engine phải thực thi tuần tự:
+
+```json
+"remediations": [
+  {
+    "action": "add",                         // Loại hành động: add | modify | delete | add_block
+    "directive": "server_tokens",             // Tên directive cần thao tác
+    "args": ["off"],                          // Giá trị mới (với action add/modify)
+    "line": 17,                               // Số dòng tham chiếu trong file gốc
+    "logical_context": ["http"],             // Ngữ cảnh Nginx (http / server / location)
+    "exact_path": ["config", 0, "parsed", 6, "block"]  // Đường dẫn chính xác đến node trong AST
+  }
+]
+```
+
+**Pipeline thực thi của Remedy Engine (5 bước):**
+
+1. **Đọc scan_result** — Load `scan_result.json` từ `tmp/contracts/scan_result/`. Với mỗi `uncompliance`, duyệt qua từng item trong `remediations[]`.
+2. **Định vị AST (Locator)** — Dùng `exact_path` để điều hướng chính xác đến node cần thao tác trong cây AST JSON (đã được crossplane parse sẵn). Không cần re-parse hay phân tích logic.
+3. **Tiêm thay đổi (Injector)** — Thực thi `action`:
+   - `add` / `add_block` → chèn directive/block mới vào đúng vị trí trong AST
+   - `modify` → cập nhật `args` của directive tại node đó
+   - `delete` → xóa node đó khỏi AST
+4. **Dựng lại config (Builder)** — Crossplane serialize AST đã chỉnh thành text Nginx config (`.conf`). Lưu ra file tạm.
+5. **Sinh diff & Validate** — Dùng `difflib` sinh Unified Diff (gốc vs. đã sửa). Upload file tạm lên server, chạy `nginx -t -c <temp_file>` qua SSH. Chỉ tiến hành Apply nếu `nginx -t` trả về `syntax is ok`.
 
 ### 3. Quy trình Khắc phục An toàn (Safe Remediation Workflow)
 
-Zero-downtime đảm bảo bởi pipeline nghiêm ngặt:
+Zero-downtime đảm bảo bởi pipeline nghiêm ngặt — chỉ kích hoạt sau khi Remedy Engine hoàn tất bước 1–4:
 
-1. **Sinh cấu hình tạm:** Build file cấu hình từ AST đã được sửa.
-2. **Kiểm thử cú pháp:** Chạy `nginx -t -c <temp_file>` trên target host.
-3. **Rollback / Reapply:** Nếu `nginx -t` fail → dừng, cho phép Rollback hoặc Reapply mà không ảnh hưởng server đang chạy.
-4. **Áp dụng:** Chỉ khi `nginx -t` OK → ghi đè file gốc và reload dịch vụ.
+1. **Dry-Run & Diff:** Sinh Unified Diff (gốc vs. đã sửa theo instruction) → hiển thị lên Frontend UI để user review.
+2. **Kiểm thử cú pháp:** Upload file tạm lên target host, chạy `nginx -t -c <temp_file>` qua SSH, đọc kết quả.
+3. **Gate check:** `nginx -t` fail → dừng toàn bộ, báo lỗi, không động vào file thật trên server.
+4. **Approve & Apply:** Chỉ khi `nginx -t` OK **và** user nhấn Approve trên UI → ghi cấu hình đã harden vào file mới + push lên target server. ( không có reload).
 
 ## Môi trường Kiểm thử (Test Environment)
 
-### Docker — Integration Test
+### Docker — Integration Test (SSH)
 
-1 container Nginx duy nhất (`nginx_sec_remedy_test`) phục vụ test integration:
+1 container Nginx duy nhất (`nginx_sec_remedy_test`) phục vụ test qua SSH thật:
 
-| Port   | Mục đích             |
-| :----: | -------------------- |
-| `2222` | SSH (paramiko)       |
-| `8080` | HTTP                 |
-| `8443` | HTTPS                |
+|  Port  | Mục đích       |
+| :----: | -------------- |
+| `2222` | SSH (paramiko) |
+| `8080` | HTTP           |
+| `8443` | HTTPS          |
 
 Container mount `./workspace:/etc/nginx` — pytest tự copy file cấu hình vào đây trước khi test.
 
 ### Tập cấu hình Nginx tĩnh (Offline Batch Test)
 
-Bộ cấu hình Nginx tĩnh (không cần SSH/Docker) nằm trong `tests/integration/`, chia theo nhóm mức vi phạm:
+Bộ cấu hình Nginx tĩnh (không cần SSH/Docker) nằm trong `tests/integration/`, chia theo số lỗi vi phạm:
 
-| Folder                  | Số lỗi   | Mô tả                                         |
-| ----------------------- | :------: | --------------------------------------------- |
-| `0_to_1_uncomply`       | 0–1      | Gần sạch — dùng để đối chiếu, tránh false positive |
-| `1_to_3_uncomply`       | 1–3      | Vi phạm nhẹ (3.2, 3.4, 2.5.3, 2.5.4, ...)   |
-| `3_to_4_uncomply`       | 3–4      | Vi phạm vừa (3.2, 3.4, 2.4.1/2, 2.5.1, ...) |
-| `10_to_12_uncomply`     | 10–12    | Vi phạm hết tất cả các rule                  |
+| Folder        | Số vi phạm | Số test cases | Test IDs        | Tiến độ  |
+| ------------- | :--------: | :-----------: | --------------- | :------: |
+| `0_compliant` |     0      |       5       | 2220 → 2224     |  5/5 ✅  |
+| `1_compliant` |     1      |      12       | 2226 → 2237     | 12/12 ✅ |
+| `2_compliant` |     2      |       3       | 2225, 2238–2239 |  3/3 ✅  |
+| `3_compliant` |     3      |       9       | 2240 → 2248     |  0/9 🔄  |
+| `4_compliant` |     4      |       9       | 2249 → 2257     |  0/9 🔄  |
 
-Mỗi folder chứa nhiều `nginx_raw_<port>/` (ví dụ: `nginx_raw_2230`, `nginx_raw_2231`, ...). `run_tests.sh` copy toàn bộ vào `tmp/` và chạy pipeline.
+> Các test case có 5–12 vi phạm (`2258 → 2272`) đang được lên kế hoạch.
+
+**6 Preset Nginx cấu hình thực tế:**
+
+| #   | Preset                    | Mô tả                                                             |
+| --- | ------------------------- | ----------------------------------------------------------------- |
+| 1   | Nginx-Django-uWSGI        | Reverse proxy cho Django app qua uWSGI, SSL + subfolder redirects |
+| 2   | Nginx-Frontend-SPA-CDN    | Serve SPA tĩnh + CDN server block cho static assets               |
+| 3   | Nginx-SPA-PHP-FPM         | SPA frontend + PHP-FPM backend cho API routes, SSL                |
+| 4   | Nginx-WordPress-PHP-FPM   | WordPress chuẩn dùng PHP-FPM, SSL + security configs              |
+| 5   | Nginx-Magento-PHP-FPM-CDN | Magento 2 nâng cao: PHP-FPM + SSL + CDN block                     |
+| 6   | Nginx-NodeJS-Proxy        | Reverse proxy đơn giản → Node.js app trên cổng 3000, SSL          |
+
+Mỗi folder chứa nhiều `nginx_raw_<port>/`. `run_tests.sh` copy toàn bộ vào `tmp/` và chạy pipeline Parse → Scan.
 
 ## Cấu trúc Thư mục (Directory Structure)
 
 ```text
 SecRemedy/
 ├── core/                           # Mã nguồn chính
-│   ├── recom_registry.py           # Metadata & registry các khuyến nghị CIS
+│   ├── recom_registry.py           # Metadata & registry 12 khuyến nghị CIS
 │   ├── scannerEng/                 # Engine quét và phân tích
 │   │   ├── fetcher.py              # SSH fetcher — tải /etc/nginx qua paramiko
 │   │   ├── parser.py               # Crossplane parser — .conf → JSON AST (hỗ trợ --config batch)
-│   │   ├── scanner.py              # Điều phối scan — chạy tất cả Detector
+│   │   ├── scanner.py              # Điều phối scan — chạy tất cả Detector, tính Compliance Score
 │   │   ├── base_recom.py           # BaseRecom — class gốc cho mọi Detector
 │   │   └── recommendations/        # 12 Detector (detector_241.py … detector_532.py)
-│   └── remedyEng/                  # Engine sinh bản vá và áp dụng
-│       ├── run_remedy.py           # Entry point — điều phối pipeline (TUI + batch)
-│       ├── remediator.py           # Điều phối remedy — chạy tất cả Remedy
-│       ├── ast_editor.py           # AST Editor — thao tác in-memory trên AST
-│       ├── export_manager.py       # Export AST → thư mục nginx config + normalization
-│       ├── diff_generator.py       # Sinh Unified Diff bằng difflib
-│       ├── terminal_ui.py          # TUI tương tác — hiển thị diff, nhận approval
-│       ├── base_remedy.py          # BaseRemedy — class gốc cho mọi Remedy
-│       ├── debug_logger.py         # Logger debug nội bộ
-│       └── recommendations/        # 12 Remedy (remediate_241.py … remediate_532.py)
+│   │       ├── detector_241.py     # CIS 2.4.1 — Listen port authorization
+│   │       ├── detector_242.py     # CIS 2.4.2 — Default server block
+│   │       ├── detector_251.py     # CIS 2.5.1 — server_tokens off
+│   │       ├── detector_252.py     # CIS 2.5.2 — Custom error pages
+│   │       ├── detector_253.py     # CIS 2.5.3 — Block hidden files
+│   │       ├── detector_254.py     # CIS 2.5.4 — Hide backend headers
+│   │       ├── detector_32.py      # CIS 3.2  — Access log enabled
+│   │       ├── detector_34.py      # CIS 3.4  — IP forwarding headers
+│   │       ├── detector_411.py     # CIS 4.1.1 — HTTP → HTTPS redirect
+│   │       ├── detector_511.py     # CIS 5.1.1 — IP allow/deny
+│   │       ├── detector_531.py     # CIS 5.3.1 — X-Content-Type-Options
+│   │       └── detector_532.py     # CIS 5.3.2 — Content Security Policy
+│   └── remedyEng/                  # Engine sinh bản vá và áp dụng [🔄 WIP]
 ├── tests/
-│   ├── integration/                # Docker Compose + tập cấu hình Nginx tĩnh
+│   ├── integration/                # Tập cấu hình Nginx tĩnh theo mức vi phạm
+│   │   ├── 0_compliant/            # 5 preset, 0 vi phạm (IDs: 2220–2224)
+│   │   ├── 1_compliant/            # 5 preset, 1 vi phạm (IDs: 2226–2237)
+│   │   ├── 2_compliant/            # 6 preset, 2 vi phạm (IDs: 2225, 2238–2239)
+│   │   ├── 3_compliant/            # 6 preset, 3 vi phạm [🔄 WIP]
+│   │   ├── 4_compliant/            # 6 preset, 4 vi phạm [🔄 WIP]
 │   │   ├── docker-compose.yml      # 1 container nginx_sec_remedy_test (SSH:2222)
 │   │   ├── Dockerfile              # Nginx + OpenSSH image
-│   │   ├── 0_to_1_uncomply/        # nginx_raw_22X0 — 0–1 lỗi
-│   │   ├── 1_to_3_uncomply/        # nginx_raw_22X1, 22X4 — 1–3 lỗi
-│   │   ├── 3_to_4_uncomply/        # nginx_raw_22X2, 22X3 — 3–4 lỗi
-│   │   └── 10_to_12_uncomply/      # nginx_raw_22X9 — lỗi hết
-│   ├── unit/
-│   │   ├── scannerEng/             # 12 test file (test_detector_241.py … test_detector_532.py)
-│   │   └── remedyEng/              # 12 test file remedy + test_export_manager + test_batch
-│   ├── config_to_test/             # JSON config cho batch pipeline
-│   │   ├── config_input_scanner_before_toFinal.json
-│   │   ├── config_input_scanner_after_toFinal.json
-│   │   └── config_input_remedy_toFinal.json
-│   ├── run_tests.sh                # Script chạy toàn bộ pipeline batch (không cần SSH)
-│   ├── conftest.py                 # Pytest fixtures dùng chung
-│   └── test_document.md            # Checklist trạng thái các cấu hình test
+│   │   └── test_doc.md             # Checklist phân bổ test cases
+│   ├── configs/                    # Config JSON cho batch mode
+│   ├── run_tests.sh                # Script chạy toàn bộ pipeline batch (Parse → Scan)
+│   ├── generate_dumps.sh           # Script sinh dump từ tập cấu hình
+│   └── conftest.py                 # Pytest fixtures dùng chung
 ├── docs/                           # Tài liệu học thuật
 │   ├── architecture/               # Data flow diagrams
-│   ├── recommendations/            # Rationale & Impact từng CIS rule
-│   └── tests/                      # Kịch bản kiểm thử & edge cases
+│   └── recommendations/            # Rationale & Impact từng CIS rule
+├── src/                            # Tài liệu tổng quan + outline
+│   ├── general.md
+│   └── outline_v1.md
 ├── database/                       # Persistence layer
 │   ├── models.py                   # SQLAlchemy ORM: Server, ScanResult, Remediation
 │   └── test_db.py                  # Script kiểm tra khởi tạo DB
@@ -121,9 +179,8 @@ SecRemedy/
 │   ├── nginx_raw_<port>/           # Config Nginx tải về từ SSH
 │   ├── contracts/
 │   │   ├── parsers_output/         # AST gốc sau parse
-│   │   ├── scan_result/            # Báo cáo lỗi JSON Contract từ Scanner
-│   │   └── remediated_output/      # AST đã vá
-│   └── hardened_configs/            # Thư mục nginx config đã remediate
+│   │   └── scan_result/            # Báo cáo lỗi JSON Contract từ Scanner
+│   └── hardened_configs/           # Config Nginx đã remediate [🔄 WIP]
 ├── notes/                          # Ghi chú phát triển
 ├── devsecops_nginx.db              # SQLite DB (runtime)
 └── requirements.txt                # Python dependencies
@@ -171,13 +228,13 @@ cd ../..
 
 ### Chạy toàn bộ pipeline batch (khuyến nghị)
 
-Không cần SSH hay Docker. Script tự copy cấu hình tĩnh vào `tmp/`, chạy Parse → Scan → Remedy → Scan lại:
+Không cần SSH hay Docker. Script tự copy cấu hình tĩnh từ `tests/integration/*_compliant/` vào `tmp/`, rồi chạy Parse → Scan:
 
 ```bash
 bash tests/run_tests.sh
 ```
 
-Output lưu tại `tmp/contracts/` và `tmp/hardened_configs/`.
+Output JSON Contract lưu tại `tmp/contracts/scan_result/`.
 
 ---
 
@@ -215,36 +272,19 @@ python -m core.scannerEng.scanner --ssh-port <ssh_port>
 
 #### Bước 4 — Remediation Engine
 
-```bash
-# Batch (không tương tác)
-python -m core.remedyEng.run_remedy --config <config.json>
-
-# TUI tương tác
-python -m core.remedyEng.run_remedy
-```
-
-> **Lưu ý:** Chế độ TUI cần container Docker đang chạy. Batch mode dùng được với cấu hình tĩnh offline.
+> 🔄 **Đang phát triển.** Module `core/remedyEng/` đang được implement.
 
 ## Chạy Tests
 
-### Unit tests
-
-```bash
-# Tất cả unit tests
-python -m pytest tests/unit/ -q
-
-# Chỉ scannerEng
-python -m pytest tests/unit/scannerEng/ -q
-
-# Chỉ remedyEng
-python -m pytest tests/unit/remedyEng/ -q
-
-# Với coverage
-python -m pytest tests/unit/ --cov=core -q
-```
-
-### Integration pipeline test (offline batch)
+### Integration pipeline test (offline, không cần SSH)
 
 ```bash
 bash tests/run_tests.sh
 ```
+
+Script chạy: **Parse → Scan** trên toàn bộ tập cấu hình tĩnh trong `tests/integration/*_compliant/`.
+Kết quả in trực tiếp ra terminal và lưu tại `tmp/contracts/`.
+
+### Kiểm tra phân bổ test cases
+
+Xem `tests/integration/test_doc.md` để biết trạng thái từng nhóm test.
