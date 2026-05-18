@@ -174,7 +174,9 @@ class Detector253(BaseRecom):
                     "line": server_block.get("line"),
                     "block": [
                         {"directive": "allow", "args": ["all"]},
-                        {"directive": "default_type", "args": ["text/plain"]}
+                        {"directive": "default_type", "args": ["text/plain"]},
+                        {"directive": "add_header", "args": ["X-Content-Type-Options", "'\"nosniff\"'", "always"]},
+                        {"directive": "add_header", "args": ["Content-Security-Policy", "'\"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';\"'", "always"]}
                     ]
                 })
             
@@ -187,7 +189,9 @@ class Detector253(BaseRecom):
                 "line": server_block.get("line"),
                 "block": [
                     {"directive": "deny", "args": ["all"]},
-                    {"directive": "return", "args": ["404"]}
+                    {"directive": "return", "args": ["404"]},
+                    {"directive": "add_header", "args": ["X-Content-Type-Options", "'\"nosniff\"'", "always"]},
+                    {"directive": "add_header", "args": ["Content-Security-Policy", "'\"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';\"'", "always"]}
                 ]
             })
         else:
@@ -201,7 +205,9 @@ class Detector253(BaseRecom):
                     "line": deny_loc.get("line"),
                     "block": [
                         {"directive": "deny", "args": ["all"]},
-                        {"directive": "return", "args": ["404"]}
+                        {"directive": "return", "args": ["404"]},
+                        {"directive": "add_header", "args": ["X-Content-Type-Options", "'\"nosniff\"'", "always"]},
+                        {"directive": "add_header", "args": ["Content-Security-Policy", "'\"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';\"'", "always"]}
                     ]
                 }
                 remediations.append(rem)
@@ -216,7 +222,9 @@ class Detector253(BaseRecom):
                     "line": server_block.get("line"),
                     "block": [
                         {"directive": "allow", "args": ["all"]},
-                        {"directive": "default_type", "args": ["text/plain"]}
+                        {"directive": "default_type", "args": ["text/plain"]},
+                        {"directive": "add_header", "args": ["X-Content-Type-Options", "'\"nosniff\"'", "always"]},
+                        {"directive": "add_header", "args": ["Content-Security-Policy", "'\"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';\"'", "always"]}
                     ]
                 }
                 remediations.append(rem)
@@ -235,7 +243,10 @@ class Detector253(BaseRecom):
                     "logical_context": logical_context,
                     "exact_path": exact_path + ["block"],
                     "line": server_block.get("line"),
-                    "block": acme_loc.get("block", [])
+                    "block": acme_loc.get("block", []) + [
+                        {"directive": "add_header", "args": ["X-Content-Type-Options", "'\"nosniff\"'", "always"]},
+                        {"directive": "add_header", "args": ["Content-Security-Policy", "'\"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';\"'", "always"]}
+                    ]
                 }
                 remediations.extend([rem_del, rem_add])
 

@@ -31,7 +31,7 @@
 +    error_page 500 502 503 504 /custom_50x.html;
  }--- original/wordpress.example.com.conf
 +++ hardened/wordpress.example.com.conf
-@@ -19,6 +19,16 @@
+@@ -19,6 +19,20 @@
      }
      add_header X-Content-Type-Options nosniff always;
      add_header Content-Security-Policy "default-src 'self'; frame-ancestors 'self'; form-action 'self';" always;
@@ -40,15 +40,19 @@
 +    location ^~ /.well-known/acme-challenge/ {
 +        allow all;
 +        default_type text/plain;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    location ~ /\. {
 +        deny all;
 +        return 404;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
  }
  server {
      listen 443 ssl http2;
-@@ -28,6 +38,16 @@
+@@ -28,6 +42,20 @@
      ssl_certificate_key /etc/ssl/private/nginx.key;
      add_header X-Content-Type-Options nosniff always;
      add_header Content-Security-Policy "default-src 'self'; frame-ancestors 'self'; form-action 'self';" always;
@@ -57,15 +61,19 @@
 +    location ^~ /.well-known/acme-challenge/ {
 +        allow all;
 +        default_type text/plain;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    location ~ /\. {
 +        deny all;
 +        return 404;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
  }
  server {
      listen 80;
-@@ -37,4 +57,15 @@
+@@ -37,4 +65,19 @@
      }
      add_header X-Content-Type-Options nosniff always;
      add_header Content-Security-Policy "default-src 'self'; frame-ancestors 'self'; form-action 'self';" always;
@@ -74,10 +82,14 @@
 +    location ^~ /.well-known/acme-challenge/ {
 +        allow all;
 +        default_type text/plain;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    location ~ /\. {
 +        deny all;
 +        return 404;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    return 301 https://$host$request_uri;
  }--- original/php_fastcgi.conf

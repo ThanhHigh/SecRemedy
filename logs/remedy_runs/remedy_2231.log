@@ -35,7 +35,7 @@
 +    error_page 500 502 503 504 /custom_50x.html;
  }--- original/wordpress.example.com.conf
 +++ hardened/wordpress.example.com.conf
-@@ -17,6 +17,16 @@
+@@ -17,6 +17,20 @@
          fastcgi_pass unix:/var/run/php/php-fpm.sock;
          include nginxconfig.io/php_fastcgi.conf;
      }
@@ -44,15 +44,19 @@
 +    location ^~ /.well-known/acme-challenge/ {
 +        allow all;
 +        default_type text/plain;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    location ~ /\. {
 +        deny all;
 +        return 404;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
  }
  server {
      listen 443 ssl http2;
-@@ -24,13 +34,36 @@
+@@ -24,13 +38,44 @@
      server_name .wordpress.example.com;
      ssl_certificate /etc/ssl/certs/nginx.crt;
      ssl_certificate_key /etc/ssl/private/nginx.key;
@@ -61,10 +65,14 @@
 +    location ^~ /.well-known/acme-challenge/ {
 +        allow all;
 +        default_type text/plain;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    location ~ /\. {
 +        deny all;
 +        return 404;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    add_header X-Content-Type-Options '"nosniff"' always;
 +    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
@@ -76,20 +84,24 @@
 -    listen [::]:8084;
      server_name .wordpress.example.com;
      location / {
++        add_header X-Content-Type-Options '"nosniff"' always;
++        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
      }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
 +    location ^~ /.well-known/acme-challenge/ {
 +        allow all;
 +        default_type text/plain;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    location ~ /\. {
 +        deny all;
 +        return 404;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    return 301 https://$host$request_uri;
-+    add_header X-Content-Type-Options '"nosniff"' always;
-+    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
  }--- original/security.conf
 +++ hardened/security.conf
 @@ -1,7 +1,7 @@

@@ -35,7 +35,7 @@
 +    error_page 500 502 503 504 /custom_50x.html;
  }--- original/nodejs.example.com.conf
 +++ hardened/nodejs.example.com.conf
-@@ -1,8 +1,23 @@
+@@ -1,8 +1,27 @@
  server {
 -    listen 80;
 -    listen 8085;
@@ -53,19 +53,27 @@
 +    location ^~ /.well-known/acme-challenge/ {
 +        allow all;
 +        default_type text/plain;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +    location ~ /\. {
 +        deny all;
 +        return 404;
++        add_header X-Content-Type-Options '\'"nosniff"\'' always;
++        add_header Content-Security-Policy '\'"default-src \\'self\\'; frame-ancestors \\'self\\'; form-action \\'self\\';"\'' always;
 +    }
 +}
 +server {
      listen 443 ssl http2;
      listen [::]:443 ssl http2;
      server_name www.nodejs.example.com;
+<<<<<<< HEAD
 @@ -16,13 +31,20 @@
          include nginxconfig.io/proxy.conf;
      }
+=======
+@@ -18,11 +37,10 @@
+>>>>>>> 9922a77 (fix(scannerEng): update remediations of detector 253 to comply with CIS 2.5.3)
      include nginxconfig.io/general.conf;
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
