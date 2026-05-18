@@ -14,17 +14,19 @@ from pathlib import Path
 
 
 class DiffGenerator:
-    def generate_from_ast(self, original_ast: dict, hardened_ast: dict) -> str:
+    def generate_per_file_from_ast(self, original_ast: dict, hardened_ast: dict) -> dict[str, str]:
         """
-        Build cả hai AST → so sánh từng cặp file → ghép thành 1 unified diff string.
+        Build cả hai AST → so sánh từng cặp file → trả dict {remote_path: diff_text}.
+        Key là đường dẫn remote (vd /etc/nginx/nginx.conf), value là unified diff (rỗng nếu không đổi).
         """
-        parts: list[str] = []
+        result: dict[str, str] = {}
 
         orig_configs = original_ast.get("config", [])
         hard_configs = hardened_ast.get("config", [])
 
         for orig_cfg, hard_cfg in zip(orig_configs, hard_configs):
-            filename = Path(orig_cfg["file"]).name
+            remote_path = orig_cfg["file"]
+            filename = Path(remote_path).name
             orig_lines = crossplane.build(orig_cfg["parsed"]).splitlines(keepends=True)
             hard_lines = crossplane.build(hard_cfg["parsed"]).splitlines(keepends=True)
 
@@ -34,9 +36,15 @@ class DiffGenerator:
                 fromfile=f"original/{filename}",
                 tofile=f"hardened/{filename}",
             )
-            parts.extend(diff)
+            result[remote_path] = "".join(diff)
 
-        return "".join(parts)
+        return result
+
+    def generate_from_ast(self, original_ast: dict, hardened_ast: dict) -> str:
+        """
+        Build cả hai AST → so sánh từng cặp file → ghép thành 1 unified diff string.
+        """
+        return "".join(self.generate_per_file_from_ast(original_ast, hardened_ast).values())
 
     def generate(self, original_path: str, hardened_path: str) -> str:
         """Diff hai file text trực tiếp (dùng khi đã có file trên disk)."""

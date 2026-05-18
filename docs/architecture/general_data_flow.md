@@ -2,82 +2,78 @@
 
 ## Tầng 1: Frontend — Streamlit UI
 
-| Dashboard UI | Remediation UI |
-|---|---|
-| Hiển thị Score | Nút **Dry-Run** → Hiển thị Diff |
-| Danh sách luật CIS vi phạm | Xem Diff → Nút **Approve** mở khóa |
+| Bước | UI Component | Hành động |
+|---|---|---|
+| 1 | Server Form | Nhận SSH creds (ip, port, user, pass) per server |
+| 2 | Scanner Param Input | User điền `authorized_ports`, `authorized_ips`, `strict_private`, `scan_server` → ghi `before_remediation.json` |
+| 3 | Pre-check UI | Hiển thị kết quả `nginx -t` (OK / FAIL + stderr) |
+| 4 | Scan Results UI | Đọc `scan_result_<port>.json` → hiển thị vi phạm CIS + điểm |
+| 5 | Remediation Param Input | Thu params user cho các rule cần input → ghi remediation config JSON |
+| 6 | Dry-Run UI | Đọc `diff_<port>.json` → hiển thị Unified Diff |
+| 7 | Approve Button | User chốt → Engine chạy Execute |
+| 8 | Execute Status UI | Hiển thị kết quả push config (Success / Error) |
 
-**Luồng tín hiệu:**
-- UI → Backend: `Click Scan` / `Dry-Run` / `Approve`
-- Backend → UI: `JSON` / `Diff + Status`
-
----
-
-## Tầng 2: Backend API — FastAPI
-
-```
-POST /scan
-POST /dry-run
-POST /approve
-```
-
-Mỗi endpoint phân nhánh xuống 3 luồng độc lập:
-
-| Luồng | Mô tả |
-|---|---|
-| **Scan flow** | Quét cấu hình nginx |
-| **Dry-Run flow** | Tạo diff, không ghi file |
-| **Execute flow** | Áp dụng thay đổi thực tế |
-
-### Pre-check: `nginx -t`
-
-Trước khi scan, backend SSH vào server và chạy `nginx -t`:
-
-- **FAIL** → Trả lỗi về UI (hiển thị stderr output), dừng luồng
-- **OK** → Tiếp tục scan
+**Nguyên tắc:** Streamlit ↔ Engine giao tiếp hoàn toàn qua JSON file — không gọi nhau trực tiếp.
 
 ---
 
-## Tầng 3: Core Engines
+## Tầng 2: Core Engines
 
 ### Scanner Engine
 
 ```
 SSH Fetcher
-  └─ Kéo /etc/nginx/ về local
-       └─ Crossplane Wrapper
-            └─ Parse text → ast_dict
-                 └─ Rules Evaluation
+  └─ Kéo /etc/nginx/* về local (/tmp/)
+       └─ Crossplane Parser
+            └─ Text → AST JSON (<port>_ast.json)
+                 └─ CIS Rules Evaluator
                       └─ Duyệt AST qua BaseRule
-                           └─ Scanner & DB
-                                └─ Tính điểm, lưu SQLite
+                           └─ Ghi scan_result_<port>.json + SQLite
 ```
 
 ### Remediation Engine
 
 ```
-AST Locator
-  └─ Tìm vị trí sửa trong AST (theo scan_result.json)
-       └─ AST Injector
-            └─ Tiêm code → mod_ast
+scan_result_<port>.json
+  └─ Scan Result Reader
+       └─ AST Locator (exact_path → node ref)
+            └─ AST Injector (add / replace / delete)
                  └─ Crossplane Builder
-                      └─ Build AST → fixed.conf
-                           └─ Diff Generator
-                                └─ So sánh → Unified Diff
+                      └─ tmp/hardened_configs/<port>_hardened.conf
+                           └─ Diff Generator (difflib)
+                                └─ diff_<port>.json → Dry-Run UI
 ```
 
-### Safe Pipeline
+### Safe Pipeline (chỉ chạy sau Approve)
 
 ```
 SSH Backup
-  └─ cp -R /etc/nginx/ (backup toàn bộ)
-       └─ Executor
-            └─ Push hardened config lên /etc/nginx/* server
+  └─ cp -R /etc/nginx/ /etc/nginx.bak/ trên server
+       └─ Executor (SFTP)
+            └─ Push hardened config → /etc/nginx/* trên server
 ```
 
 ---
 
+## Tầng 3: File I/O — "Hợp Đồng" JSON
+
+| File | Vai trò |
+|---|---|
+| `tests/configs/before_remediation.json` | Input chính cho Scanner Engine — `servers[]` array gồm SSH creds + paths + scan params |
+| `tmp/contracts/parsers_output/<port>_ast.json` | AST parse output (Parser → Locator) |
+| `tmp/contracts/scan_result/<port>_scan_result.json` | Kết quả scan CIS (Scanner → Remediation Engine + UI) |
+| `tmp/hardened_configs/<port>_hardened.conf` | Config đã hardened (Builder → Diff Generator) |
+| `diff_<port>.json` | Unified Diff (Remediation Engine → Dry-Run UI) |
+
+---
+
 ## Tầng 4: Infrastructure
+
+### Pre-check Gate
+
+`nginx -t` chạy trước scan:
+- **FAIL** → báo lỗi stderr lên UI, dừng toàn bộ luồng
+- **OK** → tiếp tục Scanner Engine
 
 ### SQLite Database
 
@@ -85,31 +81,43 @@ SSH Backup
 |---|---|
 | `Servers` | Thông tin target server |
 | `ScanResults` | Kết quả quét CIS |
-| `Remediations` | Trạng thái remediation (pending / applied / failed) |
+| `Remediations` | Trạng thái: `pending` / `approved` / `applied` / `failed` |
 
 ---
 
 ## Sơ đồ Tổng Quan
 
 ```
-[ Streamlit UI ]
-      |
-      ▼
-[ FastAPI: /scan  /dry-run  /approve ]
-      |              |              |
-      ▼              ▼              ▼
-[ nginx -t PRE-CHECK ]
-      |
-      ▼
-┌─────────────────┬──────────────────────┬─────────────────┐
-│ Scanner Engine  │ Remediation Engine   │ Safe Pipeline   │
-│                 │                      │                 │
-│ SSH Fetch       │ AST Locate           │ SSH Backup      │
-│ Crossplane Parse│ AST Inject           │ Push Config     │
-│ Rules Evaluate  │ Build fixed.conf     │                 │
-│ Score + SQLite  │ Unified Diff         │                 │
-└────────┬────────┴──────────────────────┴─────────────────┘
-         │
-         ▼
-[ SQLite DB: Servers | ScanResults | Remediations ]
+[ USER ]
+    │ SSH creds + scan params
+    ▼
+[ Streamlit — Server Form ]
+    │ ghi before_remediation.json
+    ▼
+[ Pre-check: nginx -t ]
+    │ FAIL → dừng     OK → tiếp
+    ▼
+[ Scanner Engine ]
+    │ SSH Fetch → Parse → Rules Eval → ghi scan_result.json
+    ▼
+[ Streamlit — Scan Results UI ]
+    │ đọc scan_result.json → hiển thị vi phạm
+    ▼
+[ Remediation Engine — Dry-Run ]
+    │ AST Locate → Inject → Build → Diff → ghi diff.json
+    ▼
+[ Streamlit — Dry-Run UI ]
+    │ đọc diff.json → hiển thị Unified Diff
+    ▼
+[ APPROVE GATE — User nhấn Approve ]
+    │
+    ├──[ SSH Backup: cp -R /etc/nginx/ ]
+    │
+    └──[ Executor: SFTP push hardened config ]
+              │
+              ▼
+    [ TARGET SERVER — /etc/nginx/* hardened ]
+              │
+              ▼
+    [ SQLite: Servers | ScanResults | Remediations ]
 ```

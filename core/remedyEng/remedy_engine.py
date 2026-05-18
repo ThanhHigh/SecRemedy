@@ -135,22 +135,31 @@ class RemedyEngine:
             hardened_ast, str(hardened_dir), strip_prefix=remote_base
         )
 
-        # Step 5: Generate unified diff
-        diff = self._diff_gen.generate_from_ast(original_ast, hardened_ast)
+        # Step 5: Generate unified diff (per-file + gộp)
+        file_diffs = self._diff_gen.generate_per_file_from_ast(original_ast, hardened_ast)
+        diff = "".join(file_diffs.values())
 
         return {
             "diff": diff,
+            "file_diffs": file_diffs,
             "hardened_dir": str(hardened_dir),
             "output_files": output_files,
             "status": "pending",
             "skipped": skipped,
         }
 
-    def execute(self, port: int, ssh_creds: dict) -> dict:
+    def execute(
+        self,
+        port: int,
+        ssh_creds: dict,
+        approved_files: list[str] | None = None,
+    ) -> dict:
         """
         Step 6 — chỉ gọi sau Approve Gate.
 
         ssh_creds keys: host, port, username, password (opt), key_path (opt).
+        approved_files: danh sách remote path được approve (vd ["/etc/nginx/nginx.conf"]).
+                        None = approve tất cả (hành vi cũ).
 
         Returns:
           {"status": "applied" | "failed", "error": str | None}
@@ -180,6 +189,12 @@ class RemedyEngine:
             for f in hardened_dir.rglob("*")
             if f.is_file() and f.name != ".remote_base"
         }
+
+        if approved_files is not None:
+            approved_set = set(approved_files)
+            local_files = {lp: rp for lp, rp in local_files.items() if rp in approved_set}
+            if not local_files:
+                return {"status": "failed", "error": "No approved files match hardened configs"}
 
         if not executor.push(local_files):
             return {"status": "failed", "error": "SFTP push failed"}
