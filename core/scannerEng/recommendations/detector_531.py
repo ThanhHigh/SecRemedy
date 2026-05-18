@@ -125,37 +125,69 @@ class Detector531(BaseRecom):
 
         return node
 
+    # def _traverse_and_remediate(self, node: BlockNode, inherited_valid: bool, logical_context: List[str], config_list: List[Dict[str, Any]], all_remediations: List[Dict[str, Any]], unique_remediations: set):
+    #     # 1. Generate REPLACE remediations for invalid headers in this block
+    #     for d, c_f_idx, c_path in node.invalid_xcto:
+    #         self._add_remediation(c_f_idx, "replace", "add_header",
+    #                               ["X-Content-Type-Options", '"nosniff"', "always"],
+    #                               logical_context, c_path, config_list, all_remediations, unique_remediations)
+
+    #     # 2. Determine current valid state
+    #     current_valid = node.has_valid_xcto or len(node.invalid_xcto) > 0
+    #     if not current_valid:
+    #         if node.has_add_header:
+    #             current_valid = False
+    #         else:
+    #             current_valid = inherited_valid
+
+    #     # 3. Add header if needed
+    #     if not current_valid:
+    #         if node.clean_descendants:
+    #             if node.subtree_needs:
+    #                 self._add_remediation(node.f_idx, "add", "add_header",
+    #                                       ["X-Content-Type-Options", '"nosniff"', "always"],
+    #                                       logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
+    #                 current_valid = True
+    #         else:
+    #             if node.needs_xcto_directly:
+    #                 self._add_remediation(node.f_idx, "add", "add_header",
+    #                                       ["X-Content-Type-Options", '"nosniff"', "always"],
+    #                                       logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
+    #                 current_valid = True
+
+    #     # 4. Recurse into children
+    #     for child in node.children:
+    #         child_context = logical_context + [child.block_type]
+    #         self._traverse_and_remediate(child, current_valid, child_context, config_list, all_remediations, unique_remediations)
+
     def _traverse_and_remediate(self, node: BlockNode, inherited_valid: bool, logical_context: List[str], config_list: List[Dict[str, Any]], all_remediations: List[Dict[str, Any]], unique_remediations: set):
-        # 1. Generate REPLACE remediations for invalid headers in this block
+    # 1. Fix invalid existing headers
         for d, c_f_idx, c_path in node.invalid_xcto:
             self._add_remediation(c_f_idx, "replace", "add_header",
-                                  ["X-Content-Type-Options", '"nosniff"', "always"],
-                                  logical_context, c_path, config_list, all_remediations, unique_remediations)
+                                ["X-Content-Type-Options", '"nosniff"', "always"],
+                                logical_context, c_path, config_list, all_remediations, unique_remediations)
 
-        # 2. Determine current valid state
-        current_valid = node.has_valid_xcto or len(node.invalid_xcto) > 0
-        if not current_valid:
-            if node.has_add_header:
-                current_valid = False
-            else:
-                current_valid = inherited_valid
+        # 2. Determine if THIS block needs header
+        has_it = node.has_valid_xcto or len(node.invalid_xcto) > 0
+        
+        # If server level + missing -> Add to server
+        if node.block_type == "server" and not has_it:
+            self._add_remediation(node.f_idx, "add", "add_header",
+                                ["X-Content-Type-Options", '"nosniff"', "always"],
+                                logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
+            has_it = True
 
-        # 3. Add header if needed
-        if not current_valid:
-            if node.clean_descendants:
-                if node.subtree_needs:
-                    self._add_remediation(node.f_idx, "add", "add_header",
-                                          ["X-Content-Type-Options", '"nosniff"', "always"],
-                                          logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
-                    current_valid = True
-            else:
-                if node.needs_xcto_directly:
-                    self._add_remediation(node.f_idx, "add", "add_header",
-                                          ["X-Content-Type-Options", '"nosniff"', "always"],
-                                          logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
-                    current_valid = True
+        # If location level + breaks inheritance (has other headers) + missing -> Add to location
+        if node.block_type == "location" and node.has_add_header and not has_it:
+            self._add_remediation(node.f_idx, "add", "add_header",
+                                ["X-Content-Type-Options", '"nosniff"', "always"],
+                                logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
+            has_it = True
 
-        # 4. Recurse into children
+        # 3. Handle state for children
+        current_valid = has_it if (node.has_add_header or has_it) else inherited_valid
+
+        # 4. Recurse
         for child in node.children:
             child_context = logical_context + [child.block_type]
             self._traverse_and_remediate(child, current_valid, child_context, config_list, all_remediations, unique_remediations)

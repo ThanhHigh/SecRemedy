@@ -1,0 +1,22 @@
+{
+  "servers": [
+    {
+      "ip": "172.28.32.113",
+      "port": 22,
+      "user": "root",
+      "pass": "root",
+      "strict_private": false,
+      "scan_server": true,
+      "authorized_ports": [
+        80,
+        443
+      ],
+      "authorized_ips": [
+        "127.0.0.1"
+      ],
+      "input_path": "/home/airatory/Documents/Project/UET_learn/Du_an/Trien_khai/Code/SecRemedy/tmp/contracts/parsers_output/parser_output_22.json",
+      "output_path": "/home/airatory/Documents/Project/UET_learn/Du_an/Trien_khai/Code/SecRemedy/tmp/contracts/scan_result/scan_result_22.json",
+      "report_path": "/home/airatory/Documents/Project/UET_learn/Du_an/Trien_khai/Code/SecRemedy/tmp/contracts/scan_report/scan_report_22.md"
+    }
+  ]
+}

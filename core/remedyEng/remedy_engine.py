@@ -41,6 +41,32 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent  # SecRemedy/
 # Lookaround loại trừ kế cận word-char hoặc dấu '-'.
 _SITES_ENABLED_RE = re.compile(r"(?<![A-Za-z0-9_-])sites-enabled(?![A-Za-z0-9_-])")
 
+def _remedy_sort_key(item) -> tuple:
+    """
+    Composite sort key:
+    1. Action: delete(0) < replace(1) < add(2)
+    2. Directive (if add): location(0) < add_header(1) < others(2)
+    3. Path: DESC (để tránh index-shift khi delete/insert)
+    """
+    # 1. Action priority
+    act_map = {"delete": 0, "replace": 1, "add": 2}
+    act_prio = act_map.get(item.action, 99)
+
+    # 2. Directive priority (chỉ áp dụng cho 'add')
+    dir_prio = 99
+    if item.action == "add":
+        if item.directive == "location":
+            dir_prio = 0
+        elif item.directive == "add_header":
+            dir_prio = 1
+        else:
+            dir_prio = 2
+
+    # 3. Path sort (DESC logic)
+    # Invert integer indices: 10 -> -10 để sort ASC ra DESC.
+    path_key = tuple((0, -x) if isinstance(x, int) else (1, x) for x in item.exact_path)
+
+    return (act_prio, dir_prio, path_key)
 
 def _path_sort_key(item) -> tuple:
     """
@@ -49,7 +75,6 @@ def _path_sort_key(item) -> tuple:
     tránh index-shift do delete/insert ở index thấp.
     """
     return tuple((0, x) if isinstance(x, int) else (1, x) for x in item.exact_path)
-
 
 class RemedyEngine:
     def __init__(self) -> None:
@@ -97,6 +122,11 @@ class RemedyEngine:
         # index thấp không shift các path đã queue. Stable hơn line-based sort
         # vì line=0 không phản ánh vị trí trong block.
         items_sorted = sorted(items, key=_path_sort_key, reverse=True)
+
+        # # NEW SORTING LOGIC
+        # # Sort theo Action -> Directive -> Path DESC
+        # items_sorted = sorted(items, key=_remedy_sort_key)
+
         skipped: list[dict] = []
         for item in items_sorted:
             try:

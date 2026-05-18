@@ -1,6 +1,6 @@
 [*] Dry-run port 2239 ...
 [+] Status : pending
-[+] Output : /home/nguye24/projects/sandbox/SecRemedy/tmp/hardened_configs/2239
+[+] Output : /home/airatory/Documents/Project/UET_learn/Du_an/Trien_khai/Code/SecRemedy/tmp/hardened_configs/2239
 
 --- UNIFIED DIFF ---
 --- original/nginx.conf

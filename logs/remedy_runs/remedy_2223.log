@@ -1,6 +1,6 @@
 [*] Dry-run port 2223 ...
 [+] Status : pending
-[+] Output : /home/nguye24/projects/sandbox/SecRemedy/tmp/hardened_configs/2223
+[+] Output : /home/airatory/Documents/Project/UET_learn/Du_an/Trien_khai/Code/SecRemedy/tmp/hardened_configs/2223
 
 --- UNIFIED DIFF ---
 --- original/nginx.conf
@@ -60,7 +60,7 @@
      gzip on;
      gzip_vary on;
      gzip_proxied any;
-@@ -39,9 +48,23 @@
+@@ -39,10 +48,24 @@
          add_header Access-Control-Allow-Origin *;
          add_header Cache-Control public;
          expires 30d;
@@ -69,9 +69,7 @@
      }
      location / {
          deny all;
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
-+    }
+     }
 +    error_page 404 /custom_404.html;
 +    error_page 500 502 503 504 /custom_50x.html;
 +    location ^~ /.well-known/acme-challenge/ {
@@ -81,9 +79,12 @@
 +    location ~ /\. {
 +        deny all;
 +        return 404;
-     }
++    }
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
  }
  server {
+     listen 443 ssl http2;
 @@ -50,22 +73,56 @@
      server_name .magento.example.com;
      ssl_certificate /etc/ssl/certs/nginx.crt;

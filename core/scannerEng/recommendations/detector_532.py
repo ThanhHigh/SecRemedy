@@ -137,38 +137,75 @@ class Detector532(BaseRecom):
 
         return node
 
+    # def _traverse_and_remediate(self, node: BlockNode, inherited_valid: bool, logical_context: List[str], config_list: List[Dict[str, Any]], all_remediations: List[Dict[str, Any]], unique_remediations: set):
+    #     # 1. Generate REPLACE remediations for invalid headers in this block
+    #     for d, c_f_idx, c_path in node.invalid_csp:
+    #         orig_name = d.get("args", ["Content-Security-Policy"])[0]
+    #         self._add_remediation(c_f_idx, "replace", "add_header",
+    #                               [orig_name, '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"', "always"],
+    #                               logical_context, c_path, config_list, all_remediations, unique_remediations)
+
+    #     # 2. Determine current valid state
+    #     current_valid = node.has_valid_csp or len(node.invalid_csp) > 0
+    #     if not current_valid:
+    #         if node.has_add_header:
+    #             current_valid = False
+    #         else:
+    #             current_valid = inherited_valid
+
+    #     # 3. Add header if needed
+    #     if not current_valid:
+    #         if node.clean_descendants:
+    #             if node.subtree_needs:
+    #                 self._add_remediation(node.f_idx, "add", "add_header",
+    #                                       ["Content-Security-Policy", '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"', "always"],
+    #                                       logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
+    #                 current_valid = True
+    #         else:
+    #             if node.needs_csp_directly:
+    #                 self._add_remediation(node.f_idx, "add", "add_header",
+    #                                       ["Content-Security-Policy", '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"', "always"],
+    #                                       logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
+    #                 current_valid = True
+        
+           
+    #     # 4. Recurse into children
+    #     for child in node.children:
+    #         child_context = logical_context + [child.block_type]
+    #         self._traverse_and_remediate(child, current_valid, child_context, config_list, all_remediations, unique_remediations)
+
     def _traverse_and_remediate(self, node: BlockNode, inherited_valid: bool, logical_context: List[str], config_list: List[Dict[str, Any]], all_remediations: List[Dict[str, Any]], unique_remediations: set):
-        # 1. Generate REPLACE remediations for invalid headers in this block
+        csp_val = '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"'
+
+        # 1. Fix existing invalid CSP
         for d, c_f_idx, c_path in node.invalid_csp:
             orig_name = d.get("args", ["Content-Security-Policy"])[0]
             self._add_remediation(c_f_idx, "replace", "add_header",
-                                  [orig_name, '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"', "always"],
-                                  logical_context, c_path, config_list, all_remediations, unique_remediations)
+                                [orig_name, csp_val, "always"],
+                                logical_context, c_path, config_list, all_remediations, unique_remediations)
 
-        # 2. Determine current valid state
-        current_valid = node.has_valid_csp or len(node.invalid_csp) > 0
-        if not current_valid:
-            if node.has_add_header:
-                current_valid = False
-            else:
-                current_valid = inherited_valid
+        # 2. Check current valid state
+        has_it = node.has_valid_csp or len(node.invalid_csp) > 0
 
-        # 3. Add header if needed
-        if not current_valid:
-            if node.clean_descendants:
-                if node.subtree_needs:
-                    self._add_remediation(node.f_idx, "add", "add_header",
-                                          ["Content-Security-Policy", '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"', "always"],
-                                          logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
-                    current_valid = True
-            else:
-                if node.needs_csp_directly:
-                    self._add_remediation(node.f_idx, "add", "add_header",
-                                          ["Content-Security-Policy", '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"', "always"],
-                                          logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
-                    current_valid = True
+        # If server + missing -> Add
+        if node.block_type == "server" and not has_it:
+            self._add_remediation(node.f_idx, "add", "add_header",
+                                ["Content-Security-Policy", csp_val, "always"],
+                                logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
+            has_it = True
 
-        # 4. Recurse into children
+        # If location + breaks inheritance (has other headers) + missing -> Add
+        if node.block_type == "location" and node.has_add_header and not has_it:
+            self._add_remediation(node.f_idx, "add", "add_header",
+                                ["Content-Security-Policy", csp_val, "always"],
+                                logical_context, node.exact_path, config_list, all_remediations, unique_remediations)
+            has_it = True
+
+        # 3. Inheritance logic for children
+        # If this block has ANY add_header -> inheritance reset for kids
+        current_valid = has_it if (node.has_add_header or has_it) else inherited_valid
+
+        # 4. Recurse
         for child in node.children:
             child_context = logical_context + [child.block_type]
             self._traverse_and_remediate(child, current_valid, child_context, config_list, all_remediations, unique_remediations)
