@@ -63,8 +63,20 @@
      listen 443 ssl http2;
      listen [::]:443 ssl http2;
      server_name www.nodejs.example.com;
-@@ -18,11 +33,10 @@
+@@ -16,13 +31,20 @@
+         include nginxconfig.io/proxy.conf;
+     }
      include nginxconfig.io/general.conf;
++    error_page 404 /custom_404.html;
++    error_page 500 502 503 504 /custom_50x.html;
++    location ^~ /.well-known/acme-challenge/ {
++        allow all;
++        default_type text/plain;
++    }
++    location ~ /\. {
++        deny all;
++        return 404;
++    }
  }
  server {
 -    listen 443 ssl http2;
@@ -75,9 +87,7 @@
 -    add_header X-Content-Type-Options nosniff always;
 -    add_header Content-Security-Policy "default-src 'self'; frame-ancestors 'self'; form-action 'self';" always;
 +    listen 80;
-+    listen 8085;
 +    listen [::]:80;
-+    listen [::]:8085;
 +    server_name www.nodejs.example.com;
 +    return 301 https://$host$request_uri;
  }--- original/security.conf

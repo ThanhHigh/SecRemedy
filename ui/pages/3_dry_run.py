@@ -26,7 +26,7 @@ if st.button("Chạy Dry Run", type="primary", disabled=state.step3_done()):
         port = s["port"]
         with st.spinner(f"Dry run server port {port}..."):
             try:
-                result = engine_runner.run_dry_run(port)
+                result = engine_runner.run_dry_run(port, s)
                 dry_run_results[port] = result
                 st.subheader(f"Server {s['ip']}:{port}")
                 diff_viewer.render(result)

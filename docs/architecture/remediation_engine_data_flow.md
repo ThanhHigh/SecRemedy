@@ -19,17 +19,21 @@
         ▼
 [ STEP 2: AST LOCATOR + STEP 3: AST INJECTOR ]
         │
-        │  (deep copy original AST → modify in-place per item)
-        │  skipped[] items logged nếu path invalid
+        │  pass 1: deep copy original AST → modify in-place per item
+        │  pass 1 output → tmp/remedy_passes/{port}/pass1/
+        │  re-scan pass 1 AST → pass 2 remediations
+        │  pass 2 output → tmp/remedy_passes/{port}/pass2/
+        │  skipped[] items logged nếu path invalid ở mỗi pass
         ▼
 [ STEP 4: CONFIG BUILDER ]
         │
         │  tmp/hardened_configs/{port}/<relative_path>.conf (text)
-        │  tmp/contracts/mod_asts/mod_ast_{port}.json (audit snapshot)
+        │  tmp/contracts/mod_asts/mod_ast_{port}.json (final audit snapshot)
         ▼
 [ STEP 5: DIFF GENERATOR ]
         │
         │  Dict[remote_path → unified_diff_text]
+        │  diff compare original AST ↔ final pass 2 AST
         ▼
 [ FRONTEND UI — Dry-Run Review ]
         │
@@ -85,6 +89,8 @@ exact_path: list       # AST navigation path, e.g. ["config", 0, "parsed", 6, "b
 - `exact_path` kết thúc bằng `int` → trả `(parent_list, index)` (replace/delete)
 - `exact_path` kết thúc bằng `str` → trả `(parent_list, None)` (append mode)
 
+During loop, pass 1 AST is written to `tmp/remedy_passes/{port}/pass1/mod_ast.json` and pass 2 scanner input/output live under `tmp/remedy_passes/{port}/pass2/`.
+
 ---
 
 ### Step 3: AST Injector
@@ -115,7 +121,7 @@ exact_path: list       # AST navigation path, e.g. ["config", 0, "parsed", 6, "b
 | **Công nghệ** | `crossplane.build()` |
 | **Input** | Modified AST dict + `strip_prefix` (e.g., `/etc/nginx`) |
 | **Output** | `.conf` files → `tmp/hardened_configs/{port}/<relative_path>/` |
-| **Audit** | Snapshot AST → `tmp/contracts/mod_asts/mod_ast_{port}.json` |
+| **Audit** | Final snapshot AST → `tmp/contracts/mod_asts/mod_ast_{port}.json` |
 | **Marker** | `tmp/hardened_configs/{port}/.remote_base` — lưu common parent dir (e.g., `/etc/nginx`) |
 
 ---
@@ -137,6 +143,7 @@ exact_path: list       # AST navigation path, e.g. ["config", 0, "parsed", 6, "b
     "hardened_dir": str,           # tmp/hardened_configs/{port}/
     "output_files": list[str],     # Paths đã ghi
     "status": "pending" | "no_changes",
+        "passes": list,                # Pass 1/2 scan_result + pass workspace paths
     "skipped": list                # Items failed to apply + lý do
 }
 ```
@@ -191,6 +198,8 @@ Optional: `approved_files: list[str]` — whitelist remote paths cần push (n�
 |---|---|
 | **INPUT** | `tmp/contracts/scan_result/scan_result_{port}.json` |
 | **INPUT** | `tmp/contracts/parsers_output/parser_output_{port}.json` |
+| **WORK** | `tmp/remedy_passes/{port}/pass1/` |
+| **WORK** | `tmp/remedy_passes/{port}/pass2/` |
 | **WORK** | `tmp/hardened_configs/{port}/<relative_path>/` |
 | **WORK** | `tmp/hardened_configs/{port}/.remote_base` |
 | **AUDIT** | `tmp/contracts/mod_asts/mod_ast_{port}.json` |

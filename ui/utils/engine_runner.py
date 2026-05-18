@@ -78,9 +78,21 @@ def run_scan(server: dict) -> dict:
     return scanner.run(input_path=input_path, output_path=output_path)
 
 
-def run_dry_run(port: int) -> dict:
+def run_dry_run(port: int, server: dict | None = None) -> dict:
     """Chạy Remediation Engine dry-run. Returns {"diff", "hardened_dir", "output_files", "status"}."""
-    return RemedyEngine().dry_run(port=port)
+    scanner_kwargs = None
+    if server:
+        scanner_kwargs = {
+            "server_ip": server.get("ip", "0.0.0.0"),
+            "ssh_port": port,
+            "ssh_user": server.get("user", "root"),
+            "ssh_pass": server.get("pass"),
+            "ssh_key": server.get("key"),
+            "strict_private": server.get("strict_private", False),
+            "authorized_ports": server.get("authorized_ports"),
+            "authorized_ips": server.get("authorized_ips"),
+        }
+    return RemedyEngine().dry_run(port=port, scanner_kwargs=scanner_kwargs)
 
 
 def run_execute(port: int, ssh_creds: dict) -> dict:
