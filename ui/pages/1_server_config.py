@@ -8,6 +8,8 @@ from ui.utils import state, file_io, path_helpers
 from ui.components import server_form
 
 st.set_page_config(page_title="Server Config", layout="wide")
+from ui.utils.style import apply_global_styles
+apply_global_styles()
 st.title("Bước 1 — Cấu hình Server")
 st.caption("Nhập SSH credentials và scan parameters cho từng target server.")
 

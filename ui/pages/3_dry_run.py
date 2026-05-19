@@ -9,6 +9,8 @@ from ui.utils import engine_runner
 from ui.components import diff_viewer
 
 st.set_page_config(page_title="Dry Run", layout="wide")
+from ui.utils.style import apply_global_styles
+apply_global_styles()
 st.title("Bước 3 — Dry Run")
 
 if not state.step2_done():

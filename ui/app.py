@@ -5,6 +5,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ui.utils import state
+from ui.utils.style import apply_global_styles
 
 st.set_page_config(
     page_title="SecRemedy",
@@ -12,6 +13,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Increase sidebar font size (approx. 2x current) via CSS
+apply_global_styles()
 
 with st.sidebar:
     st.title("🔒 SecRemedy")
@@ -30,7 +34,7 @@ with st.sidebar:
 
 st.title("SecRemedy — Nginx CIS Auto-Remediation")
 st.markdown("""
-Công cụ tự động đánh giá và hardening Nginx theo CIS Benchmarks.
+### Công cụ tự động đánh giá và hardening Nginx theo CIS Benchmarks.
 
 **Luồng sử dụng:**
 1. **Server Config** — Nhập SSH credentials + scan parameters

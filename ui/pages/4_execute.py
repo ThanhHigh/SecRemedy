@@ -9,6 +9,8 @@ from ui.utils import engine_runner
 from ui.components import status_badge
 
 st.set_page_config(page_title="Execute", layout="wide")
+from ui.utils.style import apply_global_styles
+apply_global_styles()
 st.title("Bước 4 — Approve & Execute")
 
 if not state.step3_done():

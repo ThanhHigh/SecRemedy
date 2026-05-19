@@ -9,6 +9,8 @@ from ui.utils import engine_runner
 from ui.components import scan_table, status_badge
 
 st.set_page_config(page_title="Scan Results", layout="wide")
+from ui.utils.style import apply_global_styles
+apply_global_styles()
 st.title("Bước 2 — Pre-check & Scan Results")
 
 if not state.step1_done():
@@ -17,6 +19,7 @@ if not state.step1_done():
 
 servers = state.get("servers_config", {}).get("servers", [])
 active_servers = [s for s in servers if s.get("scan_server", True)]
+# show_scan_tables = st.toggle("Hiển thị bảng scan", value=True)
 
 st.caption(f"{len(active_servers)}/{len(servers)} server(s) được chọn để scan.")
 
@@ -49,6 +52,8 @@ if st.button("Chạy Pre-check + Scan", type="primary", disabled=state.step2_don
                 engine_runner.run_fetch_and_parse(s)
                 result = engine_runner.run_scan(s)
                 scan_results[port] = result
+                # if show_scan_tables:
+                #     st.markdown(f"### Server {s['ip']}:{port}")
                 with st.expander(f"Server {s['ip']}:{port}", expanded=True):
                     scan_table.render(result)
             except Exception as e:
@@ -72,6 +77,8 @@ elif state.step2_done():
         if port in precheck_results:
             status_badge.render_precheck(port, precheck_results[port])
         if port in scan_results:
+            # if show_scan_tables:
+            #     st.markdown(f"### Server {s['ip']}:{port}")
             with st.expander(f"Server {s['ip']}:{port}", expanded=False):
                 scan_table.render(scan_results[port])
 
