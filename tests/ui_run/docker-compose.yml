@@ -3,11 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: nginx_sec_remedy_test
+    container_name: nginx_sec_remedy
     ports:
-      - "8080:80"
-      - "8443:443"
-      - "2222:22"
+      - "${NGINX_PORT}:22"
     volumes:
       - ./workspace:/etc/nginx
     restart: "no"

@@ -388,6 +388,56 @@ python -m core.scannerEng.scanner --phase after
 
 ## Chạy Tests
 
+### Full test với UI (end-to-end có SSH Docker)
+
+Luồng này theo flow UI: **Bước 1 Chọn server → Bước 2 Kết quả Scan → Bước 3 Dry Run (chạy thử) → Bước 4 Approve (phê duyệt)**.
+
+#### 1) Chuẩn bị môi trường
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### 2) Chạy server Docker test qua `docker_server.sh`
+
+```bash
+bash tests/ui_run/docker_server.sh <port>
+```
+
+- `<port>` là cổng SSH trên host để UI kết nối vào container. Có thể dùng bất kỳ cổng hợp lệ nào; tập test cung cấp các cổng trong khoảng 2220–2272. Ví dụ bên dưới dùng `2220`.
+- Script sẽ:
+  - copy config từ `tmp/raw_configs/<port>/` vào `tests/ui_run/workspace/`
+  - build + run nginx container qua `tests/ui_run/docker-compose.yml`
+  - giữ terminal mở (foreground)
+- **Không đóng terminal này** khi đang test UI.
+
+Khi xong test: nhấn `Ctrl+C` ở terminal đang chạy script. Script sẽ tự `docker compose down` và dọn `tests/ui_run/workspace/`.
+
+#### 3) Chạy UI app (terminal khác)
+
+```bash
+source .venv/bin/activate
+streamlit run ui/app.py
+```
+
+#### 4) Nhập server trong UI
+
+-- IP: `127.0.0.1`
+-- Port: `<port>` (ví dụ: `2220`) — cổng SSH trên host được ánh xạ vào container. Tập test thường dùng 2220–2272.
+-- User: `root`
+-- Pass: `root`
+
+> Ghi chú: Scanner dùng SSH (`paramiko`), nên port ở UI là **SSH port** (ví dụ `2220`), không phải HTTP `80/443`.
+
+#### 5) Chạy full flow trên UI
+
+1. Bước 1: Chọn server + Lưu
+2. Bước 2: Chạy pre-check (ngữ pháp `nginx -t`) + Scan
+3. Bước 3: Dry Run (chạy thử Remediation) — xem diff
+4. Bước 4: Phê duyệt (Approve) + Execute (nếu muốn áp dụng thay đổi)
+
 ### Full pipeline (offline, không cần SSH)
 
 ```bash
@@ -407,4 +457,17 @@ Xem `tests/integration/test_doc.md` để biết trạng thái từng nhóm test
 python tests/check_mod_ast.py
 ```
 
-Audit `tmp/contracts/mod_asts/mod_ast_<port>.json` — snapshot AST sau inject + rewrite, trước build.
+Aduit `tmp/contracts/mod_asts/mod_ast_<port>.json` — bản snapshot AST sau inject + rewrite, trước khi build.
+
+## Nhanh: Khởi chạy UI (Quick Start)
+
+```bash
+# Terminal 1: chạy Docker SSH target
+bash tests/ui_run/docker_server.sh <port>
+
+# Terminal 2: chạy UI
+source .venv/bin/activate
+streamlit run ui/app.py
+```
+
+Trong UI, nhập `127.0.0.1:<port>` (ví dụ: `127.0.0.1:2220`) với `root/root`.
