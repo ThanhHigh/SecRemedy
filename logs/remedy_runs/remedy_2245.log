@@ -33,19 +33,12 @@
 +    }
  }--- original/spa.example.com.conf
 +++ hardened/spa.example.com.conf
-@@ -44,29 +44,37 @@
-     location ^~ /.well-known/acme-challenge/ {
-         allow all;
-         default_type text/plain;
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
-     }
-     location ~ /\. {
+@@ -49,12 +49,12 @@
          deny all;
          return 404;
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
      }
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
  }
  server {
      listen 80;
@@ -55,23 +48,12 @@
      server_name .spa.example.com;
      error_page 404 /custom_404.html;
      error_page 500 502 503 504 /custom_50x.html;
-     location / {
-         return 301 https://www.spa.example.com$request_uri;
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
-     }
-     location ^~ /.well-known/acme-challenge/ {
-         allow all;
-         default_type text/plain;
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
-     }
-     location ~ /\. {
+@@ -69,4 +69,6 @@
          deny all;
          return 404;
-+        add_header X-Content-Type-Options '"nosniff"' always;
-+        add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
      }
++    add_header X-Content-Type-Options '"nosniff"' always;
++    add_header Content-Security-Policy '"default-src \'self\'; frame-ancestors \'self\'; form-action \'self\';"' always;
  }--- original/security.conf
 +++ hardened/security.conf
 @@ -1,13 +1,11 @@
